@@ -1,0 +1,11 @@
+{
+    "name": "miniorange/miniorange-secure-mcp-server",
+    "description": "AI governance and policy enforcement for WordPress: a secure, OAuth-protected MCP server built on the Abilities API.",
+    "type": "wordpress-plugin",
+    "license": "MIT",
+    "autoload": {
+        "classmap": [
+            "includes/"
+        ]
+    }
+}

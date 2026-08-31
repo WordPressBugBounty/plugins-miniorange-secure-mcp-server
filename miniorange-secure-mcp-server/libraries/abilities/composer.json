@@ -1,0 +1,14 @@
+{
+    "name": "miniorange/mosmcp-abilities-library",
+    "description": "Reusable WordPress Abilities API library: 260+ security-reviewed, capability-gated abilities (core content, users & roles, comments) plus provider-gated packs for WooCommerce, ACF, Yoast SEO, and forms. Drop into any plugin and register under your own prefix.",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": ">=7.4"
+    },
+    "autoload": {
+        "classmap": [
+            "src/"
+        ]
+    }
+}

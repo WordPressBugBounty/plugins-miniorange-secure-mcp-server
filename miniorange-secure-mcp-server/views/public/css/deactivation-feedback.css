@@ -1,0 +1,426 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Deactivation feedback modal — aligned to the miniOrange MCP design system.
+   Tokens are declared locally because the SPA stylesheet is not loaded on
+   wp-admin/plugins.php.
+───────────────────────────────────────────────────────────────────────────── */
+@import url("https://rsms.me/inter/inter.css");
+
+#mosmcp-df-overlay {
+	--df-fg-1: #0a0a0b;
+	--df-fg-2: #3f3f46;
+	--df-fg-3: #71717a;
+	--df-fg-4: #a1a1aa;
+	--df-surface: #ffffff;
+	--df-surface-2: #f4f4f5;
+	--df-border: rgba(0,0,0,0.09);
+	--df-border-subtle: rgba(0,0,0,0.06);
+	--df-brand: #5b67d5;
+	--df-brand-hover: #4f46e5;
+	--df-indigo-bg: #eef0fe;
+	--df-indigo-border: #c7caf5;
+	--df-indigo-fg: #4f46e5;
+	--df-red: #dc2626;
+	--df-green: #16a34a;
+	--df-green-bg: #ecfdf3;
+	--df-green-border: #bbf7d0;
+	--df-radius: 6px;
+	--df-radius-lg: 10px;
+	--df-ease: cubic-bezier(0.4, 0, 0.2, 1);
+	--df-font: "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+	display: none;
+	position: fixed;
+	inset: 0;
+	background: rgba(15,16,22,0.45);
+	z-index: 999990;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
+	font-family: var(--df-font);
+	-webkit-font-smoothing: antialiased;
+}
+#mosmcp-df-overlay.mosmcp-df-open { display: flex; }
+#mosmcp-df-overlay *,
+#mosmcp-df-overlay *::before,
+#mosmcp-df-overlay *::after { box-sizing: border-box; }
+
+#mosmcp-df-modal {
+	position: relative;
+	background: var(--df-surface);
+	border-radius: var(--df-radius-lg);
+	width: 640px;
+	max-width: 100%;
+	padding: 24px 28px 20px;
+	box-shadow: rgba(15,17,21,0.16) 0px 16px 70px, rgba(15,17,21,0.10) 0px 8px 24px, rgba(0,0,0,0.06) 0px 0px 0px 1px;
+	animation: mosmcp-df-in 180ms var(--df-ease);
+}
+@keyframes mosmcp-df-in {
+	from { opacity: 0; transform: translateY(10px) scale(0.98); }
+	to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+#mosmcp-df-close {
+	position: absolute;
+	top: 14px;
+	right: 14px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	padding: 0;
+	background: none;
+	border: none;
+	border-radius: var(--df-radius);
+	color: var(--df-fg-3);
+	cursor: pointer;
+	transition: background 120ms var(--df-ease), color 120ms var(--df-ease);
+}
+#mosmcp-df-close:hover { background: var(--df-surface-2); color: var(--df-fg-1); }
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.mosmcp-df-head {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	margin-bottom: 20px;
+	padding-right: 24px;
+}
+.mosmcp-df-head-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 38px;
+	height: 38px;
+	flex-shrink: 0;
+	background: var(--df-indigo-bg);
+	border: 1px solid var(--df-indigo-border);
+	border-radius: var(--df-radius);
+	color: var(--df-indigo-fg);
+}
+.mosmcp-df-head-text { min-width: 0; }
+#mosmcp-df-modal h3 {
+	margin: 0 0 3px;
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 1.3;
+	color: var(--df-fg-1);
+}
+.mosmcp-df-sub {
+	margin: 0;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--df-fg-3);
+}
+.mosmcp-df-tenure {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin: 9px 0 0;
+	padding: 2px 10px;
+	background: var(--df-surface-2);
+	border: 1px solid var(--df-border-subtle);
+	border-radius: 9999px;
+	font-size: 11.5px;
+	font-weight: 500;
+	color: var(--df-fg-3);
+}
+.mosmcp-df-tenure::before {
+	content: '';
+	width: 5px;
+	height: 5px;
+	border-radius: 9999px;
+	background: var(--df-brand);
+	flex-shrink: 0;
+}
+.mosmcp-df-tenure strong { font-weight: 600; color: var(--df-fg-2); }
+
+/* ── Fields ──────────────────────────────────────────────────────────────── */
+.mosmcp-df-field { margin-bottom: 16px; }
+.mosmcp-df-label {
+	display: block;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--df-fg-2);
+	margin-bottom: 8px;
+}
+.mosmcp-df-req { color: var(--df-red); margin-left: 1px; }
+.mosmcp-df-optional { font-weight: 400; color: var(--df-fg-4); }
+
+/* ── Reason radio-cards ──────────────────────────────────────────────────── */
+.mosmcp-df-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mosmcp-df-options > .mosmcp-df-option:last-child { grid-column: 1 / -1; }
+@media (max-width: 600px) {
+	.mosmcp-df-options { grid-template-columns: 1fr; }
+}
+.mosmcp-df-option {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 9px 12px;
+	background: var(--df-surface);
+	border: 1px solid var(--df-border);
+	border-radius: var(--df-radius);
+	cursor: pointer;
+	transition: border-color 120ms var(--df-ease), background 120ms var(--df-ease), box-shadow 120ms var(--df-ease);
+}
+.mosmcp-df-option:hover { background: var(--df-surface-2); }
+.mosmcp-df-option input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; }
+.mosmcp-df-option-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	flex-shrink: 0;
+	background: var(--df-surface-2);
+	border-radius: var(--df-radius);
+	color: var(--df-fg-3);
+	transition: background 120ms var(--df-ease), color 120ms var(--df-ease);
+}
+.mosmcp-df-option-label {
+	flex: 1;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--df-fg-1);
+}
+.mosmcp-df-option-check {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--df-brand);
+	opacity: 0;
+	transform: scale(0.6);
+	transition: opacity 120ms var(--df-ease), transform 120ms var(--df-ease);
+	flex-shrink: 0;
+}
+.mosmcp-df-option:has(input:checked) {
+	border-color: var(--df-brand);
+	background: var(--df-indigo-bg);
+	box-shadow: 0 0 0 1px var(--df-brand);
+}
+.mosmcp-df-option:has(input:checked) .mosmcp-df-option-icon {
+	background: #fff;
+	color: var(--df-indigo-fg);
+}
+.mosmcp-df-option:has(input:checked) .mosmcp-df-option-check { opacity: 1; transform: scale(1); }
+.mosmcp-df-option:has(input:focus-visible) { box-shadow: 0 0 0 3px rgba(99,102,241,0.30); }
+
+/* ── Follow-up + textarea ────────────────────────────────────────────────── */
+#mosmcp-df-followup-input,
+#mosmcp-df-comments {
+	width: 100%;
+	background: var(--df-surface);
+	border: 1px solid var(--df-border);
+	border-radius: var(--df-radius);
+	font-family: var(--df-font);
+	font-size: 13px;
+	color: var(--df-fg-1);
+	outline: none;
+	transition: border-color 120ms var(--df-ease), box-shadow 120ms var(--df-ease);
+}
+#mosmcp-df-followup-input { height: 34px; padding: 0 12px; }
+#mosmcp-df-comments { padding: 8px 12px; min-height: 72px; resize: vertical; line-height: 1.5; }
+#mosmcp-df-followup-input:focus,
+#mosmcp-df-comments:focus {
+	border-color: var(--df-brand);
+	box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+}
+#mosmcp-df-followup-input::placeholder,
+#mosmcp-df-comments::placeholder { color: var(--df-fg-4); }
+
+/* ── Per-reason empathy response ─────────────────────────────────────────── */
+.mosmcp-df-response {
+	margin: -8px 0 16px;
+	padding: 9px 12px;
+	background: var(--df-indigo-bg);
+	border: 1px solid var(--df-indigo-border);
+	border-radius: var(--df-radius);
+	font-size: 12.5px;
+	line-height: 1.5;
+	color: var(--df-fg-2);
+	animation: mosmcp-df-in 160ms var(--df-ease);
+}
+.mosmcp-df-response a {
+	color: var(--df-brand);
+	font-weight: 500;
+	text-decoration: none;
+}
+.mosmcp-df-response a:hover { text-decoration: underline; }
+.mosmcp-df-response__actions {
+	margin-top: 9px;
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	flex-wrap: wrap;
+}
+.mosmcp-df-keep {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 28px;
+	padding: 0 12px;
+	background: var(--df-brand);
+	color: #fff;
+	border: none;
+	border-radius: var(--df-radius);
+	font-family: var(--df-font);
+	font-size: 12px;
+	font-weight: 510;
+	cursor: pointer;
+	transition: background 120ms var(--df-ease);
+}
+.mosmcp-df-keep:hover { background: var(--df-brand-hover); }
+
+/* ── Support deflection ──────────────────────────────────────────────────── */
+.mosmcp-df-support {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 10px 12px;
+	margin-bottom: 18px;
+	background: var(--df-surface-2);
+	border: 1px solid var(--df-border-subtle);
+	border-radius: var(--df-radius);
+	font-size: 12px;
+	line-height: 1.5;
+	color: var(--df-fg-3);
+}
+.mosmcp-df-support svg { flex-shrink: 0; margin-top: 1px; color: var(--df-fg-4); }
+.mosmcp-df-support a { color: var(--df-brand); font-weight: 500; text-decoration: none; }
+.mosmcp-df-support a:hover { text-decoration: underline; }
+
+/* ── Follow-up consent ───────────────────────────────────────────────────── */
+.mosmcp-df-consent {
+	display: flex;
+	align-items: flex-start;
+	gap: 9px;
+	margin-bottom: 18px;
+	cursor: pointer;
+	font-size: 12.5px;
+	line-height: 1.45;
+	color: var(--df-fg-2);
+}
+.mosmcp-df-consent input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; }
+.mosmcp-df-consent-box {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 18px;
+	height: 18px;
+	flex-shrink: 0;
+	margin-top: 1px;
+	background: var(--df-surface);
+	border: 1px solid var(--df-border);
+	border-radius: 5px;
+	color: #fff;
+	transition: background 120ms var(--df-ease), border-color 120ms var(--df-ease);
+}
+.mosmcp-df-consent-box svg { opacity: 0; transition: opacity 120ms var(--df-ease); }
+.mosmcp-df-consent:has(input:checked) .mosmcp-df-consent-box {
+	background: var(--df-brand);
+	border-color: var(--df-brand);
+}
+.mosmcp-df-consent:has(input:checked) .mosmcp-df-consent-box svg { opacity: 1; }
+.mosmcp-df-consent:has(input:focus-visible) .mosmcp-df-consent-box {
+	box-shadow: 0 0 0 3px rgba(99,102,241,0.30);
+}
+.mosmcp-df-consent-text strong { font-weight: 600; color: var(--df-fg-1); }
+
+/* ── Actions ─────────────────────────────────────────────────────────────── */
+.mosmcp-df-actions {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+#mosmcp-df-skip {
+	background: none;
+	border: none;
+	padding: 0;
+	font-family: var(--df-font);
+	font-size: 13px;
+	color: var(--df-fg-3);
+	cursor: pointer;
+	transition: color 120ms var(--df-ease);
+}
+#mosmcp-df-skip:hover { color: var(--df-fg-1); }
+#mosmcp-df-submit {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	height: 34px;
+	padding: 0 16px;
+	background: var(--df-brand);
+	color: #fff;
+	border: none;
+	border-radius: var(--df-radius);
+	font-family: var(--df-font);
+	font-size: 13px;
+	font-weight: 510;
+	cursor: pointer;
+	transition: background 120ms var(--df-ease), opacity 120ms var(--df-ease);
+}
+#mosmcp-df-submit:hover:not(:disabled) { background: var(--df-brand-hover); }
+#mosmcp-df-submit:disabled { opacity: 0.6; cursor: default; }
+.mosmcp-df-submit-spinner {
+	display: none;
+	width: 13px;
+	height: 13px;
+	border: 1.5px solid rgba(255,255,255,0.5);
+	border-top-color: #fff;
+	border-radius: 50%;
+	animation: mosmcp-df-spin 0.65s linear infinite;
+}
+#mosmcp-df-submit.is-loading .mosmcp-df-submit-spinner { display: inline-block; }
+@keyframes mosmcp-df-spin { to { transform: rotate(360deg); } }
+
+/* ── Thank-you state ─────────────────────────────────────────────────────── */
+#mosmcp-df-thankyou {
+	display: none;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	padding: 20px 0 12px;
+}
+#mosmcp-df-thankyou.is-visible { display: flex; animation: mosmcp-df-in 200ms var(--df-ease); }
+.mosmcp-df-ty-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 52px;
+	height: 52px;
+	margin-bottom: 14px;
+	background: var(--df-green-bg);
+	border: 1px solid var(--df-green-border);
+	border-radius: 9999px;
+	color: var(--df-green);
+}
+.mosmcp-df-ty-title {
+	margin: 0 0 5px;
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--df-fg-1);
+}
+.mosmcp-df-ty-sub {
+	margin: 0;
+	font-size: 13px;
+	color: var(--df-fg-3);
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+	#mosmcp-df-modal,
+	#mosmcp-df-thankyou.is-visible,
+	.mosmcp-df-response { animation: none; }
+	.mosmcp-df-option,
+	.mosmcp-df-option-icon,
+	.mosmcp-df-option-check,
+	.mosmcp-df-consent-box,
+	.mosmcp-df-consent-box svg,
+	.mosmcp-df-keep,
+	#mosmcp-df-submit,
+	#mosmcp-df-close,
+	#mosmcp-df-followup-input,
+	#mosmcp-df-comments { transition: none; }
+}
