@@ -23,6 +23,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Audit_Store {
 
 	/**
+	 * WP-Cron hook that runs purge() daily. Scheduled/unscheduled from Hooks.
+	 */
+	const CRON_HOOK = 'mosmcp_audit_cleanup';
+
+	/**
 	 * WordPress option that holds retention configuration.
 	 */
 	const OPTION_RETENTION = 'mosmcp_audit_retention';

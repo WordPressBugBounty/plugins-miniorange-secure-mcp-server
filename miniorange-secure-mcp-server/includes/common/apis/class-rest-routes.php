@@ -13,6 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use MoSMCP\Common\Apis\Audit\Audit_Routes;
 use MoSMCP\Common\Apis\Contact\Contact_Routes;
+use MoSMCP\Common\Apis\Debug\Debug_Routes;
 use MoSMCP\Common\Apis\Diagnostics\Diagnostics_Routes;
 use MoSMCP\Common\Apis\MCP\MCP_Routes;
 use MoSMCP\Common\Apis\NHI\NHI_Routes;
@@ -43,6 +44,7 @@ class Rest_Routes {
 		Stats_Routes::register();
 		NHI_Routes::register();
 		Audit_Routes::register();
+		Debug_Routes::register();
 		Diagnostics_Routes::register();
 	}
 }

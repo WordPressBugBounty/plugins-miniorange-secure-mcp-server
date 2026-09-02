@@ -13,6 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use MoSMCP\Common\Repositories\NHI_Store;
 use MoSMCP\Common\Services\Logging\Audit_Logger;
+use MoSMCP\Common\Services\Logging\Debug_Logger;
 use stdClass;
 
 /**
@@ -59,6 +60,11 @@ class MCP_Server {
 	 */
 	public static function set_request_context( array $ctx ) {
 		Audit_Logger::set_context( $ctx );
+
+		Debug_Logger::set_client_context(
+			isset( $ctx['client_id'] ) ? (string) $ctx['client_id'] : '',
+			isset( $ctx['client_name'] ) ? (string) $ctx['client_name'] : ''
+		);
 	}
 
 	/**
@@ -157,13 +163,25 @@ class MCP_Server {
 
 		if ( null === $ability ) {
 			// Log the denied call: best-effort decode the encoded name back to ability form.
+			$decoded_name = str_replace( '__', '/', $tool_name );
+
 			Audit_Logger::record_tool_call(
-				str_replace( '__', '/', $tool_name ),
+				$decoded_name,
 				'denied',
 				0,
 				'unknown_tool',
 				__( 'Unknown tool.', 'miniorange-secure-mcp-server' ),
 				$id
+			);
+
+			Debug_Logger::warning(
+				Debug_Logger::CHANNEL_MCP,
+				sprintf( 'Denied tools/call for unknown tool "%s".', $decoded_name ),
+				array(
+					'tool_name'     => $decoded_name,
+					'raw_tool_name' => $tool_name,
+					'json_rpc_id'   => $id,
+				)
 			);
 
 			return self::error_response( $id, -32602, __( 'Unknown tool.', 'miniorange-secure-mcp-server' ) );
@@ -184,6 +202,19 @@ class MCP_Server {
 				$result->get_error_code(),
 				$result->get_error_message(),
 				$id
+			);
+
+			Debug_Logger::error(
+				Debug_Logger::CHANNEL_MCP,
+				sprintf( 'Tool call "%s" failed: %s', $ability->get_name(), $result->get_error_message() ),
+				array(
+					'tool_name'   => $ability->get_name(),
+					'error_code'  => $result->get_error_code(),
+					'error_data'  => $result->get_error_data(),
+					'latency_ms'  => $latency,
+					'input_keys'  => is_array( $input ) ? array_keys( $input ) : gettype( $input ),
+					'json_rpc_id' => $id,
+				)
 			);
 
 			return self::success_response(
@@ -207,6 +238,17 @@ class MCP_Server {
 			null,
 			null,
 			$id
+		);
+
+		Debug_Logger::debug(
+			Debug_Logger::CHANNEL_MCP,
+			sprintf( 'Tool call "%s" succeeded in %dms.', $ability->get_name(), $latency ),
+			array(
+				'tool_name'   => $ability->get_name(),
+				'latency_ms'  => $latency,
+				'input_keys'  => is_array( $input ) ? array_keys( $input ) : gettype( $input ),
+				'json_rpc_id' => $id,
+			)
 		);
 
 		$text = is_string( $result ) ? $result : (string) wp_json_encode( $result );

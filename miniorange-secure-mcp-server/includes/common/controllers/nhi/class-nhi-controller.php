@@ -160,7 +160,9 @@ class NHI_Controller extends Abstract_Admin_Controller {
 			return $id;
 		}
 
-		NHI_Store::delete( $id );
+		if ( ! NHI_Store::delete( $id ) ) {
+			return new WP_Error( 'mosmcp_delete_failed', __( 'Failed to delete NHI.', 'miniorange-secure-mcp-server' ), array( 'status' => 500 ) );
+		}
 
 		return new WP_REST_Response( array( 'deleted' => true ), 200 );
 	}

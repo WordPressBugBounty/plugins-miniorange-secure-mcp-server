@@ -30,6 +30,26 @@ abstract class Abstract_Contact_Controller extends Abstract_Admin_Controller {
 	protected const BCC_EMAIL       = 'info@xecurify.com';
 
 	/**
+	 * The database server version as reported by the server itself, e.g.
+	 * "8.4.10-0ubuntu0.26.04.1" or "10.11.6-MariaDB".
+	 *
+	 * `SELECT VERSION()` is used rather than `$wpdb->db_version()` because the
+	 * latter strips the suffix, which is what distinguishes MariaDB from MySQL —
+	 * and the two differ in index and storage-engine behaviour that schema
+	 * problems depend on.
+	 *
+	 * @return string Version string, or 'unknown' when it cannot be read.
+	 */
+	protected static function db_version() {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$version = $wpdb->get_var( 'SELECT VERSION()' );
+
+		return ( is_string( $version ) && '' !== $version ) ? $version : 'unknown';
+	}
+
+	/**
 	 * Renders the site's current agent/member/RBAC configuration as a
 	 * formatted HTML fragment, for context in support emails. Lists every
 	 * agent (NHI) with its full role => abilities grant matrix, not just counts.

@@ -15,6 +15,8 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 
 use MoSMCP\Common\Migration\Migration;
+use MoSMCP\Common\Repositories\Audit_Store;
+use MoSMCP\Common\Repositories\Debug_Store;
 
 Migration::drop_tables();
 
@@ -22,7 +24,10 @@ delete_option( 'mosmcp_settings' );
 delete_option( 'mosmcp_db_version' );
 delete_option( 'mosmcp_nhi_grants_backfilled' );
 delete_option( 'mosmcp_ability_exclusivity_reconciled' );
-delete_option( 'mosmcp_audit_retention' );
 delete_option( 'mosmcp_migrated_version' );
+delete_option( Audit_Store::OPTION_RETENTION );
+delete_option( Debug_Store::OPTION_ENABLED );
+delete_option( Debug_Store::OPTION_RETENTION );
 
-wp_clear_scheduled_hook( 'mosmcp_audit_cleanup' );
+wp_clear_scheduled_hook( Audit_Store::CRON_HOOK );
+wp_clear_scheduled_hook( Debug_Store::CRON_HOOK );

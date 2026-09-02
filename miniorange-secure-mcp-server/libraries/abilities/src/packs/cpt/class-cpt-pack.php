@@ -247,19 +247,24 @@ class Cpt_Pack extends Ability_Pack {
 						'status'    => Schema::str( __( 'Status for the new item. Publishing requires the type\'s publish capability.', 'mosmcp-abilities' ), array( 'enum' => array( 'draft', 'pending', 'private', 'publish' ), 'default' => 'draft' ) ),
 						'parent_id' => Schema::int( __( 'Parent item, for hierarchical types.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
 						'slug'      => Schema::str( __( 'New URL slug. Omit to leave the address unchanged. Reduced to a URL-safe form, and a suffix is added if it is already taken.', 'mosmcp-abilities' ) ),
+						'meta'      => Schema::map( __( 'Custom fields to set on the new item, as field name => value. Use the exact field names from the describe-type ability. Values are converted to the format each field is stored in, so a date field that holds a Unix timestamp accepts a readable date. A field that cannot be written does not fail the call: it is reported in warnings, and fields_set lists the ones that were stored.', 'mosmcp-abilities' ) ),
 					),
 					array( 'post_type', 'title' )
 				),
 				'output_schema'    => Schema::object(
 					array(
-						'id'        => Schema::int(),
-						'post_type' => Schema::str(),
-						'title'     => Schema::str(),
-						'slug'      => Schema::str( __( 'The URL slug as stored.', 'mosmcp-abilities' ) ),
-						'status'    => Schema::str(),
-						'edit_url'  => Schema::str(),
-						'view_url'  => Schema::str(),
-						'warnings'  => Schema::warnings(),
+						'id'         => Schema::int(),
+						'post_type'  => Schema::str(),
+						'title'      => Schema::str(),
+						'slug'       => Schema::str( __( 'The URL slug as stored.', 'mosmcp-abilities' ) ),
+						'status'     => Schema::str(),
+						'edit_url'   => Schema::str(),
+						'view_url'   => Schema::str(),
+						'fields_set' => Schema::arr(
+							Schema::str(),
+							__( 'The custom fields that were stored. A field passed in meta but missing from this list was refused, and the reason is in warnings.', 'mosmcp-abilities' )
+						),
+						'warnings'   => Schema::warnings(),
 					),
 					array( 'id', 'post_type', 'title', 'status' )
 				),

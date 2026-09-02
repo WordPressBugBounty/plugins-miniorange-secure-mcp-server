@@ -11,6 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use MoSMCP\Common\Controllers\Debug\Debug_Controller;
 use MoSMCP\Common\Utils\Utils;
 
 /**
@@ -218,24 +219,26 @@ class Admin_App {
 		$user = wp_get_current_user();
 
 		return array(
-			'restRoot'      => esc_url_raw( rest_url() ),
-			'restNamespace' => MOSMCP_REST_NAMESPACE,
-			'nonce'         => wp_create_nonce( 'wp_rest' ),
-			'pluginUrl'     => esc_url_raw( plugins_url( '/', MOSMCP_PLUGIN_FILE ) ),
-			'version'       => MOSMCP_VERSION,
-			'mcpEndpoint'   => Utils::resource_url(),
-			'isLocalhost'   => Utils::is_localhost_site(),
-			'migratedVersion' => current_user_can( 'manage_options' ) ? (string) get_option( 'mosmcp_migrated_version', '' ) : '',
-			'user'          => array(
+			'restRoot'               => esc_url_raw( rest_url() ),
+			'restNamespace'          => MOSMCP_REST_NAMESPACE,
+			'nonce'                  => wp_create_nonce( 'wp_rest' ),
+			'pluginUrl'              => esc_url_raw( plugins_url( '/', MOSMCP_PLUGIN_FILE ) ),
+			'version'                => MOSMCP_VERSION,
+			'mcpEndpoint'            => Utils::resource_url(),
+			'isLocalhost'            => Utils::is_localhost_site(),
+			'migratedVersion'        => current_user_can( 'manage_options' ) ? (string) get_option( 'mosmcp_migrated_version', '' ) : '',
+			'adminPostUrl'           => current_user_can( 'manage_options' ) ? esc_url_raw( admin_url( 'admin-post.php' ) ) : '',
+			'downloadDebugLogsNonce' => current_user_can( 'manage_options' ) ? wp_create_nonce( Debug_Controller::DOWNLOAD_NONCE_ACTION ) : '',
+			'user'                   => array(
 				'id'          => (int) $user->ID,
 				'displayName' => $user->display_name,
 				'isAdmin'     => current_user_can( 'manage_options' ),
 				'roles'       => array_values( (array) $user->roles ),
 			),
-			'abilities'     => self::get_abilities_payload(),
+			'abilities'              => self::get_abilities_payload(),
 			// Bundled ability sets whose companion plugin is inactive, for the
 			// in-app discovery callout. Admin-only; empty for members.
-			'dormantPacks'  => current_user_can( 'manage_options' ) ? Dormant_Abilities_Provider::packs() : array(),
+			'dormantPacks'           => current_user_can( 'manage_options' ) ? Dormant_Abilities_Provider::packs() : array(),
 		);
 	}
 
@@ -281,5 +284,4 @@ class Admin_App {
 
 		return $result;
 	}
-
 }

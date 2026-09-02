@@ -62,6 +62,9 @@ Last Name : %s<br><br>
 Site : <a href="%s" target="_blank">%s</a><br><br>
 Phone Number : %s<br><br>
 Email : <a href="mailto:%s" target="_blank">%s</a><br><br>
+WordPress Version : %s<br><br>
+PHP Version : %s<br><br>
+Database Version : %s<br><br>
 Query : %s
 </div>',
 			esc_html( $current_user->first_name ),
@@ -71,6 +74,9 @@ Query : %s
 			esc_html( $phone ),
 			esc_attr( $email ),
 			esc_html( $email ),
+			esc_html( get_bloginfo( 'version' ) ),
+			esc_html( phpversion() ),
+			esc_html( self::db_version() ),
 			nl2br( esc_html( $query ) )
 		);
 

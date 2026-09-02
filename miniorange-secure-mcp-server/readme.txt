@@ -2,9 +2,9 @@
 Contributors: cyberlord92
 Tags: mcp, ai, mcp-server, chatgpt, claude
 Requires at least: 6.9
-Tested up to: 7.0
+Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.4.8
+Stable tag: 1.4.9
 License: Expat
 License URI: https://plugins.miniorange.com/mit-license
 
@@ -324,6 +324,10 @@ The Abilities API does not record which plugin registered a given ability. The n
 
 == Changelog ==
 
+= 1.4.9 =
+* Debug logging framework: a built-in diagnostic log for MCP and OAuth activity.
+* Minor Bug fixes.
+
 = 1.4.8 =
 * Minor bug fixes
 
@@ -420,6 +424,12 @@ The Abilities API does not record which plugin registered a given ability. The n
 * Initial release: read-only viewer for abilities registered through the WordPress Abilities API.
 
 == Upgrade Notice ==
+
+= 1.4.9 =
+Adds a built-in debug logging framework, and minor bug fixes.
+
+= 1.4.8 =
+Minor bug fixes. No database changes and no manual upgrade steps required.
 
 = 1.4.7 =
 Adds Elementor support, custom post type support for any registered type, media uploads, and the remaining Yoast SEO fields. Newly added abilities start switched off — enable the ones you want under AI Agents. No database changes and no manual upgrade steps required.

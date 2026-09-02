@@ -12,6 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use MoSMCP\Common\Repositories\Audit_Store;
+use MoSMCP\Common\Repositories\Debug_Store;
 use MoSMCP\Common\Repositories\NHI_Store;
 use MoSMCP\Common\Repositories\Store;
 use MoSMCP\Common\Services\OAuth\Tokens;
@@ -47,6 +48,17 @@ class Migration {
 		$nhis            = NHI_Store::table();
 		$grants          = NHI_Store::grants_table();
 		$audit           = Audit_Store::table();
+		$debug           = Debug_Store::table();
+
+		// Pin the engine so the schema never inherits the server default. The grants table's
+		// four-column unique key is ~1669 bytes under utf8mb4, and MyISAM caps a composite key
+		// at 1000 bytes *in total* — it rejects the CREATE TABLE outright, which dbDelta then
+		// reports as nothing at all, leaving the table silently absent. InnoDB's 767/3072 limit
+		// applies per column, and every column here clears it (varchar(191) utf8mb4 = 764 bytes,
+		// which is why WordPress standardised on 191), so InnoDB accepts this key in any row
+		// format. ROW_FORMAT=DYNAMIC is pinned for consistency, not to make the key fit.
+		// Table options apply at creation only, so existing installs need no migration.
+		$table_opts = "ENGINE=InnoDB {$charset_collate} ROW_FORMAT=DYNAMIC";
 
 		$sql = array();
 
@@ -61,7 +73,7 @@ class Migration {
 			is_enabled tinyint(1) NOT NULL DEFAULT 1,
 			allowed_abilities longtext DEFAULT NULL,
 			PRIMARY KEY  (client_id)
-		) {$charset_collate};";
+		) {$table_opts};";
 
 		$sql[] = "CREATE TABLE {$codes} (
 			code_hash varchar(64) NOT NULL,
@@ -74,7 +86,7 @@ class Migration {
 			expires bigint(20) unsigned NOT NULL DEFAULT 0,
 			used tinyint(1) NOT NULL DEFAULT 0,
 			PRIMARY KEY  (code_hash)
-		) {$charset_collate};";
+		) {$table_opts};";
 
 		$sql[] = "CREATE TABLE {$tokens} (
 			token_hash varchar(64) NOT NULL,
@@ -88,7 +100,7 @@ class Migration {
 			PRIMARY KEY  (token_hash),
 			KEY type (type),
 			KEY expires (expires)
-		) {$charset_collate};";
+		) {$table_opts};";
 
 		// NHIs (role-scoped ability policies). Per-role grants live in the grants table;
 		// allowed_abilities is a legacy column kept unused so the RBAC upgrade stays
@@ -102,7 +114,7 @@ class Migration {
 			created bigint(20) unsigned NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			UNIQUE KEY uuid (uuid)
-		) {$charset_collate};";
+		) {$table_opts};";
 
 		// Normalized grants: one row per (nhi_id, role, resource_type, resource).
 		// `resource` holds the identifier for its resource_type ('ability' today,
@@ -121,7 +133,7 @@ class Migration {
 			KEY resource (resource),
 			KEY nhi_id (nhi_id),
 			KEY type_role (resource_type,role)
-		) {$charset_collate};";
+		) {$table_opts};";
 
 		// MCP tool-call audit log: one row per tools/call invocation.
 		// nhi_id/nhi_uuid/nhi_name are snapshotted so the log stays readable after NHI deletion.
@@ -154,7 +166,31 @@ class Migration {
 			KEY status (status),
 			KEY user_created (user_id,created),
 			KEY nhi_created (nhi_id,created)
-		) {$charset_collate};";
+		) {$table_opts};";
+
+		// Internal debug log: developer-facing diagnostic events, independent of
+		// WP_DEBUG. client_id/client_name/user_login are snapshotted (like the
+		// audit log) so entries stay readable after the client or user is deleted.
+		$sql[] = "CREATE TABLE {$debug} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			created bigint(20) unsigned NOT NULL DEFAULT 0,
+			level varchar(10) NOT NULL DEFAULT 'info',
+			channel varchar(50) NOT NULL DEFAULT 'general',
+			message longtext NOT NULL,
+			context longtext NOT NULL,
+			request_id varchar(36) NOT NULL DEFAULT '',
+			user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			user_login varchar(191) NOT NULL DEFAULT '',
+			client_id varchar(64) NOT NULL DEFAULT '',
+			client_name varchar(255) NOT NULL DEFAULT '',
+			ip_address varchar(45) DEFAULT NULL,
+			PRIMARY KEY  (id),
+			KEY created (created),
+			KEY level (level),
+			KEY channel (channel),
+			KEY request_id (request_id),
+			KEY client_id (client_id)
+		) {$table_opts};";
 
 		foreach ( $sql as $statement ) {
 			dbDelta( $statement );
@@ -384,7 +420,7 @@ class Migration {
 	public static function drop_tables() {
 		global $wpdb;
 
-		$tables = array( Store::table( 'clients' ), Store::table( 'codes' ), Store::table( 'tokens' ), NHI_Store::grants_table(), NHI_Store::table(), Audit_Store::table() );
+		$tables = array( Store::table( 'clients' ), Store::table( 'codes' ), Store::table( 'tokens' ), NHI_Store::grants_table(), NHI_Store::table(), Audit_Store::table(), Debug_Store::table() );
 
 		foreach ( $tables as $table ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange

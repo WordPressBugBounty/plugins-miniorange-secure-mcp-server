@@ -18,6 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use MoSMCP\Common\Repositories\NHI_Store;
 use MoSMCP\Common\Repositories\Store;
+use MoSMCP\Common\Services\Logging\Debug_Logger;
 use MoSMCP\Common\Utils\Utils;
 use MoSMCP\Common\Views\OAuth\Consent_View;
 use WP_Error;
@@ -464,11 +465,13 @@ class OAuth_Server {
 	 */
 	private static function authenticate_client( WP_REST_Request $request, $client_id ) {
 		if ( '' === $client_id ) {
+			Debug_Logger::warning( Debug_Logger::CHANNEL_OAUTH, 'Token request rejected: missing client_id.' );
 			return new WP_Error( 'invalid_client', __( 'Missing client_id.', 'miniorange-secure-mcp-server' ) );
 		}
 
 		$client = Store::get_client( $client_id );
 		if ( ! $client ) {
+			Debug_Logger::warning( Debug_Logger::CHANNEL_OAUTH, 'Token request rejected: unknown client.', array( 'client_id' => $client_id ) );
 			return new WP_Error( 'invalid_client', __( 'Unknown client.', 'miniorange-secure-mcp-server' ) );
 		}
 
@@ -490,6 +493,14 @@ class OAuth_Server {
 		}
 
 		if ( '' === $secret || ! hash_equals( (string) $client['client_secret_hash'], Tokens::hash( $secret ) ) ) {
+			Debug_Logger::warning(
+				Debug_Logger::CHANNEL_OAUTH,
+				'Token request rejected: client secret authentication failed.',
+				array(
+					'client_id'   => $client_id,
+					'client_name' => isset( $client['client_name'] ) ? (string) $client['client_name'] : '',
+				)
+			);
 			return new WP_Error( 'invalid_client', __( 'Client authentication failed.', 'miniorange-secure-mcp-server' ) );
 		}
 

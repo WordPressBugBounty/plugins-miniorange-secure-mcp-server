@@ -419,6 +419,20 @@ class Cpt_Support {
 			$fields[] = $acf;
 		}
 
+		/*
+		 * JetEngine last, and only for keys nothing has described yet. A site can
+		 * both declare a key and build it in JetEngine, and the declared description
+		 * is the one WordPress actually enforces.
+		 */
+		$described = wp_list_pluck( $fields, 'key' );
+
+		foreach ( self::jetengine_fields_for( $post_type ) as $jet ) {
+			if ( in_array( $jet['key'], $described, true ) ) {
+				continue;
+			}
+			$fields[] = $jet;
+		}
+
 		usort(
 			$fields,
 			static function ( $a, $b ) {
@@ -540,6 +554,260 @@ class Cpt_Support {
 	}
 
 	/**
+	 * Get JetEngine meta fields registered for a post type.
+	 *
+	 * JetEngine stores its own fields outside of register_post_meta() and ACF,
+	 * so this reaches into JetEngine's internal meta_boxes object to list them.
+	 * Results are memoised per request. Returns an empty array if JetEngine
+	 * isn't active or its internals don't match what we expect.
+	 *
+	 * @param string $post_type Post type slug.
+	 * @return array<int, array<string, mixed>> List of field definitions, or empty array.
+	 */
+	public static function jetengine_fields_for( $post_type ) {
+		// Memoised for the request, as acf_fields_for() is and for the same reason:
+		// reading one item asks this question once per field.
+		static $memo = array();
+
+		$post_type = (string) $post_type;
+
+		if ( isset( $memo[ $post_type ] ) ) {
+			return $memo[ $post_type ];
+		}
+
+		$memo[ $post_type ] = array();
+
+		if ( ! function_exists( 'jet_engine' ) ) {
+			return $memo[ $post_type ];
+		}
+
+		try {
+			$engine = jet_engine();
+
+			if ( ! is_object( $engine ) || ! isset( $engine->meta_boxes ) || ! is_object( $engine->meta_boxes ) ) {
+				return $memo[ $post_type ];
+			}
+
+			$boxes  = $engine->meta_boxes;
+			$object = 'post_type::' . $post_type;
+			$raw    = array();
+
+			foreach ( array( 'get_meta_fields_for_object', 'get_fields_for_object' ) as $method ) {
+				if ( ! method_exists( $boxes, $method ) ) {
+					continue;
+				}
+				$result = $boxes->$method( $object );
+				if ( is_array( $result ) && $result ) {
+					$raw = $result;
+					break;
+				}
+			}
+
+			if ( ! $raw && method_exists( $boxes, 'get_registered_fields' ) ) {
+				$all = $boxes->get_registered_fields();
+				if ( is_array( $all ) ) {
+					foreach ( array( $object, $post_type ) as $lookup ) {
+						if ( ! empty( $all[ $lookup ] ) && is_array( $all[ $lookup ] ) ) {
+							$raw = $all[ $lookup ];
+							break;
+						}
+					}
+				}
+			}
+
+			$memo[ $post_type ] = self::normalise_jetengine_fields( $raw );
+		} catch ( \Throwable $e ) {
+			$memo[ $post_type ] = array();
+		}
+
+		return $memo[ $post_type ];
+	}
+
+	/**
+	 * Turns JetEngine's field descriptors into this pack's field shape.
+	 *
+	 * Written to tolerate a descriptor that is missing anything but its name, since
+	 * the source is another plugin's internal structure.
+	 *
+	 * @param mixed $raw Whatever JetEngine returned.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private static function normalise_jetengine_fields( $raw ) {
+		$out = array();
+
+		if ( ! is_array( $raw ) ) {
+			return $out;
+		}
+
+		foreach ( $raw as $field ) {
+			if ( ! is_array( $field ) || empty( $field['name'] ) ) {
+				continue;
+			}
+
+			$key = (string) $field['name'];
+			if ( self::is_internal_meta( $key ) ) {
+				continue;
+			}
+
+			$out[] = array(
+				'key'         => $key,
+				'type'        => self::jetengine_storage_type( $field ),
+				/*
+				 * False even for a repeater. "Repeatable" here means several postmeta
+				 * rows under one key, which is what the write path acts on; JetEngine
+				 * keeps a repeater as one serialised array in a single row, so saying
+				 * true would make the write path delete and re-add rows and destroy
+				 * the value.
+				 */
+				'repeatable'  => false,
+				'registered'  => false,
+				'protected'   => false,
+				'description' => isset( $field['title'] ) ? (string) $field['title'] : '',
+				'managed_by'  => 'jetengine',
+			);
+		}
+
+		return $out;
+	}
+
+	/**
+	 * The storage format JetEngine uses for one of its fields.
+	 *
+	 * @param array<string, mixed> $field JetEngine field descriptor.
+	 * @return string One of this pack's coercion types.
+	 */
+	private static function jetengine_storage_type( array $field ) {
+		$type = isset( $field['type'] ) ? (string) $field['type'] : 'text';
+
+		// A JetEngine date or datetime field stores a Unix timestamp only when its
+		// "Save as timestamp" box is ticked; otherwise it keeps a formatted string.
+		$timestamp = ! empty( $field['is_timestamp'] );
+
+		switch ( $type ) {
+			case 'date':
+				return $timestamp ? 'timestamp' : 'date';
+
+			case 'datetime':
+			case 'datetime-local':
+				return $timestamp ? 'timestamp' : 'datetime';
+
+			case 'time':
+				return 'time';
+
+			case 'switcher':
+				return 'boolean';
+
+			case 'number':
+				return 'number';
+
+			case 'checkbox':
+			case 'repeater':
+				return 'array';
+
+			default:
+				return 'string';
+		}
+	}
+
+	/**
+	 * One JetEngine field on a type, by key.
+	 *
+	 * @param string $post_type Post type slug.
+	 * @param string $key       Meta key.
+	 * @return array<string, mixed>|null
+	 */
+	public static function jetengine_field( $post_type, $key ) {
+		foreach ( self::jetengine_fields_for( $post_type ) as $field ) {
+			if ( $field['key'] === (string) $key ) {
+				return $field;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Whether anything on this site claims a custom field.
+	 *
+	 * Consulted only for types that provide no custom-fields editor of their own, to
+	 * separate "a plugin owns this field and renders it in its own screens" from
+	 * "this key exists nowhere and nothing would ever read it".
+	 *
+	 * @param WP_Post $post Target post.
+	 * @param string  $key  Meta key.
+	 * @return bool
+	 */
+	public static function field_has_owner( WP_Post $post, $key ) {
+		$post_type = (string) $post->post_type;
+		$key       = (string) $key;
+
+		if ( self::registration_for( $post_type, $key ) ) {
+			return true;
+		}
+
+		foreach ( self::acf_fields_for( $post_type ) as $field ) {
+			if ( $field['key'] === $key ) {
+				return true;
+			}
+		}
+
+		if ( self::jetengine_field( $post_type, $key ) ) {
+			return true;
+		}
+
+		// Already stored on this item: something wrote it, so something reads it.
+		// This is also the cheap answer for every field arriving from a read, which
+		// is the path that asks this question most often.
+		if ( metadata_exists( 'post', (int) $post->ID, $key ) ) {
+			return true;
+		}
+
+		return self::type_stores_field( $post_type, $key );
+	}
+
+	/**
+	 * Whether any item of a type already stores a meta key.
+	 *
+	 * The last resort behind field_has_owner(). A field plugin this pack cannot
+	 * introspect still leaves its values in postmeta, so a key the type's existing
+	 * items carry is plainly a real field of that type — that is how a field can be
+	 * set on a newly created item before anything has been written to it. One
+	 * bounded query per key per request.
+	 *
+	 * @param string $post_type Post type slug.
+	 * @param string $key       Meta key.
+	 * @return bool
+	 */
+	private static function type_stores_field( $post_type, $key ) {
+		static $memo = array();
+
+		$cache_key = $post_type . '|' . $key;
+
+		if ( isset( $memo[ $cache_key ] ) ) {
+			return $memo[ $cache_key ];
+		}
+
+		$found = get_posts(
+			array(
+				'post_type'              => $post_type,
+				'post_status'            => 'any',
+				'posts_per_page'         => 1,
+				'fields'                 => 'ids',
+				'no_found_rows'          => true,
+				'ignore_sticky_posts'    => true,
+				'update_post_term_cache' => false,
+				'update_post_meta_cache' => false,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_key'               => $key,
+				'meta_compare'           => 'EXISTS',
+			)
+		);
+
+		$memo[ $cache_key ] = ! empty( $found );
+
+		return $memo[ $cache_key ];
+	}
+
+	/**
 	 * Decides whether a custom field may be written, and how.
 	 *
 	 * WordPress already has a policy here, expressed through the `edit_post_meta`
@@ -561,12 +829,25 @@ class Cpt_Support {
 			);
 		}
 
-		if ( ! post_type_supports( $post->post_type, 'custom-fields' ) ) {
+		/*
+		 * 'custom-fields' support only controls whether core shows its own Custom
+         * Fields metabox — it's not a storage or permission rule, and neither
+         * update_post_meta() nor field plugins (JetEngine, Pods, Meta Box, CMB2,
+         * Toolset) consult it, since they render their own meta boxes. Refusing
+         * writes just because it's off used to lock those plugins' fields
+         * permanently.
+         *
+         * So we only refuse when no core editor AND nothing else owns the field
+         * (no plugin, no prior stored value) — a write would go somewhere unreadable.
+         * Everything else falls through to the edit_post_meta check below.
+		 */
+		if ( ! post_type_supports( $post->post_type, 'custom-fields' ) && ! self::field_has_owner( $post, $key ) ) {
 			return new WP_Error(
 				'custom_fields_not_supported',
 				sprintf(
-					/* translators: %s: post type slug */
-					__( 'The "%s" type does not support custom fields, so a value written to one would never be shown or used.', 'mosmcp-abilities' ),
+					/* translators: 1: meta key, 2: post type slug */
+					__( 'Nothing manages the field "%1$s" on the "%2$s" type: no plugin or theme declares it, no field plugin owns it, no item of this type has ever stored it, and the type has no custom-fields editor of its own. A value written there could never be read back or displayed. Check the name against the describe-type ability, or have the plugin that owns the field declare it.', 'mosmcp-abilities' ),
+					$key,
 					(string) $post->post_type
 				)
 			);
@@ -626,11 +907,28 @@ class Cpt_Support {
 			);
 		}
 
+		/*
+		 * A declared type wins, because it is the one WordPress will validate
+		 * against. Failing that, a field plugin's own definition is far better than
+		 * assuming text: writing "2026-08-20" into a JetEngine date field that holds
+		 * a Unix timestamp stores something its templates cannot read.
+		 */
+		$jet = $registered ? null : self::jetengine_field( (string) $post->post_type, $key );
+
+		if ( $registered && isset( $registered['type'] ) ) {
+			$type = (string) $registered['type'];
+		} elseif ( $jet ) {
+			$type = (string) $jet['type'];
+		} else {
+			$type = 'string';
+		}
+
 		return array(
 			'key'        => $key,
 			'registered' => (bool) $registered,
-			'type'       => $registered && isset( $registered['type'] ) ? (string) $registered['type'] : 'string',
+			'type'       => $type,
 			'repeatable' => $registered ? empty( $registered['single'] ) : false,
+			'managed_by' => $registered ? 'registered' : ( $jet ? 'jetengine' : 'unregistered' ),
 		);
 	}
 
@@ -681,6 +979,57 @@ class Cpt_Support {
 			case 'boolean':
 				return (bool) filter_var( $value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
 
+			/*
+			 * These date types cover plugin-defined fields (JetEngine's, today), so a
+             * human-readable value like "20 Aug 2026 at 7pm" gets converted to whatever
+             * format the field actually stores (e.g. a Unix timestamp).
+             *
+             * strtotime()/gmdate() are paired deliberately: WordPress fixes PHP's
+             * timezone to UTC, so parsing and formatting round-trip without drift.
+			 */
+			case 'timestamp':
+				if ( is_numeric( $value ) ) {
+					return (string) (int) $value;
+				}
+
+				$parsed = strtotime( (string) $value );
+				if ( false === $parsed ) {
+					return new WP_Error(
+						'field_type_mismatch',
+						__( 'This field stores a date as a Unix timestamp. Send a timestamp, or a date this site can read such as "2026-08-20 19:00".', 'mosmcp-abilities' )
+					);
+				}
+				return (string) $parsed;
+
+			case 'date':
+			case 'datetime':
+				$parsed = is_numeric( $value ) ? (int) $value : strtotime( (string) $value );
+				if ( false === $parsed ) {
+					return new WP_Error(
+						'field_type_mismatch',
+						__( 'This field stores a date. Send one this site can read, such as "2026-08-20 19:00".', 'mosmcp-abilities' )
+					);
+				}
+				return gmdate( 'datetime' === $type ? 'Y-m-d H:i' : 'Y-m-d', $parsed );
+
+			case 'time':
+				$raw = trim( (string) $value );
+
+				// Already a clock time. Matched first so "19:00" is never sent
+				// through strtotime(), which would read it as a moment today.
+				if ( preg_match( '/^([01]?[0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/', $raw, $parts ) ) {
+					return sprintf( '%02d:%02d', (int) $parts[1], (int) $parts[2] );
+				}
+
+				$parsed = is_numeric( $raw ) ? (int) $raw : strtotime( $raw );
+				if ( false === $parsed ) {
+					return new WP_Error(
+						'field_type_mismatch',
+						__( 'This field stores a time of day. Send it as "19:00".', 'mosmcp-abilities' )
+					);
+				}
+				return gmdate( 'H:i', $parsed );
+
 			case 'array':
 			case 'object':
 				if ( is_string( $value ) ) {
@@ -729,6 +1078,12 @@ class Cpt_Support {
 		}
 		if ( self::acf_fields_for( $slug ) ) {
 			$notes[] = __( 'Some of this type\'s fields are managed by Advanced Custom Fields and must be changed with the ACF abilities rather than the generic field abilities.', 'mosmcp-abilities' );
+		}
+		if ( self::jetengine_fields_for( $slug ) ) {
+			$notes[] = __( 'Some of this type\'s fields are defined in JetEngine. The generic field abilities read and write them, and a value is converted to the format JetEngine stores for that field — a date field set up to hold a Unix timestamp receives one.', 'mosmcp-abilities' );
+		}
+		if ( ! post_type_supports( $slug, 'custom-fields' ) ) {
+			$notes[] = __( 'This type has no custom-fields editor of its own, which is normal for a type built by a field plugin. Its fields can still be read and written; a field nothing manages and nothing has ever stored is refused, because a value there could never be read back.', 'mosmcp-abilities' );
 		}
 
 		return $notes;

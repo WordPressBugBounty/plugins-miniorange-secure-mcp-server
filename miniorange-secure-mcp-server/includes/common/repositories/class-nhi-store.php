@@ -11,6 +11,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use MoSMCP\Common\Services\Logging\Debug_Logger;
+
 /**
  * NHIs + their normalized role→ability grants (wp_mosmcp_nhis, wp_mosmcp_nhi_grants).
  *
@@ -118,13 +120,38 @@ class NHI_Store {
 		);
 
 		if ( ! $ok ) {
+			Debug_Logger::error(
+				Debug_Logger::CHANNEL_NHI,
+				'Failed to insert NHI row.',
+				array(
+					'table' => self::table(),
+					'error' => $wpdb->last_error,
+				)
+			);
+
 			return false;
 		}
 
 		$id = (int) $wpdb->insert_id;
 
 		if ( isset( $data['role_ability_map'] ) && is_array( $data['role_ability_map'] ) ) {
-			self::replace_grants( $id, $data['role_ability_map'] );
+			if ( ! self::replace_grants( $id, $data['role_ability_map'] ) ) {
+				// The grants are the point of an NHI. Keeping a row whose abilities failed to
+				// write would report success and grant nothing, so roll it back and let the
+				// caller surface the failure and retry.
+				self::delete( $id );
+
+				Debug_Logger::error(
+					Debug_Logger::CHANNEL_NHI,
+					'Rolled back new NHI because its grants could not be written.',
+					array(
+						'nhi_id' => $id,
+						'uuid'   => $uuid,
+					)
+				);
+
+				return false;
+			}
 		}
 
 		return array(
@@ -157,10 +184,23 @@ class NHI_Store {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$result = $wpdb->update( self::table(), $columns, array( 'id' => $id ) );
 			$ok     = false !== $result;
+
+			if ( ! $ok ) {
+				Debug_Logger::error(
+					Debug_Logger::CHANNEL_NHI,
+					'Failed to update NHI columns.',
+					array(
+						'nhi_id'  => (int) $id,
+						'columns' => array_keys( $columns ),
+						'error'   => $wpdb->last_error,
+					)
+				);
+			}
 		}
 
 		if ( array_key_exists( 'role_ability_map', $data ) && is_array( $data['role_ability_map'] ) ) {
-			self::replace_grants( (int) $id, $data['role_ability_map'] );
+			// Evaluated first so the grants are always written, whatever the column update did.
+			$ok = self::replace_grants( (int) $id, $data['role_ability_map'] ) && $ok;
 		}
 
 		return $ok;
@@ -170,15 +210,34 @@ class NHI_Store {
 	 * Deletes an NHI and all of its grants.
 	 *
 	 * @param int $id The NHI id.
-	 * @return void
+	 * @return bool True when both deletes succeeded.
 	 */
 	public static function delete( $id ) {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->delete( self::grants_table(), array( 'nhi_id' => $id ) );
+		$grants_deleted = $wpdb->delete( self::grants_table(), array( 'nhi_id' => $id ) );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->delete( self::table(), array( 'id' => $id ) );
+		$nhi_deleted = $wpdb->delete( self::table(), array( 'id' => $id ) );
+
+		// Zero rows affected is a legitimate outcome — an NHI with no grants deletes cleanly.
+		// Only an explicit false means the query itself failed.
+		$ok = false !== $grants_deleted && false !== $nhi_deleted;
+
+		if ( ! $ok ) {
+			Debug_Logger::error(
+				Debug_Logger::CHANNEL_NHI,
+				'Failed to delete NHI.',
+				array(
+					'nhi_id'         => (int) $id,
+					'grants_deleted' => false !== $grants_deleted,
+					'nhi_deleted'    => false !== $nhi_deleted,
+					'error'          => $wpdb->last_error,
+				)
+			);
+		}
+
+		return $ok;
 	}
 
 	/**
@@ -592,18 +651,18 @@ class NHI_Store {
 	 * @param string $role          Role slug, or '*'.
 	 * @param string $ability       Ability name (resource identifier), or '*'.
 	 * @param string $resource_type Grant type (default 'ability').
-	 * @return void
+	 * @return bool True when the row was written or already present.
 	 */
 	public static function add_grant( $nhi_id, $role, $ability, $resource_type = 'ability' ) {
 		global $wpdb;
 
 		$ability = (string) $ability;
 		if ( '' === $ability ) {
-			return;
+			return true;
 		}
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->query(
+		$result = $wpdb->query(
 			$wpdb->prepare(
 				'INSERT IGNORE INTO %i (nhi_id, role, resource_type, resource, created) VALUES (%d, %s, %s, %s, %d)',
 				self::grants_table(),
@@ -614,6 +673,10 @@ class NHI_Store {
 				time()
 			)
 		);
+
+		// INSERT IGNORE reports 0 affected rows when the grant already exists, which is the
+		// intended no-op. Only an explicit false means the query failed.
+		return false !== $result;
 	}
 
 	/**
@@ -638,22 +701,75 @@ class NHI_Store {
 	 *
 	 * @param int                     $nhi_id The NHI id.
 	 * @param array<string, string[]> $map    Role slug => list of ability names.
-	 * @return void
+	 * @return bool True when the old grants were cleared and every new grant written.
 	 */
 	private static function replace_grants( $nhi_id, array $map ) {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->delete( self::grants_table(), array( 'nhi_id' => (int) $nhi_id ) );
+		$cleared = $wpdb->delete( self::grants_table(), array( 'nhi_id' => (int) $nhi_id ) );
 
+		// Zero rows deleted is normal for an NHI that had no grants yet; only false is a
+		// failure. Bail early — writing new grants on top of a failed clear would leave a
+		// mix of old and new.
+		if ( false === $cleared ) {
+			Debug_Logger::error(
+				Debug_Logger::CHANNEL_NHI,
+				'Failed to clear existing grants; ability policy not written.',
+				array(
+					'nhi_id' => (int) $nhi_id,
+					'table'  => self::grants_table(),
+					'error'  => $wpdb->last_error,
+				)
+			);
+
+			return false;
+		}
+
+		$attempted = 0;
+		$failed    = 0;
 		foreach ( $map as $role => $abilities ) {
 			if ( ! is_array( $abilities ) ) {
 				continue;
 			}
 			foreach ( $abilities as $ability ) {
-				self::add_grant( (int) $nhi_id, (string) $role, (string) $ability );
+				++$attempted;
+				// Written first so one failure does not abandon the remaining grants.
+				if ( ! self::add_grant( (int) $nhi_id, (string) $role, (string) $ability ) ) {
+					++$failed;
+				}
 			}
 		}
+
+		// Summarised rather than logged per ability — a policy can carry hundreds of grants
+		// and a missing table fails every one of them.
+		if ( $failed > 0 ) {
+			Debug_Logger::error(
+				Debug_Logger::CHANNEL_NHI,
+				'One or more ability grants could not be written.',
+				array(
+					'nhi_id'    => (int) $nhi_id,
+					'attempted' => $attempted,
+					'failed'    => $failed,
+					'table'     => self::grants_table(),
+					'error'     => $wpdb->last_error,
+				)
+			);
+
+			return false;
+		}
+
+		Debug_Logger::debug(
+			Debug_Logger::CHANNEL_NHI,
+			'Ability policy written.',
+			array(
+				'nhi_id' => (int) $nhi_id,
+				'grants' => $attempted,
+				'roles'  => array_keys( $map ),
+			)
+		);
+
+		return true;
 	}
 
 	/**

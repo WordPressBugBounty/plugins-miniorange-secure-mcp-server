@@ -339,15 +339,71 @@ class Cpt_Provider {
 			);
 		}
 
+		/*
+		 * Custom fields, in the same call that creates the item.
+		 *
+		 * A custom type's real information lives in its fields, so creating one
+		 * without them produces an item that looks finished and is empty. Left to a
+		 * follow-up call this was worse than inconvenient: a caller that had no way
+		 * to send the fields would report the item as created with its date and
+		 * description set, having written neither.
+		 *
+		 * A field that cannot be written does not fail the call — the item exists by
+		 * now, and destroying it to report a rejected field would lose the rest of
+		 * the work. Each one is named in the warnings instead, and fields_set says
+		 * exactly which were stored, so a caller can tell a complete item from a
+		 * partial one without guessing.
+		 */
+		$fields_set = array();
+		$meta       = isset( $input['meta'] ) && is_array( $input['meta'] ) ? $input['meta'] : array();
+
+		if ( $meta ) {
+			$created = get_post( (int) $id );
+
+			foreach ( $meta as $key => $value ) {
+				$key   = (string) $key;
+				$check = $created instanceof WP_Post
+					? Cpt_Support::check_meta_writable( $created, $key )
+					: new WP_Error( 'item_missing', __( 'The new item could not be read back.', 'mosmcp-abilities' ) );
+
+				if ( ! $check instanceof WP_Error ) {
+					$value = Cpt_Support::coerce( $value, $check['type'] );
+				}
+
+				$failure = $check instanceof WP_Error ? $check : ( $value instanceof WP_Error ? $value : null );
+
+				if ( $failure instanceof WP_Error ) {
+					$warnings[] = array(
+						'code'    => 'field_not_set',
+						'message' => sprintf(
+							/* translators: 1: field name, 2: reason the field was refused */
+							__( 'The field "%1$s" was not set: %2$s', 'mosmcp-abilities' ),
+							$key,
+							$failure->get_error_message()
+						),
+						'context' => 'field=' . $key . ' reason=' . $failure->get_error_code(),
+					);
+					continue;
+				}
+
+				// wp_slash() for the same reason the set-field ability slashes: the
+				// metadata API unslashes on the way in, and an API value is not
+				// slashed to begin with.
+				update_post_meta( (int) $id, $key, wp_slash( $value ) );
+				$fields_set[] = $key;
+			}
+		}
+
 		return array(
-			'id'        => (int) $id,
-			'post_type' => (string) $type->name,
-			'title'     => (string) get_the_title( $id ),
-			'slug'      => $stored,
-			'status'    => (string) get_post_status( $id ),
-			'edit_url'  => (string) get_edit_post_link( $id, 'raw' ),
-			'view_url'  => (string) get_permalink( $id ),
-			'warnings'  => $warnings,
+			'id'         => (int) $id,
+			'post_type'  => (string) $type->name,
+			'title'      => (string) get_the_title( $id ),
+			'slug'       => $stored,
+			'status'     => (string) get_post_status( $id ),
+			'edit_url'   => (string) get_edit_post_link( $id, 'raw' ),
+			'view_url'   => (string) get_permalink( $id ),
+			'fields_set' => $fields_set,
+			'warnings'   => $warnings,
 		);
 	}
 
@@ -456,7 +512,17 @@ class Cpt_Provider {
 		$stored = get_post_meta( (int) $post->ID, $field, ! $check['repeatable'] );
 
 		$warnings = array();
-		if ( ! $check['registered'] ) {
+		$managed  = isset( $check['managed_by'] ) ? (string) $check['managed_by'] : 'unregistered';
+
+		if ( 'jetengine' === $managed ) {
+			// Saying "nothing declares this field" would be misleading here: JetEngine
+			// defines it and displays it, it just never tells WordPress about it.
+			$warnings[] = array(
+				'code'    => 'field_defined_by_jetengine',
+				'message' => __( 'JetEngine defines this field, so the value was converted to the format JetEngine stores it in. JetEngine does not declare its fields to WordPress, so nothing validates the value beyond that conversion.', 'mosmcp-abilities' ),
+				'context' => 'field=' . $field . ' stored_as=' . (string) $check['type'],
+			);
+		} elseif ( ! $check['registered'] ) {
 			$warnings[] = array(
 				'code'    => 'field_not_declared',
 				'message' => __( 'No plugin or theme declares this field, so nothing validates its value or displays it automatically. It was written as given.', 'mosmcp-abilities' ),
@@ -1101,6 +1167,7 @@ class Cpt_Provider {
 
 			$acf_key    = Cpt_Support::acf_field_key( (int) $post->ID, $key );
 			$registered = Cpt_Support::registration_for( (string) $post->post_type, $key );
+			$jet        = Cpt_Support::jetengine_field( (string) $post->post_type, $key );
 
 			$values = array_map( 'maybe_unserialize', array_values( (array) $rows ) );
 
@@ -1119,7 +1186,7 @@ class Cpt_Provider {
 				'value'               => self::render_value( count( $values ) > 1 ? $values : reset( $values ) ),
 				'repeatable'          => count( $values ) > 1,
 				'registered'          => (bool) $registered,
-				'managed_by'          => '' !== $acf_key ? 'acf' : ( $registered ? 'registered' : 'unregistered' ),
+				'managed_by'          => '' !== $acf_key ? 'acf' : ( $registered ? 'registered' : ( $jet ? 'jetengine' : 'unregistered' ) ),
 				'writable'            => ! ( $gate instanceof WP_Error ),
 				'not_writable_reason' => $gate instanceof WP_Error ? (string) $gate->get_error_code() : '',
 			);

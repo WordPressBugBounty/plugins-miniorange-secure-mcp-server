@@ -13,7 +13,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use MoSMCP\Abilities\Abilities_Library;
 use MoSMCP\Common\Apis\Rest_Routes;
+use MoSMCP\Common\Controllers\Debug\Debug_Controller;
 use MoSMCP\Common\Migration\Migration;
+use MoSMCP\Common\Repositories\Audit_Store;
+use MoSMCP\Common\Repositories\Debug_Store;
 use MoSMCP\Common\Services\Discovery\Discovery;
 use MoSMCP\Common\Services\OAuth\OAuth_Server;
 use MoSMCP\Common\Utils\Utils;
@@ -41,13 +44,20 @@ class Hooks {
 		// admin_init — migrates before the role-scoped resolver reads the grants table.
 		register_activation_hook( MOSMCP_PLUGIN_FILE, array( Migration::class, 'install' ) );
 		register_activation_hook( MOSMCP_PLUGIN_FILE, array( __CLASS__, 'on_activate' ) );
-		register_deactivation_hook( MOSMCP_PLUGIN_FILE, array( __CLASS__, 'unschedule_audit_cleanup' ) );
+		register_deactivation_hook( MOSMCP_PLUGIN_FILE, array( __CLASS__, 'unschedule_cron_jobs' ) );
 		add_action( 'plugins_loaded', array( Migration::class, 'maybe_upgrade' ) );
-		add_action( 'plugins_loaded', array( __CLASS__, 'unschedule_audit_cleanup' ) );
 		add_action( 'admin_init', array( Migration::class, 'maybe_upgrade' ) );
+
+		// Daily retention cleanup for the audit and debug logs.
+		add_action( Audit_Store::CRON_HOOK, array( Audit_Store::class, 'purge' ) );
+		add_action( Debug_Store::CRON_HOOK, array( Debug_Store::class, 'purge' ) );
 
 		// REST routes (MCP transport + OAuth server).
 		add_action( 'rest_api_init', array( Rest_Routes::class, 'register' ) );
+
+		// Log export for the debug log — a raw file download, so it runs through
+		// admin-post.php rather than the REST API (see Debug_Controller).
+		add_action( 'admin_post_' . Debug_Controller::DOWNLOAD_ACTION, array( Debug_Controller::class, 'download_logs' ) );
 
 		// Let our OAuth/MCP endpoints begin the handshake even when a security plugin
 		// blocks the REST API site-wide (our routes carry their own auth). High priority
@@ -114,27 +124,45 @@ class Hooks {
 	}
 
 	/**
-	 * Removes the audit cleanup cron event. Called on plugins_loaded (to clear any
-	 * previously scheduled event) and on deactivation.
+	 * Removes both retention-cleanup cron events. Called on deactivation.
 	 *
 	 * @return void
 	 */
-	public static function unschedule_audit_cleanup() {
-		$timestamp = wp_next_scheduled( 'mosmcp_audit_cleanup' );
-		if ( $timestamp ) {
-			wp_unschedule_event( $timestamp, 'mosmcp_audit_cleanup' );
+	public static function unschedule_cron_jobs() {
+		foreach ( array( Audit_Store::CRON_HOOK, Debug_Store::CRON_HOOK ) as $hook ) {
+			$timestamp = wp_next_scheduled( $hook );
+			if ( $timestamp ) {
+				wp_unschedule_event( $timestamp, $hook );
+			}
 		}
 	}
 
 	/**
-	 * Activation tasks: persist the well-known rewrite rules and best-effort ensure
-	 * the Authorization header reaches PHP on Apache.
+	 * Activation tasks: persist the well-known rewrite rules, schedule the daily
+	 * log-retention cron jobs, and best-effort ensure the Authorization header
+	 * reaches PHP on Apache.
 	 *
 	 * @return void
 	 */
 	public static function on_activate() {
 		self::maybe_flush_rewrite();
+		self::schedule_cron_jobs();
 		self::ensure_authorization_htaccess();
+	}
+
+	/**
+	 * Schedules the daily audit/debug log retention cron jobs if not already
+	 * scheduled. Idempotent, so safe to call on every activation (including
+	 * reactivation after a deactivation that cleared them).
+	 *
+	 * @return void
+	 */
+	private static function schedule_cron_jobs() {
+		foreach ( array( Audit_Store::CRON_HOOK, Debug_Store::CRON_HOOK ) as $hook ) {
+			if ( ! wp_next_scheduled( $hook ) ) {
+				wp_schedule_event( time(), 'daily', $hook );
+			}
+		}
 	}
 
 	/**

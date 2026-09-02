@@ -68,6 +68,9 @@ class Deactivation_Controller extends Abstract_Contact_Controller {
 			. 'Company :<a href="' . esc_url( $site_url ) . '" target="_blank" >' . esc_html( $site_url ) . '</a><br><br>'
 			. 'Phone Number :<br><br>'
 			. 'Email :<a href="mailto:' . esc_attr( $current_user->user_email ) . '" target="_blank">' . esc_html( $current_user->user_email ) . '</a><br><br>'
+			. 'WordPress Version :' . esc_html( get_bloginfo( 'version' ) ) . '<br><br>'
+			. 'PHP Version :' . esc_html( phpversion() ) . '<br><br>'
+			. 'Database Version :' . esc_html( self::db_version() ) . '<br><br>'
 			. 'Follow-up OK :' . ( $contact_ok ? 'Yes' : 'No' ) . '<br><br>'
 			. 'Query :' . $query . '<br><br>'
 			. self::plugin_config_snapshot()

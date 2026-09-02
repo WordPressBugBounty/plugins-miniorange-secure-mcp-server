@@ -14,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 use MoSMCP\Common\Repositories\NHI_Store;
 use MoSMCP\Common\Repositories\Store;
 use MoSMCP\Common\Services\Discovery\Discovery;
+use MoSMCP\Common\Services\Logging\Debug_Logger;
 use MoSMCP\Common\Services\MCP\MCP_Server;
 use MoSMCP\Common\Services\OAuth\Tokens;
 use MoSMCP\Common\Utils\Utils;
@@ -75,18 +76,18 @@ class REST_Controller {
 	public static function authenticate( WP_REST_Request $request ) {
 		$token = Utils::extract_bearer_token( $request );
 		if ( '' === $token ) {
-			return self::unauthorized();
+			return self::unauthorized( 'missing_token' );
 		}
 
 		$row = Store::get_token( Tokens::hash( $token ) );
 
 		if ( ! $row || 'access' !== $row['type'] ) {
-			return self::unauthorized();
+			return self::unauthorized( 'invalid_token', array( 'token_prefix' => substr( $token, 0, 8 ) ) );
 		}
 
 		if ( (int) $row['expires'] < time() ) {
 			Store::delete_token( $row['token_hash'] );
-			return self::unauthorized();
+			return self::unauthorized( 'expired_token', array( 'client_id' => $row['client_id'] ) );
 		}
 
 		// Audience binding (RFC 8707): the token must have been issued for this server.
@@ -96,7 +97,14 @@ class REST_Controller {
 			return preg_replace( '#^https?://#i', '', untrailingslashit( (string) $u ) );
 		};
 		if ( $strip_scheme( $row['resource'] ) !== $strip_scheme( Utils::resource_url() ) ) {
-			return self::unauthorized();
+			return self::unauthorized(
+				'audience_mismatch',
+				array(
+					'client_id'         => $row['client_id'],
+					'token_resource'    => $row['resource'],
+					'expected_resource' => Utils::resource_url(),
+				)
+			);
 		}
 
 		// The OAuth connection is user-scoped: the token's client must still
@@ -104,7 +112,7 @@ class REST_Controller {
 		// lives on the client — it is the union of every enabled NHI.
 		$client = Store::get_client( $row['client_id'] );
 		if ( ! $client ) {
-			return self::unauthorized();
+			return self::unauthorized( 'unknown_client', array( 'client_id' => $row['client_id'] ) );
 		}
 
 		// Establish the token's user first so we can read its role(s), then apply the
@@ -141,6 +149,18 @@ class REST_Controller {
 				'nhi_id'      => $primary_nhi ? (int) $primary_nhi['id'] : null,
 				'nhi_uuid'    => $primary_nhi ? (string) $primary_nhi['uuid'] : '',
 				'nhi_name'    => $primary_nhi ? (string) $primary_nhi['name'] : '',
+			)
+		);
+
+		Debug_Logger::debug(
+			Debug_Logger::CHANNEL_MCP,
+			sprintf( 'Authenticated MCP request from client "%s".', isset( $client['client_name'] ) ? (string) $client['client_name'] : (string) $row['client_id'] ),
+			array(
+				'client_id'   => $row['client_id'],
+				'client_name' => isset( $client['client_name'] ) ? (string) $client['client_name'] : '',
+				'user_id'     => (int) $row['user_id'],
+				'nhi_name'    => $primary_nhi ? (string) $primary_nhi['name'] : '',
+				'ip'          => $ip,
 			)
 		);
 
@@ -296,11 +316,33 @@ class REST_Controller {
 	}
 
 	/**
-	 * Builds the standard 401 error used by the MCP endpoint.
+	 * Builds the standard 401 error used by the MCP endpoint, logging the
+	 * specific reason for the rejection to the debug log (never exposed in the
+	 * HTTP response, which always carries the same generic message).
 	 *
+	 * @param string               $reason  Short machine-readable rejection reason.
+	 * @param array<string, mixed> $context Additional detail for the debug log.
 	 * @return WP_Error The unauthorized error.
 	 */
-	private static function unauthorized() {
+	private static function unauthorized( $reason = 'unknown', array $context = array() ) {
+		$ip = '';
+		if ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
+			$raw_ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+			$ip     = filter_var( $raw_ip, FILTER_VALIDATE_IP ) ? $raw_ip : '';
+		}
+
+		Debug_Logger::warning(
+			Debug_Logger::CHANNEL_MCP,
+			sprintf( 'Rejected MCP request: %s.', $reason ),
+			array_merge(
+				array(
+					'reason' => $reason,
+					'ip'     => $ip,
+				),
+				$context
+			)
+		);
+
 		return new WP_Error(
 			'mosmcp_unauthorized',
 			__( 'A valid OAuth bearer token is required.', 'miniorange-secure-mcp-server' ),
