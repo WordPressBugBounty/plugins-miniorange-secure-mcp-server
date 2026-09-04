@@ -34,13 +34,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Revisions_Pack extends Ability_Pack {
 
 	/**
+	 * Ability category slug.
+	 */
+	const CATEGORY = 'mosmcp-revisions';
+
+	/**
 	 * Ability category for revision abilities.
 	 *
 	 * @return array Category definition.
 	 */
 	public function category() {
 		return array(
-			'slug'        => 'mosmcp-revisions',
+			'slug'        => self::CATEGORY,
 			'label'       => __( 'Revisions', 'mosmcp-abilities' ),
 			'description' => __( 'Inspect, compare, restore, and manage post and page revisions.', 'mosmcp-abilities' ),
 		);
@@ -76,7 +81,7 @@ class Revisions_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Count Revisions for Post', 'mosmcp-abilities' ),
 				'description'   => __( 'Returns how many revisions a post or page has, and the ID of the latest one. Does not count autosaves.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-revisions',
+				'category'      => self::CATEGORY,
 				'capability'    => 'read_post',
 				'cap_args'      => self::post_id_args(),
 				'annotations'   => self::annotations( true, false, true, false ),
@@ -110,7 +115,7 @@ class Revisions_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Get Revision', 'mosmcp-abilities' ),
 				'description'   => __( 'Gets the full content of a single revision by its ID: title, content, excerpt, author, and date.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-revisions',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Revisions_Provider::class, 'get' ),
@@ -149,7 +154,7 @@ class Revisions_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Get Latest Revision', 'mosmcp-abilities' ),
 				'description'   => __( 'Gets the full content of the most recent revision of a post or page.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-revisions',
+				'category'      => self::CATEGORY,
 				'capability'    => 'read_post',
 				'cap_args'      => self::post_id_args(),
 				'annotations'   => self::annotations( true, false, true, false ),
@@ -188,7 +193,7 @@ class Revisions_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Get Revision Status', 'mosmcp-abilities' ),
 				'description'   => __( 'Checks whether revisions are enabled for a post (or in general), and the maximum number of revisions WordPress will keep (unlimited unless configured otherwise in wp-config.php). This is site configuration, read-only — it cannot be changed by this ability.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-revisions',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Revisions_Provider::class, 'get_status' ),
@@ -220,7 +225,7 @@ class Revisions_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'List Autosaves for Post', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists the autosaves of a post or page. WordPress keeps only the single most recent autosave per user, so this typically returns at most one item per user currently editing the post — it is not a full history like mosmcp/revision-list-for-post.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-revisions',
+				'category'      => self::CATEGORY,
 				'capability'    => 'read_post',
 				'cap_args'      => self::post_id_args(),
 				'annotations'   => self::annotations( true, false, true, false ),
@@ -261,7 +266,7 @@ class Revisions_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'List Revisions by Author', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists the revisions of a post or page that were made by a specific user, newest first. Does not include autosaves.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-revisions',
+				'category'      => self::CATEGORY,
 				'capability'    => 'read_post',
 				'cap_args'      => self::post_id_args(),
 				'annotations'   => self::annotations( true, false, true, false ),
@@ -290,7 +295,7 @@ class Revisions_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'List Revisions for Post', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists all revisions of a post or page, newest first, with author and date for each. Does not include the full content of each revision — use mosmcp/revision-get for that. Returns at most per_page revisions (default 20) plus the total.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-revisions',
+				'category'      => self::CATEGORY,
 				'capability'    => 'read_post',
 				'cap_args'      => self::post_id_args(),
 				'annotations'   => self::annotations( true, false, true, false ),
@@ -312,7 +317,7 @@ class Revisions_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Restore Revision', 'mosmcp-abilities' ),
 				'description'   => __( 'Restores a post or page to a chosen revision, replacing its current title, content, and excerpt with that revision\'s. This itself creates a new revision capturing what the post looked like just before the restore, so the restore can always be undone.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-revisions',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::parent_args(),
 				'annotations'   => self::annotations( false, false, false, true ),
@@ -347,7 +352,7 @@ class Revisions_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Delete Revision', 'mosmcp-abilities' ),
 				'description'   => __( 'Permanently deletes a single revision by ID. This does not affect the current post — only that one historical snapshot is removed. There is no undo and no wp-admin screen for this action. Requires confirm=true.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-revisions',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::parent_args(),
 				'annotations'   => self::annotations( false, true, true, false ),

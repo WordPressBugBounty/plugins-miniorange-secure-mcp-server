@@ -55,6 +55,25 @@ use WP_User_Query;
 class Customers_Abilities {
 
 	/**
+	 * Validates $input['id'] and confirms it names an existing user.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return int|WP_Error
+	 */
+	private static function require_customer_id( $input ) {
+		$customer_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'customer ID', 'mosmcp-abilities' ) );
+		if ( is_wp_error( $customer_id ) ) {
+			return $customer_id;
+		}
+
+		if ( ! get_userdata( $customer_id ) ) {
+			return WooCommerce_Response::error( 'wcab_customer_not_found', __( 'No customer was found with that ID.', 'mosmcp-abilities' ) );
+		}
+
+		return $customer_id;
+	}
+
+	/**
 	 * Registers every Customers ability. Called from {@see WooCommerce_Abilities_Loader}.
 	 *
 	 * @return void
@@ -278,13 +297,9 @@ class Customers_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$customer_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'customer ID', 'mosmcp-abilities' ) );
+		$customer_id = self::require_customer_id( $input );
 		if ( is_wp_error( $customer_id ) ) {
 			return $customer_id;
-		}
-
-		if ( ! get_userdata( $customer_id ) ) {
-			return WooCommerce_Response::error( 'wcab_customer_not_found', __( 'No customer was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		WooCommerce_Helper::log( 'mosmcp/get-customer', 'success', array( 'id' => $customer_id ) );
@@ -480,13 +495,9 @@ class Customers_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$customer_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'customer ID', 'mosmcp-abilities' ) );
+		$customer_id = self::require_customer_id( $input );
 		if ( is_wp_error( $customer_id ) ) {
 			return $customer_id;
-		}
-
-		if ( ! get_userdata( $customer_id ) ) {
-			return WooCommerce_Response::error( 'wcab_customer_not_found', __( 'No customer was found with that ID.', 'mosmcp-abilities' ) );
 		}
 		if ( ! WooCommerce_Permissions::can_edit_customer( $customer_id ) ) {
 			return WooCommerce_Response::error( 'wcab_cannot_edit', __( 'You are not allowed to edit this customer.', 'mosmcp-abilities' ) );
@@ -495,7 +506,7 @@ class Customers_Abilities {
 		$fields = $input;
 		unset( $fields['id'] );
 		if ( empty( $fields ) ) {
-			return WooCommerce_Response::error( 'wcab_nothing_to_update', __( 'Provide at least one field to update.', 'mosmcp-abilities' ) );
+			return WooCommerce_Response::nothing_to_update_error();
 		}
 
 		$customer = new WC_Customer( $customer_id );
@@ -548,22 +559,18 @@ class Customers_Abilities {
 	 * @return void
 	 */
 	private static function apply_customer_address( $customer, $type, array $address ) {
-		foreach ( array( 'first_name', 'last_name', 'company', 'address_1', 'address_2', 'city', 'state', 'postcode', 'country', 'phone' ) as $field ) {
-			if ( ! isset( $address[ $field ] ) ) {
-				continue;
-			}
-			$method = 'set_' . $type . '_' . $field;
-			if ( method_exists( $customer, $method ) ) {
-				$customer->$method( sanitize_text_field( (string) $address[ $field ] ) );
-			}
-		}
-
-		if ( isset( $address['email'] ) ) {
-			$method = 'set_' . $type . '_email';
-			if ( method_exists( $customer, $method ) ) {
-				$customer->$method( sanitize_email( (string) $address['email'] ) );
-			}
-		}
+		// Unlike order addresses, the official Customer schema gives billing and
+		// shipping an identical shape — both carry phone and email. Matches
+		// WooCommerce_Helper::customer_address()'s read side.
+		WooCommerce_Helper::apply_address(
+			$customer,
+			$type,
+			$address,
+			array(
+				'phone' => 'text',
+				'email' => 'email',
+			)
+		);
 	}
 
 	/*
@@ -631,13 +638,9 @@ class Customers_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$customer_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'customer ID', 'mosmcp-abilities' ) );
+		$customer_id = self::require_customer_id( $input );
 		if ( is_wp_error( $customer_id ) ) {
 			return $customer_id;
-		}
-
-		if ( ! get_userdata( $customer_id ) ) {
-			return WooCommerce_Response::error( 'wcab_customer_not_found', __( 'No customer was found with that ID.', 'mosmcp-abilities' ) );
 		}
 		if ( ! WooCommerce_Permissions::can_delete_customer( $customer_id ) ) {
 			return WooCommerce_Response::error( 'wcab_cannot_delete', __( 'You are not allowed to delete this customer.', 'mosmcp-abilities' ) );
@@ -756,13 +759,9 @@ class Customers_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$customer_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'customer ID', 'mosmcp-abilities' ) );
+		$customer_id = self::require_customer_id( $input );
 		if ( is_wp_error( $customer_id ) ) {
 			return $customer_id;
-		}
-
-		if ( ! get_userdata( $customer_id ) ) {
-			return WooCommerce_Response::error( 'wcab_customer_not_found', __( 'No customer was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		$pagination = WooCommerce_Validator::validate_pagination( $input );

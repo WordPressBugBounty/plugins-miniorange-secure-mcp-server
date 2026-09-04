@@ -73,9 +73,14 @@ class Ability_Registrar {
 	private static function validate( Ability $ability ) {
 		$errors = array();
 
-		$name = $ability->get_name();
-		if ( '' === $name || 0 !== strpos( $name, 'mosmcp/' ) ) {
-			$errors[] = __( 'the name must be namespaced under "mosmcp/"', 'mosmcp-abilities' );
+		$name   = $ability->get_name();
+		$prefix = Config::AUTHORING_PREFIX . '/';
+		if ( '' === $name || 0 !== strpos( $name, $prefix ) ) {
+			$errors[] = sprintf(
+				/* translators: %s: required ability-name prefix, e.g. "mosmcp/". */
+				__( 'the name must be namespaced under "%s"', 'mosmcp-abilities' ),
+				$prefix
+			);
 		}
 		if ( '' === $ability->get_label() ) {
 			$errors[] = __( 'a label is required', 'mosmcp-abilities' );

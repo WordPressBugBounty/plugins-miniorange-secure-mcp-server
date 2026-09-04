@@ -60,6 +60,16 @@ class WooCommerce_Response {
 	}
 
 	/**
+	 * Builds the "no fields supplied" error every update-style ability returns
+	 * when the caller's input contains no recognized field to change.
+	 *
+	 * @return WP_Error
+	 */
+	public static function nothing_to_update_error() {
+		return self::error( 'wcab_nothing_to_update', __( 'Provide at least one field to update.', 'mosmcp-abilities' ) );
+	}
+
+	/**
 	 * Builds pagination metadata from a total row count.
 	 *
 	 * @param int $total    Total matching rows across all pages.

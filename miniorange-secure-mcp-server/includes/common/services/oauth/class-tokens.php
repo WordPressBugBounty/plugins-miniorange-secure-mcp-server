@@ -38,6 +38,16 @@ class Tokens {
 	const CODE_TTL = 300;
 
 	/**
+	 * Token type stored in the `type` column for an access token.
+	 */
+	const TYPE_ACCESS = 'access';
+
+	/**
+	 * Token type stored in the `type` column for a refresh token.
+	 */
+	const TYPE_REFRESH = 'refresh';
+
+	/**
 	 * Generates a cryptographically secure, URL-safe opaque secret.
 	 *
 	 * @return string A 43-character base64url string (256 bits of entropy).
@@ -87,17 +97,45 @@ class Tokens {
 	}
 
 	/**
-	 * Ensures a hash salt exists in the plugin settings option.
+	 * Dedicated option used only to atomically claim the salt on first use.
+	 *
+	 * `add_option()` is a single INSERT against `wp_options.option_name`, which
+	 * carries a UNIQUE index — so under two concurrent first-ever requests, the
+	 * database itself guarantees only one INSERT can succeed. Storing the salt
+	 * directly under `mosmcp_settings['salt']` (a read-modify-write of a
+	 * multi-key array option) cannot offer that guarantee: two requests can
+	 * both read an empty salt, each generate a different value, and each call
+	 * `update_option()`, silently orphaning whichever token was hashed with the
+	 * value that lost the race. This option exists purely so the race has a
+	 * single, database-enforced winner.
+	 */
+	const SALT_CLAIM_OPTION = 'mosmcp_salt';
+
+	/**
+	 * Ensures a hash salt exists in the plugin settings option, generating one
+	 * exactly once even under concurrent first-use requests.
 	 *
 	 * @return void
 	 */
 	public static function ensure_salt() {
 		$settings = get_option( 'mosmcp_settings', array() );
 
-		if ( empty( $settings['salt'] ) ) {
-			$settings['salt'] = self::base64url_encode( random_bytes( 32 ) );
-			update_option( 'mosmcp_settings', $settings, false );
+		if ( ! empty( $settings['salt'] ) ) {
+			return;
 		}
+
+		$candidate = self::base64url_encode( random_bytes( 32 ) );
+
+		// Atomic claim: succeeds only for the first process to reach this line;
+		// every other concurrent caller gets false and must adopt the winner's value.
+		if ( add_option( self::SALT_CLAIM_OPTION, $candidate, '', false ) ) {
+			$salt = $candidate;
+		} else {
+			$salt = (string) get_option( self::SALT_CLAIM_OPTION, $candidate );
+		}
+
+		$settings['salt'] = $salt;
+		update_option( 'mosmcp_settings', $settings, false );
 	}
 
 	/**

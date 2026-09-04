@@ -12,6 +12,7 @@
 namespace MoSMCP\Abilities\Packs\Core;
 
 use MoSMCP\Abilities\Packs\Core\Support\Media_Uploader;
+use MoSMCP\Abilities\Support\Pagination;
 use WP_Error;
 use WP_Query;
 
@@ -611,6 +612,7 @@ class Media_Provider {
 	 */
 	private static function run_list( $input, $extra_args = array() ) {
 		$per_page = isset( $input['per_page'] ) ? absint( $input['per_page'] ) : 20;
+		$per_page = min( $per_page, Pagination::MAX_PER_PAGE );
 		$offset   = isset( $input['offset'] ) ? absint( $input['offset'] ) : 0;
 
 		$args = array_merge(

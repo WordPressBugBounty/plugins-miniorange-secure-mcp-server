@@ -16,6 +16,7 @@ use MoSMCP\Abilities\Packs\Core\Support\Post_Display;
 use MoSMCP\Abilities\Packs\Core\Support\Post_Duplicator;
 use MoSMCP\Abilities\Packs\Core\Support\Post_Fields;
 use MoSMCP\Abilities\Packs\Core\Support\Post_Meta_Diff;
+use MoSMCP\Abilities\Support\Pagination;
 use WP_Error;
 use WP_Query;
 
@@ -733,7 +734,8 @@ class Posts_Provider {
 		if ( $id > 0 ) {
 			$post = get_post( $id );
 
-			if ( ! $post || 'post' !== $post->post_type ) {
+			// read_post handles every status: published, private, draft, pending, future.
+			if ( ! $post || 'post' !== $post->post_type || ! current_user_can( 'read_post', $post->ID ) ) {
 				return array(
 					'showing' => 0,
 					'total'   => 0,
@@ -1145,6 +1147,7 @@ class Posts_Provider {
 	 */
 	private static function list_args( $input, array $overrides ) {
 		$per_page = isset( $input['per_page'] ) ? absint( $input['per_page'] ) : 20;
+		$per_page = min( $per_page, Pagination::MAX_PER_PAGE );
 		$offset   = isset( $input['offset'] ) ? absint( $input['offset'] ) : 0;
 
 		return array_merge(

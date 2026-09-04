@@ -205,35 +205,90 @@ class WooCommerce_Helper {
 	}
 
 	/**
+	 * Core billing/shipping address fields common to both orders and customers.
+	 *
+	 * @var string[]
+	 */
+	const ADDRESS_CORE_FIELDS = array( 'first_name', 'last_name', 'company', 'address_1', 'address_2', 'city', 'state', 'postcode', 'country' );
+
+	/**
+	 * Reads a billing/shipping address off an order or customer object.
+	 *
+	 * The core field set is identical for both; what differs (and is the caller's
+	 * responsibility to get right — see order_address()/customer_address() below)
+	 * is which extra fields exist for which $type: orders only carry email/phone
+	 * on billing, while customers carry both on billing AND shipping.
+	 *
+	 * @param WC_Order|WC_Customer  $object       The order or customer.
+	 * @param string                $type         'billing' or 'shipping'.
+	 * @param array<string, string> $extra_fields Extra field name => sanitizer tag
+	 *                                            ('text' or 'email'), beyond the core set, for this $type.
+	 * @return array<string, string>
+	 */
+	private static function read_address( $object, $type, array $extra_fields = array() ) {
+		$field = static function ( $name ) use ( $object, $type ) {
+			$method = 'get_' . $type . '_' . $name;
+			return method_exists( $object, $method ) ? (string) $object->$method() : '';
+		};
+
+		$address = array();
+		foreach ( self::ADDRESS_CORE_FIELDS as $name ) {
+			$address[ $name ] = $field( $name );
+		}
+		foreach ( array_keys( $extra_fields ) as $name ) {
+			$address[ $name ] = $field( $name );
+		}
+
+		return $address;
+	}
+
+	/**
+	 * Applies a billing/shipping address onto an order or customer object.
+	 *
+	 * @param WC_Order|WC_Customer  $object       The order or customer.
+	 * @param string                $type         'billing' or 'shipping'.
+	 * @param array<string, mixed>  $address      Caller-supplied address fields.
+	 * @param array<string, string> $extra_fields Extra field name => sanitizer tag
+	 *                                            ('text' or 'email'), beyond the core set, for this $type.
+	 * @return void
+	 */
+	public static function apply_address( $object, $type, array $address, array $extra_fields = array() ) {
+		foreach ( self::ADDRESS_CORE_FIELDS as $name ) {
+			if ( ! isset( $address[ $name ] ) ) {
+				continue;
+			}
+			$method = 'set_' . $type . '_' . $name;
+			if ( method_exists( $object, $method ) ) {
+				$object->$method( sanitize_text_field( (string) $address[ $name ] ) );
+			}
+		}
+
+		foreach ( $extra_fields as $name => $sanitizer ) {
+			if ( ! isset( $address[ $name ] ) ) {
+				continue;
+			}
+			$method = 'set_' . $type . '_' . $name;
+			if ( ! method_exists( $object, $method ) ) {
+				continue;
+			}
+			$value = 'email' === $sanitizer ? sanitize_email( (string) $address[ $name ] ) : sanitize_text_field( (string) $address[ $name ] );
+			$object->$method( $value );
+		}
+	}
+
+	/**
 	 * @param WC_Order $order
 	 * @param string   $type 'billing' or 'shipping'.
 	 * @return array<string, string>
 	 */
 	private static function order_address( $order, $type ) {
-		$field = static function ( $name ) use ( $order, $type ) {
-			$method = 'get_' . $type . '_' . $name;
-			return method_exists( $order, $method ) ? (string) $order->$method() : '';
-		};
+		// Only billing carries email/phone in the official Order schema.
+		$extra_fields = ( 'billing' === $type ) ? array(
+			'email' => 'email',
+			'phone' => 'text',
+		) : array();
 
-		$address = array(
-			'first_name' => $field( 'first_name' ),
-			'last_name'  => $field( 'last_name' ),
-			'company'    => $field( 'company' ),
-			'address_1'  => $field( 'address_1' ),
-			'address_2'  => $field( 'address_2' ),
-			'city'       => $field( 'city' ),
-			'state'      => $field( 'state' ),
-			'postcode'   => $field( 'postcode' ),
-			'country'    => $field( 'country' ),
-		);
-
-		// Only billing carries email/phone in the official schema.
-		if ( 'billing' === $type ) {
-			$address['email'] = (string) $order->get_billing_email();
-			$address['phone'] = (string) $order->get_billing_phone();
-		}
-
-		return $address;
+		return self::read_address( $order, $type, $extra_fields );
 	}
 
 	/**
@@ -390,23 +445,15 @@ class WooCommerce_Helper {
 	 * @return array<string, string>
 	 */
 	private static function customer_address( $customer, $type ) {
-		$field = static function ( $name ) use ( $customer, $type ) {
-			$method = 'get_' . $type . '_' . $name;
-			return method_exists( $customer, $method ) ? (string) $customer->$method() : '';
-		};
-
-		return array(
-			'first_name' => $field( 'first_name' ),
-			'last_name'  => $field( 'last_name' ),
-			'company'    => $field( 'company' ),
-			'address_1'  => $field( 'address_1' ),
-			'address_2'  => $field( 'address_2' ),
-			'city'       => $field( 'city' ),
-			'state'      => $field( 'state' ),
-			'postcode'   => $field( 'postcode' ),
-			'country'    => $field( 'country' ),
-			'phone'      => $field( 'phone' ),
-			'email'      => $field( 'email' ),
+		// Unlike order addresses, the official Customer schema gives billing and
+		// shipping an identical shape — both carry phone and email.
+		return self::read_address(
+			$customer,
+			$type,
+			array(
+				'phone' => 'text',
+				'email' => 'email',
+			)
 		);
 	}
 

@@ -68,6 +68,30 @@ class Orders_Abilities {
 	const FEE_TAX_STATUSES = array( 'taxable', 'none' );
 
 	/**
+	 * Validates $input['id'] and fetches the order it names.
+	 *
+	 * Every write/read ability in this file starts with this exact
+	 * validate-then-fetch sequence; centralizing it means the "order not
+	 * found" code/message can't drift between call sites.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return WC_Order|WP_Error
+	 */
+	private static function require_order( $input ) {
+		$order_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'order ID', 'mosmcp-abilities' ) );
+		if ( is_wp_error( $order_id ) ) {
+			return $order_id;
+		}
+
+		$order = wc_get_order( $order_id );
+		if ( ! $order ) {
+			return WooCommerce_Response::error( 'wcab_order_not_found', __( 'No order was found with that ID.', 'mosmcp-abilities' ) );
+		}
+
+		return $order;
+	}
+
+	/**
 	 * Registers every Orders ability. Called from {@see WooCommerce_Abilities_Loader}.
 	 *
 	 * @return void
@@ -453,15 +477,11 @@ class Orders_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$order_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'order ID', 'mosmcp-abilities' ) );
-		if ( is_wp_error( $order_id ) ) {
-			return $order_id;
+		$order = self::require_order( $input );
+		if ( is_wp_error( $order ) ) {
+			return $order;
 		}
-
-		$order = wc_get_order( $order_id );
-		if ( ! $order ) {
-			return WooCommerce_Response::error( 'wcab_order_not_found', __( 'No order was found with that ID.', 'mosmcp-abilities' ) );
-		}
+		$order_id = $order->get_id();
 
 		WooCommerce_Helper::log( 'mosmcp/get-order', 'success', array( 'id' => $order_id ) );
 
@@ -808,24 +828,14 @@ class Orders_Abilities {
 	 * @return void
 	 */
 	private static function apply_address( $order, $type, array $address ) {
-		foreach ( array( 'first_name', 'last_name', 'company', 'address_1', 'address_2', 'city', 'state', 'postcode', 'country' ) as $field ) {
-			if ( ! isset( $address[ $field ] ) ) {
-				continue;
-			}
-			$method = 'set_' . $type . '_' . $field;
-			if ( method_exists( $order, $method ) ) {
-				$order->$method( sanitize_text_field( (string) $address[ $field ] ) );
-			}
-		}
+		// Only billing carries email/phone in the official Order schema — matches
+		// WooCommerce_Helper::order_address()'s read side.
+		$extra_fields = ( 'billing' === $type ) ? array(
+			'email' => 'email',
+			'phone' => 'text',
+		) : array();
 
-		if ( 'billing' === $type ) {
-			if ( isset( $address['email'] ) ) {
-				$order->set_billing_email( sanitize_email( (string) $address['email'] ) );
-			}
-			if ( isset( $address['phone'] ) ) {
-				$order->set_billing_phone( sanitize_text_field( (string) $address['phone'] ) );
-			}
-		}
+		WooCommerce_Helper::apply_address( $order, $type, $address, $extra_fields );
 	}
 
 	/*
@@ -889,15 +899,11 @@ class Orders_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$order_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'order ID', 'mosmcp-abilities' ) );
-		if ( is_wp_error( $order_id ) ) {
-			return $order_id;
+		$order = self::require_order( $input );
+		if ( is_wp_error( $order ) ) {
+			return $order;
 		}
-
-		$order = wc_get_order( $order_id );
-		if ( ! $order ) {
-			return WooCommerce_Response::error( 'wcab_order_not_found', __( 'No order was found with that ID.', 'mosmcp-abilities' ) );
-		}
+		$order_id = $order->get_id();
 		if ( ! WooCommerce_Permissions::can_edit_order( $order_id ) ) {
 			return WooCommerce_Response::error( 'wcab_cannot_edit', __( 'You are not allowed to edit this order.', 'mosmcp-abilities' ) );
 		}
@@ -1001,15 +1007,11 @@ class Orders_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$order_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'order ID', 'mosmcp-abilities' ) );
-		if ( is_wp_error( $order_id ) ) {
-			return $order_id;
+		$order = self::require_order( $input );
+		if ( is_wp_error( $order ) ) {
+			return $order;
 		}
-
-		$order = wc_get_order( $order_id );
-		if ( ! $order ) {
-			return WooCommerce_Response::error( 'wcab_order_not_found', __( 'No order was found with that ID.', 'mosmcp-abilities' ) );
-		}
+		$order_id = $order->get_id();
 		if ( ! WooCommerce_Permissions::can_edit_order( $order_id ) ) {
 			return WooCommerce_Response::error( 'wcab_cannot_edit', __( 'You are not allowed to edit this order.', 'mosmcp-abilities' ) );
 		}
@@ -1017,7 +1019,7 @@ class Orders_Abilities {
 		$fields = $input;
 		unset( $fields['id'] );
 		if ( empty( $fields ) ) {
-			return WooCommerce_Response::error( 'wcab_nothing_to_update', __( 'Provide at least one field to update.', 'mosmcp-abilities' ) );
+			return WooCommerce_Response::nothing_to_update_error();
 		}
 
 		if ( isset( $input['status'] ) ) {
@@ -1118,15 +1120,11 @@ class Orders_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$order_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'order ID', 'mosmcp-abilities' ) );
-		if ( is_wp_error( $order_id ) ) {
-			return $order_id;
+		$order = self::require_order( $input );
+		if ( is_wp_error( $order ) ) {
+			return $order;
 		}
-
-		$order = wc_get_order( $order_id );
-		if ( ! $order ) {
-			return WooCommerce_Response::error( 'wcab_order_not_found', __( 'No order was found with that ID.', 'mosmcp-abilities' ) );
-		}
+		$order_id = $order->get_id();
 		if ( ! WooCommerce_Permissions::can_edit_order( $order_id ) ) {
 			return WooCommerce_Response::error( 'wcab_cannot_edit', __( 'You are not allowed to edit this order.', 'mosmcp-abilities' ) );
 		}
@@ -1236,14 +1234,11 @@ class Orders_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$order_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'order ID', 'mosmcp-abilities' ) );
-		if ( is_wp_error( $order_id ) ) {
-			return $order_id;
+		$order = self::require_order( $input );
+		if ( is_wp_error( $order ) ) {
+			return $order;
 		}
-
-		if ( ! wc_get_order( $order_id ) ) {
-			return WooCommerce_Response::error( 'wcab_order_not_found', __( 'No order was found with that ID.', 'mosmcp-abilities' ) );
-		}
+		$order_id = $order->get_id();
 
 		$type = WooCommerce_Validator::validate_enum( isset( $input['type'] ) ? $input['type'] : null, self::NOTE_TYPES, __( 'type', 'mosmcp-abilities' ), 'any' );
 		if ( is_wp_error( $type ) ) {
@@ -1370,15 +1365,11 @@ class Orders_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$order_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'order ID', 'mosmcp-abilities' ) );
-		if ( is_wp_error( $order_id ) ) {
-			return $order_id;
+		$order = self::require_order( $input );
+		if ( is_wp_error( $order ) ) {
+			return $order;
 		}
-
-		$order = wc_get_order( $order_id );
-		if ( ! $order ) {
-			return WooCommerce_Response::error( 'wcab_order_not_found', __( 'No order was found with that ID.', 'mosmcp-abilities' ) );
-		}
+		$order_id = $order->get_id();
 		if ( ! WooCommerce_Permissions::can_delete_order( $order_id ) ) {
 			return WooCommerce_Response::error( 'wcab_cannot_delete', __( 'You are not allowed to delete this order.', 'mosmcp-abilities' ) );
 		}
@@ -1475,15 +1466,11 @@ class Orders_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$order_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'order ID', 'mosmcp-abilities' ) );
-		if ( is_wp_error( $order_id ) ) {
-			return $order_id;
+		$order = self::require_order( $input );
+		if ( is_wp_error( $order ) ) {
+			return $order;
 		}
-
-		$order = wc_get_order( $order_id );
-		if ( ! $order ) {
-			return WooCommerce_Response::error( 'wcab_order_not_found', __( 'No order was found with that ID.', 'mosmcp-abilities' ) );
-		}
+		$order_id = $order->get_id();
 
 		$refunds = array_map( array( __CLASS__, 'refund_detail' ), $order->get_refunds() );
 
@@ -1581,15 +1568,11 @@ class Orders_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$order_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'order ID', 'mosmcp-abilities' ) );
-		if ( is_wp_error( $order_id ) ) {
-			return $order_id;
+		$order = self::require_order( $input );
+		if ( is_wp_error( $order ) ) {
+			return $order;
 		}
-
-		$order = wc_get_order( $order_id );
-		if ( ! $order ) {
-			return WooCommerce_Response::error( 'wcab_order_not_found', __( 'No order was found with that ID.', 'mosmcp-abilities' ) );
-		}
+		$order_id = $order->get_id();
 		if ( ! WooCommerce_Permissions::can_edit_order( $order_id ) ) {
 			return WooCommerce_Response::error( 'wcab_cannot_edit', __( 'You are not allowed to refund this order.', 'mosmcp-abilities' ) );
 		}
@@ -1599,6 +1582,9 @@ class Orders_Abilities {
 		foreach ( $raw_line_items as $raw_line_item ) {
 			if ( ! is_array( $raw_line_item ) || ! isset( $raw_line_item['id'] ) ) {
 				continue;
+			}
+			if ( isset( $raw_line_item['refund_total'] ) && ( ! is_numeric( $raw_line_item['refund_total'] ) || (float) $raw_line_item['refund_total'] < 0 ) ) {
+				return WooCommerce_Response::error( 'wcab_invalid_refund_amount', __( 'refund_total must be a non-negative number.', 'mosmcp-abilities' ) );
 			}
 			$item_id                    = absint( $raw_line_item['id'] );
 			$line_items_arg[ $item_id ] = array(
@@ -1611,6 +1597,10 @@ class Orders_Abilities {
 
 		if ( ! $has_amount && ! $has_line_items ) {
 			return WooCommerce_Response::error( 'wcab_missing_refund_amount', __( 'Provide either amount or line_items to refund.', 'mosmcp-abilities' ) );
+		}
+
+		if ( $has_amount && ( ! is_numeric( $input['amount'] ) || (float) $input['amount'] < 0 ) ) {
+			return WooCommerce_Response::error( 'wcab_invalid_refund_amount', __( 'amount must be a non-negative number.', 'mosmcp-abilities' ) );
 		}
 
 		$args = array(

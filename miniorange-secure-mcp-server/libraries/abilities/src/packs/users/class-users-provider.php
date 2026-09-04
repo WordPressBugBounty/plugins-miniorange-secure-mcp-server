@@ -14,6 +14,8 @@
 
 namespace MoSMCP\Abilities\Packs\Users;
 
+use MoSMCP\Abilities\Support\Pagination;
+use MoSMCP\Abilities\Support\Permissions;
 use WP_Error;
 use WP_Query;
 use WP_User_Query;
@@ -238,17 +240,20 @@ class Users_Provider {
 		$meta_key = isset( $input['meta_key'] ) ? sanitize_key( (string) $input['meta_key'] ) : '';
 
 		if ( '' !== $meta_key ) {
+			if ( Permissions::is_reserved_user_meta_key( $meta_key ) ) {
+				return new WP_Error( 'mosmcp_forbidden_meta_key', __( 'That meta key is protected and cannot be read or modified through this ability.', 'mosmcp-abilities' ) );
+			}
 			return array(
 				'id'   => $id,
 				'meta' => (object) array( $meta_key => get_user_meta( $id, $meta_key, false ) ),
 			);
 		}
 
-		global $wpdb;
-		$all       = get_user_meta( $id );
-		$sensitive = array( 'session_tokens', $wpdb->prefix . 'capabilities', $wpdb->prefix . 'user_level' );
-		foreach ( $sensitive as $key ) {
-			unset( $all[ $key ] );
+		$all = get_user_meta( $id );
+		foreach ( array_keys( $all ) as $key ) {
+			if ( Permissions::is_reserved_user_meta_key( $key ) ) {
+				unset( $all[ $key ] );
+			}
 		}
 
 		return array(
@@ -975,25 +980,7 @@ class Users_Provider {
 	 * @return array<string, int>
 	 */
 	private static function paginate_args( $input ) {
-		$page     = isset( $input['page'] ) ? absint( $input['page'] ) : 1;
-		$per_page = isset( $input['per_page'] ) ? absint( $input['per_page'] ) : 20;
-
-		if ( $page < 1 ) {
-			$page = 1;
-		}
-		if ( $per_page < 1 ) {
-			$per_page = 20;
-		}
-		if ( $per_page > 100 ) {
-			$per_page = 100;
-		}
-
-		return array(
-			'page'     => $page,
-			'per_page' => $per_page,
-			'number'   => $per_page,
-			'offset'   => ( $page - 1 ) * $per_page,
-		);
+		return Pagination::args( $input );
 	}
 
 	/**

@@ -75,8 +75,8 @@ class Audit_Store {
 	 * Returns paginated, optionally filtered log rows with the total count.
 	 *
 	 * Accepted $args keys: page (int, 1-based), per_page (int, max 100),
-	 * user_id (int), nhi_uuid (string), tool_name (string), status (string),
-	 * date_from (YYYY-MM-DD), date_to (YYYY-MM-DD).
+	 * user_login (string, partial match), nhi_uuid (string), tool_name (string),
+	 * status (string), date_from (YYYY-MM-DD), date_to (YYYY-MM-DD).
 	 *
 	 * @param array<string, mixed> $args Query arguments.
 	 * @return array{logs: list<array<string,mixed>>, total_count: int, page: int, per_page: int}

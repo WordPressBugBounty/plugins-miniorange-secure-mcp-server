@@ -46,7 +46,7 @@ class REST_Controller {
 
 		$nhi_count = NHI_Store::count_enabled();
 
-		return new WP_REST_Response(
+		$response = new WP_REST_Response(
 			array(
 				'service'      => 'mosmcp',
 				'version'      => MOSMCP_VERSION,
@@ -62,6 +62,16 @@ class REST_Controller {
 			),
 			200
 		);
+
+		// This document reports live NHI state that flips the moment an admin enables an
+		// agent. It MUST NOT be cached: page/edge caches (LiteSpeed on Hostinger, Cloudflare,
+		// etc.) otherwise serve a stale `nhi_count:0` to the gateway, which then blocks
+		// connections with "No NHI configured" even after an agent is enabled. Mirrors the
+		// no-store the OAuth endpoints already send.
+		$response->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
+		$response->header( 'Pragma', 'no-cache' );
+
+		return $response;
 	}
 
 	/**
@@ -81,8 +91,10 @@ class REST_Controller {
 
 		$row = Store::get_token( Tokens::hash( $token ) );
 
-		if ( ! $row || 'access' !== $row['type'] ) {
-			return self::unauthorized( 'invalid_token', array( 'token_prefix' => substr( $token, 0, 8 ) ) );
+		if ( ! $row || Tokens::TYPE_ACCESS !== $row['type'] ) {
+			// Named to avoid Debug_Logger's redaction (keyed on substrings like "token"),
+			// which would otherwise mask this deliberately-short, non-sensitive fragment.
+			return self::unauthorized( 'invalid_token', array( 'bearer_prefix' => substr( $token, 0, 8 ) ) );
 		}
 
 		if ( (int) $row['expires'] < time() ) {
@@ -269,50 +281,6 @@ class REST_Controller {
 		}
 
 		return $result;
-	}
-
-	/**
-	 * Extracts the bearer token from the request, working around servers that
-	 * strip the Authorization header from the CGI environment.
-	 *
-	 * @param WP_REST_Request $request The request.
-	 * @return string The token, or an empty string when absent.
-	 */
-	private static function extract_bearer_token( WP_REST_Request $request ) {
-		$header = (string) $request->get_header( 'authorization' );
-
-		if ( '' === $header && ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
-			$header = sanitize_text_field( wp_unslash( $_SERVER['HTTP_AUTHORIZATION'] ) );
-		}
-
-		if ( '' === $header && ! empty( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ) ) {
-			$header = sanitize_text_field( wp_unslash( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ) );
-		}
-
-		if ( '' === $header && function_exists( 'getallheaders' ) ) {
-			foreach ( (array) getallheaders() as $key => $value ) {
-				if ( 'authorization' === strtolower( (string) $key ) ) {
-					$header = sanitize_text_field( $value );
-					break;
-				}
-			}
-		}
-
-		// Some Apache/FastCGI setups surface the header only via apache_request_headers().
-		if ( '' === $header && function_exists( 'apache_request_headers' ) ) {
-			foreach ( (array) apache_request_headers() as $key => $value ) {
-				if ( 'authorization' === strtolower( (string) $key ) ) {
-					$header = sanitize_text_field( $value );
-					break;
-				}
-			}
-		}
-
-		if ( preg_match( '/^Bearer\s+(.+)$/i', trim( $header ), $matches ) ) {
-			return trim( $matches[1] );
-		}
-
-		return '';
 	}
 
 	/**

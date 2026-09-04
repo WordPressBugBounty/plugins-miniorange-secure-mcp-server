@@ -199,6 +199,17 @@ class Utils {
 			}
 		}
 
+		// Some Apache/FastCGI setups surface the header only via apache_request_headers()
+		// (not $_SERVER['HTTP_AUTHORIZATION'] or getallheaders()).
+		if ( '' === $header && function_exists( 'apache_request_headers' ) ) {
+			foreach ( (array) apache_request_headers() as $key => $value ) {
+				if ( 'authorization' === strtolower( (string) $key ) ) {
+					$header = sanitize_text_field( $value );
+					break;
+				}
+			}
+		}
+
 		if ( preg_match( '/^Bearer\s+(.+)$/i', trim( $header ), $matches ) ) {
 			return trim( $matches[1] );
 		}

@@ -14,17 +14,21 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 
+use MoSMCP\Common\Hooks\Hooks;
 use MoSMCP\Common\Migration\Migration;
 use MoSMCP\Common\Repositories\Audit_Store;
 use MoSMCP\Common\Repositories\Debug_Store;
+use MoSMCP\Common\Services\OAuth\Tokens;
 
 Migration::drop_tables();
 
 delete_option( 'mosmcp_settings' );
-delete_option( 'mosmcp_db_version' );
-delete_option( 'mosmcp_nhi_grants_backfilled' );
-delete_option( 'mosmcp_ability_exclusivity_reconciled' );
-delete_option( 'mosmcp_migrated_version' );
+delete_option( Migration::DB_VERSION_OPTION );
+delete_option( Migration::GRANTS_BACKFILL_OPTION );
+delete_option( Migration::EXCLUSIVITY_BACKFILL_OPTION );
+delete_option( Migration::MIGRATED_VERSION_OPTION );
+delete_option( Hooks::REWRITE_VERSION_OPTION );
+delete_option( Tokens::SALT_CLAIM_OPTION );
 delete_option( Audit_Store::OPTION_RETENTION );
 delete_option( Debug_Store::OPTION_ENABLED );
 delete_option( Debug_Store::OPTION_RETENTION );

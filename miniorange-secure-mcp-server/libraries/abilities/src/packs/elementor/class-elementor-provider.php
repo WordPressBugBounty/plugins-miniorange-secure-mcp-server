@@ -29,6 +29,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Elementor_Provider {
 
 	/**
+	 * Default/max "limit" for mosmcp/elementor-list-widget-types. Named so the
+	 * runtime clamp below and the ability's input_schema (class-elementor-pack.php)
+	 * can't silently drift from each other.
+	 */
+	const WIDGET_LIST_DEFAULT_LIMIT = 100;
+	const WIDGET_LIST_MAX_LIMIT     = 300;
+
+	/**
 	 * Reads a post's Elementor layout as a flat, content-focused element list.
 	 *
 	 * @param array<string, mixed> $input Ability input.
@@ -315,8 +323,8 @@ class Elementor_Provider {
 			)
 		);
 
-		$limit  = isset( $input['limit'] ) ? absint( $input['limit'] ) : 100;
-		$limit  = max( 1, min( $limit, 300 ) );
+		$limit  = isset( $input['limit'] ) ? absint( $input['limit'] ) : self::WIDGET_LIST_DEFAULT_LIMIT;
+		$limit  = max( 1, min( $limit, self::WIDGET_LIST_MAX_LIMIT ) );
 		$offset = isset( $input['offset'] ) ? absint( $input['offset'] ) : 0;
 
 		$page       = array_slice( $all, $offset, $limit );

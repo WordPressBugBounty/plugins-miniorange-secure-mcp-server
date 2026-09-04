@@ -97,6 +97,26 @@ class Products_Abilities {
 	const BACKORDER_OPTIONS = array( 'no', 'notify', 'yes' );
 
 	/**
+	 * Validates $input['id'] and fetches the product it names.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return WC_Product|WP_Error
+	 */
+	private static function require_product( $input ) {
+		$product_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'product ID', 'mosmcp-abilities' ) );
+		if ( is_wp_error( $product_id ) ) {
+			return $product_id;
+		}
+
+		$product = wc_get_product( $product_id );
+		if ( ! $product ) {
+			return WooCommerce_Response::error( 'wcab_product_not_found', __( 'No product was found with that ID.', 'mosmcp-abilities' ) );
+		}
+
+		return $product;
+	}
+
+	/**
 	 * Tax status options.
 	 */
 	const TAX_STATUSES = array( 'taxable', 'shipping', 'none' );
@@ -887,15 +907,11 @@ class Products_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$product_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'product ID', 'mosmcp-abilities' ) );
-		if ( is_wp_error( $product_id ) ) {
-			return $product_id;
+		$product = self::require_product( $input );
+		if ( is_wp_error( $product ) ) {
+			return $product;
 		}
-
-		$product = wc_get_product( $product_id );
-		if ( ! $product ) {
-			return WooCommerce_Response::error( 'wcab_product_not_found', __( 'No product was found with that ID.', 'mosmcp-abilities' ) );
-		}
+		$product_id = $product->get_id();
 		if ( ! WooCommerce_Permissions::can_edit_product( $product_id ) ) {
 			return WooCommerce_Response::error( 'wcab_cannot_edit', __( 'You are not allowed to edit this product.', 'mosmcp-abilities' ) );
 		}
@@ -903,7 +919,7 @@ class Products_Abilities {
 		$fields = $input;
 		unset( $fields['id'], $fields['status'] );
 		if ( empty( $fields ) && ! isset( $input['status'] ) ) {
-			return WooCommerce_Response::error( 'wcab_nothing_to_update', __( 'Provide at least one field to update.', 'mosmcp-abilities' ) );
+			return WooCommerce_Response::nothing_to_update_error();
 		}
 
 		$result = self::apply_writable_fields( $product, $fields );
@@ -967,8 +983,10 @@ class Products_Abilities {
 		}
 		if ( isset( $input['sale_price'] ) ) {
 			$sale_price = sanitize_text_field( (string) $input['sale_price'] );
-			if ( '' !== $sale_price && ! is_numeric( $sale_price ) ) {
-				return WooCommerce_Response::error( 'wcab_invalid_price', __( 'sale_price must be numeric, or an empty string to clear it.', 'mosmcp-abilities' ) );
+			if ( '' !== $sale_price ) {
+				if ( ! is_numeric( $sale_price ) || (float) $sale_price < 0 ) {
+					return WooCommerce_Response::error( 'wcab_invalid_price', __( 'sale_price must be a non-negative number, or an empty string to clear it.', 'mosmcp-abilities' ) );
+				}
 			}
 			$product->set_sale_price( $sale_price );
 		}
@@ -992,6 +1010,9 @@ class Products_Abilities {
 			$product->set_manage_stock( (bool) $input['manage_stock'] );
 		}
 		if ( isset( $input['stock_quantity'] ) ) {
+			if ( ! is_numeric( $input['stock_quantity'] ) || (int) $input['stock_quantity'] < 0 ) {
+				return WooCommerce_Response::error( 'wcab_invalid_stock_quantity', __( 'stock_quantity must be a non-negative integer.', 'mosmcp-abilities' ) );
+			}
 			$product->set_stock_quantity( (int) $input['stock_quantity'] );
 		}
 		if ( isset( $input['stock_status'] ) ) {
@@ -1133,15 +1154,11 @@ class Products_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$product_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'product ID', 'mosmcp-abilities' ) );
-		if ( is_wp_error( $product_id ) ) {
-			return $product_id;
+		$product = self::require_product( $input );
+		if ( is_wp_error( $product ) ) {
+			return $product;
 		}
-
-		$product = wc_get_product( $product_id );
-		if ( ! $product ) {
-			return WooCommerce_Response::error( 'wcab_product_not_found', __( 'No product was found with that ID.', 'mosmcp-abilities' ) );
-		}
+		$product_id = $product->get_id();
 		if ( ! WooCommerce_Permissions::can_delete_product( $product_id ) ) {
 			return WooCommerce_Response::error( 'wcab_cannot_delete', __( 'You are not allowed to delete this product.', 'mosmcp-abilities' ) );
 		}
@@ -1983,15 +2000,11 @@ class Products_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$product_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'product ID', 'mosmcp-abilities' ) );
-		if ( is_wp_error( $product_id ) ) {
-			return $product_id;
+		$product = self::require_product( $input );
+		if ( is_wp_error( $product ) ) {
+			return $product;
 		}
-
-		$product = wc_get_product( $product_id );
-		if ( ! $product ) {
-			return WooCommerce_Response::error( 'wcab_product_not_found', __( 'No product was found with that ID.', 'mosmcp-abilities' ) );
-		}
+		$product_id = $product->get_id();
 		if ( ! WooCommerce_Permissions::can_edit_product( $product_id ) ) {
 			return WooCommerce_Response::error( 'wcab_cannot_edit', __( 'You are not allowed to edit this product.', 'mosmcp-abilities' ) );
 		}

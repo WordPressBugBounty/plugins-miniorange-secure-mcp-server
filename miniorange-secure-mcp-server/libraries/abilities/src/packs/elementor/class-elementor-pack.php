@@ -155,7 +155,14 @@ class Elementor_Pack extends Ability_Pack {
 							)
 						),
 						'include_css' => Schema::boolean( __( 'Include the layout\'s generated CSS alongside the markup. Only applies when rendering a whole post.', 'mosmcp-abilities' ), array( 'default' => false ) ),
-						'max_bytes'   => Schema::int( __( 'Maximum output size. Larger output is cut off and flagged as truncated.', 'mosmcp-abilities' ), array( 'default' => 120000, 'minimum' => 1000, 'maximum' => 500000 ) ),
+						'max_bytes'   => Schema::int(
+							__( 'Maximum output size. Larger output is cut off and flagged as truncated.', 'mosmcp-abilities' ),
+							array(
+								'default' => Elementor_Renderer::DEFAULT_MAX_BYTES,
+								'minimum' => 1000,
+								'maximum' => Elementor_Renderer::LIMIT_MAX_BYTES,
+							)
+						),
 					),
 					array( 'id' )
 				),
@@ -469,8 +476,21 @@ class Elementor_Pack extends Ability_Pack {
 						'widget_type' => Schema::str( __( 'Optional. Return only elements of this widget or container type, for example "heading" or "container".', 'mosmcp-abilities' ) ),
 						'search'      => Schema::str( __( 'Optional. Return only elements whose text, image or link values contain this string.', 'mosmcp-abilities' ) ),
 						'max_depth'   => Schema::int( __( 'Optional. Return only elements at or above this nesting depth. Top-level containers are depth 0.', 'mosmcp-abilities' ), array( 'minimum' => 0 ) ),
-						'limit'       => Schema::int( __( 'Maximum number of elements to return.', 'mosmcp-abilities' ), array( 'default' => 150, 'minimum' => 1, 'maximum' => 1000 ) ),
-						'offset'      => Schema::int( __( 'Number of matching elements to skip, for paging through a large layout.', 'mosmcp-abilities' ), array( 'default' => 0, 'minimum' => 0 ) ),
+						'limit'       => Schema::int(
+							__( 'Maximum number of elements to return.', 'mosmcp-abilities' ),
+							array(
+								'default' => Elementor_Document::DEFAULT_LIMIT,
+								'minimum' => 1,
+								'maximum' => Elementor_Document::MAX_LIMIT,
+							)
+						),
+						'offset'      => Schema::int(
+							__( 'Number of matching elements to skip, for paging through a large layout.', 'mosmcp-abilities' ),
+							array(
+								'default' => 0,
+								'minimum' => 0,
+							)
+						),
 						'include_raw' => Schema::boolean( __( 'Also return the layout exactly as stored, including all styling. Needed only when the whole layout is going to be rewritten, since the summarised list above omits styling and cannot be written back. Large.', 'mosmcp-abilities' ), array( 'default' => false ) ),
 					),
 					array( 'id' )
@@ -547,8 +567,21 @@ class Elementor_Pack extends Ability_Pack {
 						'search'      => Schema::str( __( 'Optional. Match widgets whose slug or name contains this string.', 'mosmcp-abilities' ) ),
 						'category'    => Schema::str( __( 'Optional. Match widgets in this Elementor panel category, for example "basic" or "pro-elements".', 'mosmcp-abilities' ) ),
 						'atomic_only' => Schema::boolean( __( 'Optional. Return only Elementor v4 atomic widgets.', 'mosmcp-abilities' ), array( 'default' => false ) ),
-						'limit'       => Schema::int( __( 'Maximum number of widget types to return.', 'mosmcp-abilities' ), array( 'default' => 100, 'minimum' => 1, 'maximum' => 300 ) ),
-						'offset'      => Schema::int( __( 'Number of widget types to skip.', 'mosmcp-abilities' ), array( 'default' => 0, 'minimum' => 0 ) ),
+						'limit'       => Schema::int(
+							__( 'Maximum number of widget types to return.', 'mosmcp-abilities' ),
+							array(
+								'default' => Elementor_Provider::WIDGET_LIST_DEFAULT_LIMIT,
+								'minimum' => 1,
+								'maximum' => Elementor_Provider::WIDGET_LIST_MAX_LIMIT,
+							)
+						),
+						'offset'      => Schema::int(
+							__( 'Number of widget types to skip.', 'mosmcp-abilities' ),
+							array(
+								'default' => 0,
+								'minimum' => 0,
+							)
+						),
 					)
 				),
 				'output_schema' => Schema::object(

@@ -382,7 +382,7 @@ class ACFA_Write_Abilities {
 		}
 		$field = ACFA_Helpers::field_object( $input['field_key'], $post_id );
 		if ( ! $field ) {
-			return new WP_Error( 'acfa_field_not_found', __( 'No ACF field matches the given field key/name for this post.', 'mosmcp-abilities' ) );
+			return new WP_Error( ACFA_Helpers::ERR_FIELD_NOT_FOUND, __( 'No ACF field matches the given field key/name for this post.', 'mosmcp-abilities' ) );
 		}
 		return array( $field, $post_id );
 	}
@@ -430,7 +430,7 @@ class ACFA_Write_Abilities {
 		list( $field, $post_id ) = $prepared;
 
 		if ( ! in_array( $field['type'], array( 'repeater', 'flexible_content' ), true ) ) {
-			return new WP_Error( 'acfa_not_repeater', __( 'The given field is not a repeater or flexible content field.', 'mosmcp-abilities' ) );
+			return new WP_Error( ACFA_Helpers::ERR_NOT_REPEATER, __( 'The given field is not a repeater or flexible content field.', 'mosmcp-abilities' ) );
 		}
 
 		$rows      = get_field( $field['key'], $post_id, false );
@@ -481,7 +481,7 @@ class ACFA_Write_Abilities {
 		list( $field, $post_id ) = $prepared;
 
 		if ( 'repeater' !== $field['type'] ) {
-			return new WP_Error( 'acfa_not_repeater', __( 'The given field is not a repeater field.', 'mosmcp-abilities' ) );
+			return new WP_Error( ACFA_Helpers::ERR_NOT_REPEATER, __( 'The given field is not a repeater field.', 'mosmcp-abilities' ) );
 		}
 		if ( empty( $input['row_values'] ) || ! is_array( $input['row_values'] ) ) {
 			return new WP_Error( 'acfa_missing_row_values', __( 'row_values must be a non-empty object of sub-field name/value pairs.', 'mosmcp-abilities' ) );
@@ -519,8 +519,53 @@ class ACFA_Write_Abilities {
 		$current    = get_field( $field['key'], $post_id, false );
 		$current    = array_map( 'intval', array_filter( (array) $current ) );
 		$target_ids = array_map( 'intval', (array) $input['target_ids'] );
+		$action     = (string) $input['action'];
 
-		switch ( (string) $input['action'] ) {
+		// Only IDs being newly linked in ('add'/'replace') need vetting — 'remove'
+		// only ever narrows $current via array_diff, so an invalid/unreadable ID
+		// there is a harmless no-op, never a way to attach something new.
+		if ( 'remove' !== $action && ! empty( $target_ids ) ) {
+			$is_user_field = 'user' === $field['type'];
+
+			// Existence is checked as one batched query rather than one get_post()/
+			// get_userdata() call per target ID; current_user_can() still runs per
+			// ID below since capability checks aren't batchable.
+			if ( $is_user_field ) {
+				$existing_ids = get_users(
+					array(
+						'include' => $target_ids,
+						'fields'  => 'ID',
+					)
+				);
+			} else {
+				// An explicit status list, not the 'any' keyword: 'any' silently
+				// excludes trash/auto-draft, but get_post() (what this replaces)
+				// doesn't care about status at all — matching that means asking
+				// for every registered status explicitly.
+				$existing_ids = get_posts(
+					array(
+						'post__in'    => $target_ids,
+						'post_type'   => 'any',
+						'post_status' => get_post_stati(),
+						'numberposts' => -1,
+						'fields'      => 'ids',
+					)
+				);
+			}
+			$existing_ids = array_flip( array_map( 'intval', $existing_ids ) );
+
+			foreach ( $target_ids as $target_id ) {
+				if ( $is_user_field ) {
+					if ( ! isset( $existing_ids[ $target_id ] ) ) {
+						return new WP_Error( 'acfa_invalid_target', sprintf( /* translators: %d: user ID. */ __( 'No user found with ID %d.', 'mosmcp-abilities' ), $target_id ) );
+					}
+				} elseif ( ! isset( $existing_ids[ $target_id ] ) || ! current_user_can( 'read_post', $target_id ) ) {
+						return new WP_Error( 'acfa_invalid_target', sprintf( /* translators: %d: post ID. */ __( 'No readable post found with ID %d.', 'mosmcp-abilities' ), $target_id ) );
+				}
+			}
+		}
+
+		switch ( $action ) {
 			case 'add':
 				$updated = array_values( array_unique( array_merge( $current, $target_ids ) ) );
 				break;
@@ -707,13 +752,13 @@ class ACFA_Write_Abilities {
 	 */
 	public static function execute_update_options_page_field( $input ) {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			return new WP_Error( 'acfa_forbidden', __( 'You do not have permission to update options page fields.', 'mosmcp-abilities' ) );
+			return new WP_Error( ACFA_Helpers::ERR_FORBIDDEN, __( 'You do not have permission to update options page fields.', 'mosmcp-abilities' ) );
 		}
 		$acf_post_id = ACFA_Helpers::options_post_id( (string) $input['options_page'] );
 
 		$field = ACFA_Helpers::field_object( $input['field_key'], $acf_post_id );
 		if ( ! $field ) {
-			return new WP_Error( 'acfa_field_not_found', __( 'No ACF field matches the given field key/name on this options page.', 'mosmcp-abilities' ) );
+			return new WP_Error( ACFA_Helpers::ERR_FIELD_NOT_FOUND, __( 'No ACF field matches the given field key/name on this options page.', 'mosmcp-abilities' ) );
 		}
 
 		$success = update_field( $field['key'], $input['value'], $acf_post_id );

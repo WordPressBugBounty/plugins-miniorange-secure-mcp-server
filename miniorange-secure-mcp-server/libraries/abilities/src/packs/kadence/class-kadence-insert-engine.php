@@ -84,12 +84,12 @@ class Kadence_Insert_Engine {
 	 * markup at all, which cannot match the block's real save() output. For a true
 	 * leaf (no lead/trail), innerContent is the single HTML chunk as before.
 	 *
-	 * @param string                            $name  Block name, e.g. 'kadence/advancedheading'.
-	 * @param array<string, mixed>              $attrs Block attributes (must include uniqueID).
-	 * @param array<int, array<string, mixed>>  $inner Child blocks (for containers).
-	 * @param string                            $leaf  Leaf innerHTML (when there is no lead/trail).
-	 * @param string                            $lead  Container opening markup.
-	 * @param string                            $trail Container closing markup.
+	 * @param string                           $name  Block name, e.g. 'kadence/advancedheading'.
+	 * @param array<string, mixed>             $attrs Block attributes (must include uniqueID).
+	 * @param array<int, array<string, mixed>> $inner Child blocks (for containers).
+	 * @param string                           $leaf  Leaf innerHTML (when there is no lead/trail).
+	 * @param string                           $lead  Container opening markup.
+	 * @param string                           $trail Container closing markup.
 	 * @return array<string, mixed>
 	 */
 	public static function node( $name, array $attrs, array $inner = array(), $leaf = '', $lead = '', $trail = '' ) {
@@ -203,7 +203,7 @@ class Kadence_Insert_Engine {
 	public static function build( array $spec, array $existing, $post_id ) {
 		$name = self::normalize_name( isset( $spec['block'] ) ? (string) $spec['block'] : '' );
 
-		if ( '' === $name || 0 !== strpos( $name, 'kadence/' ) ) {
+		if ( '' === $name || 0 !== strpos( $name, Kadence_Blocks_Helper::PREFIX ) ) {
 			return Kadence_Write_Engine::error( 'unsupported_block', __( 'The "block" must be a Kadence block name, e.g. "kadence/advancedheading".', 'mosmcp-abilities' ) );
 		}
 		if ( class_exists( 'WP_Block_Type_Registry' ) && ! \WP_Block_Type_Registry::get_instance()->is_registered( $name ) ) {
@@ -221,8 +221,8 @@ class Kadence_Insert_Engine {
 		}
 
 		// Build children first, threading a growing set so their uniqueIDs never collide.
-		$children = array();
-		$working  = $existing;
+		$children  = array();
+		$working   = $existing;
 		$working[] = array( 'attrs' => array( 'uniqueID' => $uid ) );
 
 		if ( ! empty( $spec['children'] ) && is_array( $spec['children'] ) ) {
@@ -255,7 +255,7 @@ class Kadence_Insert_Engine {
 		if ( '' === $block ) {
 			return '';
 		}
-		return false === strpos( $block, '/' ) ? 'kadence/' . $block : $block;
+		return false === strpos( $block, '/' ) ? Kadence_Blocks_Helper::PREFIX . $block : $block;
 	}
 
 	/**
@@ -268,7 +268,7 @@ class Kadence_Insert_Engine {
 	 * @param bool                 $has_children Whether the block has child blocks.
 	 * @return array{0: string, 1: string, 2: string}
 	 */
-	private static function markup( $name, $uid, array $attrs, $content, $has_children ) {
+	public static function markup( $name, $uid, array $attrs, $content, $has_children ) {
 		switch ( $name ) {
 			case 'kadence/rowlayout':
 				$cols = isset( $attrs['columns'] ) ? max( 1, (int) $attrs['columns'] ) : 1;

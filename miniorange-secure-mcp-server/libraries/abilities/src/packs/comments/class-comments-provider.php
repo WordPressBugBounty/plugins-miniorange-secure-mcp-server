@@ -11,6 +11,7 @@
 
 namespace MoSMCP\Abilities\Packs\Comments;
 
+use MoSMCP\Abilities\Support\Pagination;
 use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -575,25 +576,7 @@ class Comments_Provider {
 	 * @return array<string, int>
 	 */
 	private static function paginate_args( $input ) {
-		$page     = isset( $input['page'] ) ? absint( $input['page'] ) : 1;
-		$per_page = isset( $input['per_page'] ) ? absint( $input['per_page'] ) : 20;
-
-		if ( $page < 1 ) {
-			$page = 1;
-		}
-		if ( $per_page < 1 ) {
-			$per_page = 20;
-		}
-		if ( $per_page > 100 ) {
-			$per_page = 100;
-		}
-
-		return array(
-			'page'     => $page,
-			'per_page' => $per_page,
-			'number'   => $per_page,
-			'offset'   => ( $page - 1 ) * $per_page,
-		);
+		return Pagination::args( $input );
 	}
 
 	/**

@@ -35,13 +35,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Pages_Pack extends Ability_Pack {
 
 	/**
+	 * Ability category slug.
+	 */
+	const CATEGORY = 'mosmcp-pages';
+
+	/**
 	 * Ability category for page abilities.
 	 *
 	 * @return array Category definition.
 	 */
 	public function category() {
 		return array(
-			'slug'        => 'mosmcp-pages',
+			'slug'        => self::CATEGORY,
 			'label'       => __( 'Pages', 'mosmcp-abilities' ),
 			'description' => __( 'Create, edit, publish, and manage hierarchical pages.', 'mosmcp-abilities' ),
 		);
@@ -93,7 +98,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Create Draft Page', 'mosmcp-abilities' ),
 				'description'   => __( 'Creates a new page as a draft, authored by the current user. The page is not published. Optionally set a parent page to create it as a sub-page.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-pages',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_pages',
 				'annotations'   => self::annotations( false, false, false, false ),
 				'execute'       => array( Pages_Provider::class, 'create_draft' ),
@@ -132,7 +137,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Update Page', 'mosmcp-abilities' ),
 				'description'   => __( 'Edits the title, content and/or excerpt of an existing page, including pages authored by other users. Requires edit rights on that specific page, so a contributor still cannot edit a published page. Replaces the fields you pass and leaves the rest untouched; the page keeps its current status. If the post is built with Elementor, what visitors read comes from the Elementor layout rather than from this content, so change the text on the Elementor elements instead.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-pages',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_page',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, true, true ),
@@ -149,15 +154,15 @@ class Pages_Pack extends Ability_Pack {
 				),
 				'output_schema' => Schema::object(
 					array(
-						'id'       => Schema::int(),
-						'title'    => Schema::str(),
-						'status'   => Schema::str(),
-						'slug'     => Schema::str( __( 'The URL slug as stored, which may differ from a requested one.', 'mosmcp-abilities' ) ),
-						'updated'  => Schema::arr( array( 'type' => 'string' ), __( 'Fields that were changed.', 'mosmcp-abilities' ) ),
-						'warnings' => Schema::warnings( __( 'Notes about the update, such as the content not being visible because Elementor renders this post.', 'mosmcp-abilities' ) ),
-						'modified' => Schema::str(),
-						'edit_url' => Schema::str(),
-						'view_url' => Schema::str(),
+						'id'        => Schema::int(),
+						'title'     => Schema::str(),
+						'status'    => Schema::str(),
+						'slug'      => Schema::str( __( 'The URL slug as stored, which may differ from a requested one.', 'mosmcp-abilities' ) ),
+						'updated'   => Schema::arr( array( 'type' => 'string' ), __( 'Fields that were changed.', 'mosmcp-abilities' ) ),
+						'warnings'  => Schema::warnings( __( 'Notes about the update, such as the content not being visible because Elementor renders this post.', 'mosmcp-abilities' ) ),
+						'modified'  => Schema::str(),
+						'edit_url'  => Schema::str(),
+						'view_url'  => Schema::str(),
 						'post_type' => Schema::str(),
 					),
 					array( 'id', 'title', 'status' )
@@ -182,7 +187,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'            => __( 'Duplicate Page', 'mosmcp-abilities' ),
 				'description'      => __( 'Copies an existing page as a new draft, including its Elementor layout, assigned page template, theme display settings, custom fields and SEO fields. Use this to create a page that matches the design of an existing one, then edit the copy. The duplicate is authored by the current user and is created as a draft unless another status is given.', 'mosmcp-abilities' ),
-				'category'         => 'mosmcp-pages',
+				'category'         => self::CATEGORY,
 				'capability'       => 'edit_post',
 				'cap_args'         => self::source_id_args(),
 				'permission_extra' => self::can_create_pages(),
@@ -267,7 +272,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'            => __( 'Set Page Featured Image', 'mosmcp-abilities' ),
 				'description'      => __( 'Sets the featured image of a page to an existing media library image, or removes it by passing 0. Many themes render the featured image as the page banner.', 'mosmcp-abilities' ),
-				'category'         => 'mosmcp-pages',
+				'category'         => self::CATEGORY,
 				'capability'       => 'edit_post',
 				'cap_args'         => self::id_args(),
 				'permission_extra' => self::can_edit_page(),
@@ -296,7 +301,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Get Page Template And Display Settings', 'mosmcp-abilities' ),
 				'description'   => __( 'Reports which page template a page uses, whether Elementor controls its layout, and the per-page theme settings (sidebar, content width, title visibility) that decide how it renders. Use this to find out why one page looks different from another.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-pages',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( true, false, true, false ),
@@ -323,7 +328,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'            => __( 'Set Page Template', 'mosmcp-abilities' ),
 				'description'      => __( 'Assigns a page template to a page, for example one of Elementor\'s full-width or canvas templates. Only templates the active theme and its plugins actually register are accepted, so a mistyped slug is refused instead of silently falling back to the default.', 'mosmcp-abilities' ),
-				'category'         => 'mosmcp-pages',
+				'category'         => self::CATEGORY,
 				'capability'       => 'edit_post',
 				'cap_args'         => self::id_args(),
 				'permission_extra' => self::can_edit_page(),
@@ -352,7 +357,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Update Own Page', 'mosmcp-abilities' ),
 				'description'   => __( 'Edits the title, content and/or excerpt of a page authored by the current user. Cannot edit pages written by other users. Only the fields you pass are changed; the page keeps its current status. If the post is built with Elementor, what visitors read comes from the Elementor layout rather than from this content, so change the text on the Elementor elements instead.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-pages',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_page',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, false, true ),
@@ -369,15 +374,15 @@ class Pages_Pack extends Ability_Pack {
 				),
 				'output_schema' => Schema::object(
 					array(
-						'id'       => Schema::int(),
-						'title'    => Schema::str(),
-						'status'   => Schema::str(),
-						'slug'     => Schema::str( __( 'The URL slug as stored, which may differ from a requested one.', 'mosmcp-abilities' ) ),
-						'modified' => Schema::str(),
-						'updated'  => Schema::arr( array( 'type' => 'string' ), __( 'Fields that were changed.', 'mosmcp-abilities' ) ),
-						'warnings' => Schema::warnings( __( 'Notes about the update, such as the content not being visible because Elementor renders this post.', 'mosmcp-abilities' ) ),
-						'edit_url' => Schema::str(),
-						'view_url' => Schema::str(),
+						'id'        => Schema::int(),
+						'title'     => Schema::str(),
+						'status'    => Schema::str(),
+						'slug'      => Schema::str( __( 'The URL slug as stored, which may differ from a requested one.', 'mosmcp-abilities' ) ),
+						'modified'  => Schema::str(),
+						'updated'   => Schema::arr( array( 'type' => 'string' ), __( 'Fields that were changed.', 'mosmcp-abilities' ) ),
+						'warnings'  => Schema::warnings( __( 'Notes about the update, such as the content not being visible because Elementor renders this post.', 'mosmcp-abilities' ) ),
+						'edit_url'  => Schema::str(),
+						'view_url'  => Schema::str(),
 						'post_type' => Schema::str(),
 					),
 					array( 'id', 'title', 'status' )
@@ -397,7 +402,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'            => __( 'Publish Page', 'mosmcp-abilities' ),
 				'description'      => __( 'Changes a draft or pending page to published, making it publicly visible immediately.', 'mosmcp-abilities' ),
-				'category'         => 'mosmcp-pages',
+				'category'         => self::CATEGORY,
 				'capability'       => 'publish_pages',
 				'permission_extra' => self::can_edit_page(),
 				'annotations'      => self::annotations( false, false, false, true ),
@@ -434,7 +439,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Unpublish Page', 'mosmcp-abilities' ),
 				'description'   => __( 'Reverts a published page back to draft status, removing it from public view.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-pages',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_page',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, false, true ),
@@ -461,7 +466,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'            => __( 'Schedule Page', 'mosmcp-abilities' ),
 				'description'      => __( 'Schedules a draft or pending page to be published automatically at a future date and time (site timezone).', 'mosmcp-abilities' ),
-				'category'         => 'mosmcp-pages',
+				'category'         => self::CATEGORY,
 				'capability'       => 'publish_pages',
 				'permission_extra' => self::can_edit_page(),
 				'annotations'      => self::annotations( false, false, false, true ),
@@ -499,7 +504,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'            => __( 'Set Page to Private', 'mosmcp-abilities' ),
 				'description'      => __( 'Sets a page to private status, making it visible only to administrators and editors.', 'mosmcp-abilities' ),
-				'category'         => 'mosmcp-pages',
+				'category'         => self::CATEGORY,
 				'capability'       => 'publish_pages',
 				'permission_extra' => self::can_edit_page(),
 				'annotations'      => self::annotations( false, false, false, true ),
@@ -526,7 +531,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Set Page to Pending Review', 'mosmcp-abilities' ),
 				'description'   => __( 'Sets a draft page to pending review, so an editor can review and publish it.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-pages',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_page',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, false, true ),
@@ -553,7 +558,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Trash Page', 'mosmcp-abilities' ),
 				'description'   => __( 'Moves a page to the trash. The page is recoverable and can be restored later.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-pages',
+				'category'      => self::CATEGORY,
 				'capability'    => 'delete_page',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, true, true, true ),
@@ -589,7 +594,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Restore Page from Trash', 'mosmcp-abilities' ),
 				'description'   => __( 'Restores a page from the trash back to its previous status.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-pages',
+				'category'      => self::CATEGORY,
 				'capability'    => 'delete_page',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, true, true ),
@@ -624,7 +629,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Delete Page Permanently', 'mosmcp-abilities' ),
 				'description'   => __( 'Permanently deletes a page, bypassing the trash. This action is IRREVERSIBLE. Requires confirm=true.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-pages',
+				'category'      => self::CATEGORY,
 				'capability'    => 'delete_page',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, true, true, true ),
@@ -659,7 +664,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Find Page (ID by Name / Name by ID)', 'mosmcp-abilities' ),
 				'description'   => __( 'Looks up pages to resolve a page ID from a title/name, or a title from a page ID. Use this FIRST whenever the user refers to a page by its name and another ability requires a page ID. Provide "search" with the full or partial page title, or provide "id" to get that page\'s details. Searches all statuses. Returns up to 10 matches plus the total number of matches.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-pages',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_pages',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Pages_Provider::class, 'find' ),
@@ -704,7 +709,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Get Page', 'mosmcp-abilities' ),
 				'description'   => __( 'Gets the full details of a single page by its ID, including content, status, author, dates, and parent page.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-pages',
+				'category'      => self::CATEGORY,
 				'capability'    => 'read',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Pages_Provider::class, 'get' ),
@@ -760,7 +765,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'List All Pages', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists all pages of every status (published, draft, pending, scheduled, private, trashed), with an optional status filter. Returns at most per_page pages (default 20) plus the total. Users who cannot edit others\' pages only see their own pages.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-pages',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_pages',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Pages_Provider::class, 'list_all' ),
@@ -972,7 +977,7 @@ class Pages_Pack extends Ability_Pack {
 			array(
 				'label'         => $label,
 				'description'   => $desc,
-				'category'      => 'mosmcp-pages',
+				'category'      => self::CATEGORY,
 				'capability'    => $capability,
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Pages_Provider::class, $method ),

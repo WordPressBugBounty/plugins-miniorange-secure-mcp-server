@@ -12,6 +12,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use MoSMCP\Common\Controllers\Debug\Debug_Controller;
+use MoSMCP\Common\Migration\Migration;
+use MoSMCP\Common\Repositories\NHI_Store;
 use MoSMCP\Common\Utils\Utils;
 
 /**
@@ -216,7 +218,8 @@ class Admin_App {
 	 * @return array<string, mixed>
 	 */
 	private static function build_bootstrap() {
-		$user = wp_get_current_user();
+		$user     = wp_get_current_user();
+		$is_admin = current_user_can( 'manage_options' );
 
 		return array(
 			'restRoot'               => esc_url_raw( rest_url() ),
@@ -226,36 +229,55 @@ class Admin_App {
 			'version'                => MOSMCP_VERSION,
 			'mcpEndpoint'            => Utils::resource_url(),
 			'isLocalhost'            => Utils::is_localhost_site(),
-			'migratedVersion'        => current_user_can( 'manage_options' ) ? (string) get_option( 'mosmcp_migrated_version', '' ) : '',
-			'adminPostUrl'           => current_user_can( 'manage_options' ) ? esc_url_raw( admin_url( 'admin-post.php' ) ) : '',
-			'downloadDebugLogsNonce' => current_user_can( 'manage_options' ) ? wp_create_nonce( Debug_Controller::DOWNLOAD_NONCE_ACTION ) : '',
+			'migratedVersion'        => $is_admin ? (string) get_option( Migration::MIGRATED_VERSION_OPTION, '' ) : '',
+			'adminPostUrl'           => $is_admin ? esc_url_raw( admin_url( 'admin-post.php' ) ) : '',
+			'downloadDebugLogsNonce' => $is_admin ? wp_create_nonce( Debug_Controller::DOWNLOAD_NONCE_ACTION ) : '',
 			'user'                   => array(
 				'id'          => (int) $user->ID,
 				'displayName' => $user->display_name,
-				'isAdmin'     => current_user_can( 'manage_options' ),
+				'isAdmin'     => $is_admin,
 				'roles'       => array_values( (array) $user->roles ),
 			),
-			'abilities'              => self::get_abilities_payload(),
+			'abilities'              => self::get_abilities_payload( $user, $is_admin ),
 			// Bundled ability sets whose companion plugin is inactive, for the
 			// in-app discovery callout. Admin-only; empty for members.
-			'dormantPacks'           => current_user_can( 'manage_options' ) ? Dormant_Abilities_Provider::packs() : array(),
+			'dormantPacks'           => $is_admin ? Dormant_Abilities_Provider::packs() : array(),
 		);
 	}
 
 	/**
 	 * Returns a JSON-serializable list of registered abilities.
 	 *
+	 * Admins see the full catalog (they manage NHI ability grants and need to see
+	 * every option). Non-admins only see the abilities their own role(s) resolve
+	 * to via the NHI grants — the same scope the MCP endpoint and the OAuth
+	 * consent screen apply — so a low-privilege member page never leaks the
+	 * existence/description of abilities gated behind a higher capability.
+	 *
+	 * @param WP_User $user     The current user.
+	 * @param bool    $is_admin Whether the current user manages options (already
+	 *                          resolved by the caller, so this isn't recomputed here).
 	 * @return list<array<string, string|bool>>
 	 */
-	private static function get_abilities_payload() {
+	private static function get_abilities_payload( $user, $is_admin ) {
 		if ( ! function_exists( 'wp_get_abilities' ) ) {
 			return array();
+		}
+
+		$allowed = null;
+		if ( ! $is_admin ) {
+			$roles   = ( isset( $user->roles ) && is_array( $user->roles ) ) ? array_values( $user->roles ) : array();
+			$allowed = NHI_Store::resolve_for_roles( $roles );
 		}
 
 		$raw    = wp_get_abilities();
 		$result = array();
 
 		foreach ( $raw as $ability ) {
+			if ( null !== $allowed && ! in_array( $ability->get_name(), (array) $allowed, true ) ) {
+				continue;
+			}
+
 			$category = '';
 			if ( method_exists( $ability, 'get_category' ) ) {
 				$category = (string) $ability->get_category();

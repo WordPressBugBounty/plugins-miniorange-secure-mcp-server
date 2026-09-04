@@ -38,13 +38,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Cpt_Pack extends Ability_Pack {
 
 	/**
+	 * Ability category slug.
+	 */
+	const CATEGORY = 'mosmcp-cpt';
+
+	/**
 	 * The ability category this pack registers.
 	 *
 	 * @return array Category definition with 'slug', 'label', and 'description' keys.
 	 */
 	public function category() {
 		return array(
-			'slug'        => 'mosmcp-cpt',
+			'slug'        => self::CATEGORY,
 			'label'       => __( 'Custom Content', 'mosmcp-abilities' ),
 			'description' => __( 'Read and manage custom content types a site has registered — services, team members, portfolios and the like — including their custom fields and taxonomies.', 'mosmcp-abilities' ),
 		);
@@ -92,7 +97,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'List Custom Content Types', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists the custom content types this site has registered — things like Services, Team Members or Portfolio items — with what each supports, its taxonomies, how many items it holds, and whether the current user may create or publish them. Start here before working with custom content. Posts, pages, WooCommerce products and form entries are handled by their own abilities and are not listed.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Cpt_Provider::class, 'list_types' ),
@@ -120,7 +125,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Describe Custom Content Type', 'mosmcp-abilities' ),
 				'description'   => __( 'Describes one custom content type in full: which fields it has and their types, which taxonomies it uses and how many terms each holds, what it supports, and exactly what the current user is permitted to do with it. Read this before creating or editing items of a type you have not worked with, since a custom type\'s real content usually lives in its fields rather than its body text.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Cpt_Provider::class, 'describe_type' ),
@@ -146,7 +151,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'List Custom Content', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists items of a custom content type, optionally filtered by status, by a taxonomy term, by parent, or by a search of the title and body.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Cpt_Provider::class, 'list_items' ),
@@ -158,10 +163,35 @@ class Cpt_Pack extends Ability_Pack {
 						'taxonomy'  => Schema::str( __( 'Filter by a taxonomy attached to this type. Requires term.', 'mosmcp-abilities' ) ),
 						'term'      => Schema::str( __( 'The term to filter by, as a slug, name or ID. Requires taxonomy.', 'mosmcp-abilities' ) ),
 						'parent_id' => Schema::int( __( 'Only direct children of this item, for hierarchical types.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
-						'order_by'  => Schema::str( __( 'Sort by "modified" (default) or "title".', 'mosmcp-abilities' ), array( 'enum' => array( 'modified', 'title' ), 'default' => 'modified' ) ),
-						'order'     => Schema::str( __( 'Sort direction.', 'mosmcp-abilities' ), array( 'enum' => array( 'ASC', 'DESC' ), 'default' => 'DESC' ) ),
-						'per_page'  => Schema::int( __( 'How many items to return.', 'mosmcp-abilities' ), array( 'default' => 20, 'minimum' => 1, 'maximum' => 100 ) ),
-						'offset'    => Schema::int( __( 'How many items to skip.', 'mosmcp-abilities' ), array( 'default' => 0, 'minimum' => 0 ) ),
+						'order_by'  => Schema::str(
+							__( 'Sort by "modified" (default) or "title".', 'mosmcp-abilities' ),
+							array(
+								'enum'    => array( 'modified', 'title' ),
+								'default' => 'modified',
+							)
+						),
+						'order'     => Schema::str(
+							__( 'Sort direction.', 'mosmcp-abilities' ),
+							array(
+								'enum'    => array( 'ASC', 'DESC' ),
+								'default' => 'DESC',
+							)
+						),
+						'per_page'  => Schema::int(
+							__( 'How many items to return.', 'mosmcp-abilities' ),
+							array(
+								'default' => 20,
+								'minimum' => 1,
+								'maximum' => 100,
+							)
+						),
+						'offset'    => Schema::int(
+							__( 'How many items to skip.', 'mosmcp-abilities' ),
+							array(
+								'default' => 0,
+								'minimum' => 0,
+							)
+						),
 					),
 					array( 'post_type' )
 				),
@@ -203,7 +233,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Get Custom Content Item', 'mosmcp-abilities' ),
 				'description'   => __( 'Reads one item of a custom content type in full: its text, every custom field with who manages it, its taxonomy terms, its place in the hierarchy, its featured image and its Elementor status. Fields managed by Advanced Custom Fields are labelled as such, because those must be changed with the ACF abilities.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( true, false, true, false ),
@@ -233,7 +263,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'            => __( 'Create Custom Content Item', 'mosmcp-abilities' ),
 				'description'      => __( 'Creates a new item of a custom content type, as a draft unless another status is given. Fields the type does not support are refused rather than stored where nothing would ever show them. Set the item\'s custom fields and taxonomy terms afterwards, or duplicate an existing item to inherit its design.', 'mosmcp-abilities' ),
-				'category'         => 'mosmcp-cpt',
+				'category'         => self::CATEGORY,
 				'capability'       => 'edit_posts',
 				'permission_extra' => self::can_create_any(),
 				'annotations'      => self::annotations( false, false, false, false ),
@@ -244,7 +274,13 @@ class Cpt_Pack extends Ability_Pack {
 						'title'     => Schema::str( __( 'Title for the new item.', 'mosmcp-abilities' ), array( 'minLength' => 1 ) ),
 						'content'   => Schema::str( __( 'Body text. Only for types that support an editor.', 'mosmcp-abilities' ) ),
 						'excerpt'   => Schema::str( __( 'Excerpt. Only for types that support one.', 'mosmcp-abilities' ) ),
-						'status'    => Schema::str( __( 'Status for the new item. Publishing requires the type\'s publish capability.', 'mosmcp-abilities' ), array( 'enum' => array( 'draft', 'pending', 'private', 'publish' ), 'default' => 'draft' ) ),
+						'status'    => Schema::str(
+							__( 'Status for the new item. Publishing requires the type\'s publish capability.', 'mosmcp-abilities' ),
+							array(
+								'enum'    => array( 'draft', 'pending', 'private', 'publish' ),
+								'default' => 'draft',
+							)
+						),
 						'parent_id' => Schema::int( __( 'Parent item, for hierarchical types.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
 						'slug'      => Schema::str( __( 'New URL slug. Omit to leave the address unchanged. Reduced to a URL-safe form, and a suffix is added if it is already taken.', 'mosmcp-abilities' ) ),
 						'meta'      => Schema::map( __( 'Custom fields to set on the new item, as field name => value. Use the exact field names from the describe-type ability. Values are converted to the format each field is stored in, so a date field that holds a Unix timestamp accepts a readable date. A field that cannot be written does not fail the call: it is reported in warnings, and fields_set lists the ones that were stored.', 'mosmcp-abilities' ) ),
@@ -283,7 +319,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Update Custom Content Item', 'mosmcp-abilities' ),
 				'description'   => __( 'Edits the title, body and/or excerpt of a custom content item. Fields the type does not support are refused rather than written where nothing would display them. A custom type\'s real information usually lives in its custom fields, so use the field abilities for those.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, true, true ),
@@ -329,7 +365,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'            => __( 'Duplicate Custom Content Item', 'mosmcp-abilities' ),
 				'description'      => __( 'Copies a custom content item as a new draft, carrying its custom fields, taxonomy terms, featured image, template and Elementor layout across. This is the reliable way to create an item that matches an existing one, because a custom type\'s appearance and data live in its fields and settings rather than its body text.', 'mosmcp-abilities' ),
-				'category'         => 'mosmcp-cpt',
+				'category'         => self::CATEGORY,
 				'capability'       => 'edit_post',
 				'cap_args'         => self::source_id_args(),
 				'permission_extra' => self::can_create_any(),
@@ -340,7 +376,13 @@ class Cpt_Pack extends Ability_Pack {
 						'post_type'         => self::post_type_property(),
 						'source_id'         => Schema::int( __( 'The item to copy. Its fields and settings become the new item\'s.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
 						'title'             => Schema::str( __( 'Title for the copy. Omit to use the original followed by "(copy)".', 'mosmcp-abilities' ) ),
-						'status'            => Schema::str( __( 'Status for the copy. Defaults to draft so it can be reviewed first.', 'mosmcp-abilities' ), array( 'enum' => array( 'draft', 'pending', 'private', 'publish' ), 'default' => 'draft' ) ),
+						'status'            => Schema::str(
+							__( 'Status for the copy. Defaults to draft so it can be reviewed first.', 'mosmcp-abilities' ),
+							array(
+								'enum'    => array( 'draft', 'pending', 'private', 'publish' ),
+								'default' => 'draft',
+							)
+						),
 						'include_content'   => Schema::boolean( __( 'Whether to copy the body text. Set false to keep the fields and settings but start with empty text.', 'mosmcp-abilities' ), array( 'default' => true ) ),
 						'expected_modified' => Schema::str( __( 'Optional. The "modified" value from a previous read; the copy is refused if the source changed since.', 'mosmcp-abilities' ) ),
 					),
@@ -384,15 +426,15 @@ class Cpt_Pack extends Ability_Pack {
 		return new Ability(
 			'mosmcp/cpt-set-field',
 			array(
-				'label'         => __( 'Set Custom Field', 'mosmcp-abilities' ),
-				'description'   => __( 'Writes one custom field on a custom content item — a price, a duration, a list of features. Values are checked against the field\'s declared type. Fields managed by Advanced Custom Fields are refused, because ACF stores each field as a pair of rows and writing only one breaks it; use the ACF abilities for those. Private fields no plugin has declared are also refused. Read the item first to see which fields it has and which are writable.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
-				'capability'    => 'edit_post',
-				'cap_args'      => self::id_args(),
-				'annotations'   => self::annotations( false, false, true, false ),
-				'execute'       => array( Cpt_Provider::class, 'set_field' ),
+				'label'           => __( 'Set Custom Field', 'mosmcp-abilities' ),
+				'description'     => __( 'Writes one custom field on a custom content item — a price, a duration, a list of features. Values are checked against the field\'s declared type. Fields managed by Advanced Custom Fields are refused, because ACF stores each field as a pair of rows and writing only one breaks it; use the ACF abilities for those. Private fields no plugin has declared are also refused. Read the item first to see which fields it has and which are writable.', 'mosmcp-abilities' ),
+				'category'        => self::CATEGORY,
+				'capability'      => 'edit_post',
+				'cap_args'        => self::id_args(),
+				'annotations'     => self::annotations( false, false, true, false ),
+				'execute'         => array( Cpt_Provider::class, 'set_field' ),
 				'guard_meta_keys' => array( 'field' ),
-				'input_schema'  => Schema::object(
+				'input_schema'    => Schema::object(
 					array(
 						'post_type' => self::post_type_property(),
 						'id'        => self::id_property(),
@@ -401,7 +443,7 @@ class Cpt_Pack extends Ability_Pack {
 					),
 					array( 'post_type', 'id', 'field', 'value' )
 				),
-				'output_schema' => Schema::object(
+				'output_schema'   => Schema::object(
 					array(
 						'id'         => Schema::int(),
 						'post_type'  => Schema::str(),
@@ -428,15 +470,15 @@ class Cpt_Pack extends Ability_Pack {
 		return new Ability(
 			'mosmcp/cpt-delete-field',
 			array(
-				'label'         => __( 'Delete Custom Field', 'mosmcp-abilities' ),
-				'description'   => __( 'Removes a custom field from a custom content item entirely, rather than setting it empty. The same protections apply as when writing one.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
-				'capability'    => 'edit_post',
-				'cap_args'      => self::id_args(),
-				'annotations'   => self::annotations( false, true, true, false ),
-				'execute'       => array( Cpt_Provider::class, 'delete_field' ),
+				'label'           => __( 'Delete Custom Field', 'mosmcp-abilities' ),
+				'description'     => __( 'Removes a custom field from a custom content item entirely, rather than setting it empty. The same protections apply as when writing one.', 'mosmcp-abilities' ),
+				'category'        => self::CATEGORY,
+				'capability'      => 'edit_post',
+				'cap_args'        => self::id_args(),
+				'annotations'     => self::annotations( false, true, true, false ),
+				'execute'         => array( Cpt_Provider::class, 'delete_field' ),
 				'guard_meta_keys' => array( 'field' ),
-				'input_schema'  => Schema::object(
+				'input_schema'    => Schema::object(
 					array(
 						'post_type' => self::post_type_property(),
 						'id'        => self::id_property(),
@@ -444,7 +486,7 @@ class Cpt_Pack extends Ability_Pack {
 					),
 					array( 'post_type', 'id', 'field' )
 				),
-				'output_schema' => Schema::object(
+				'output_schema'   => Schema::object(
 					array(
 						'id'        => Schema::int(),
 						'post_type' => Schema::str(),
@@ -472,7 +514,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Assign Terms To Custom Content', 'mosmcp-abilities' ),
 				'description'   => __( 'Adds terms from one of a type\'s taxonomies to an item — a service category, a department. Terms must already exist unless create_missing is set. By default terms are added to whatever is already assigned; set replace to swap the whole set.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, true, false ),
@@ -504,7 +546,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Remove Terms From Custom Content', 'mosmcp-abilities' ),
 				'description'   => __( 'Removes specific terms from an item in one of its taxonomies, leaving the terms themselves intact for other items.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, true, false ),
@@ -536,7 +578,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Set Custom Content Featured Image', 'mosmcp-abilities' ),
 				'description'   => __( 'Sets or clears the featured image of a custom content item. Refused for types that have no featured image, since one would never be displayed.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, true, true ),
@@ -565,7 +607,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Move Custom Content In Hierarchy', 'mosmcp-abilities' ),
 				'description'   => __( 'Sets the parent of an item in a hierarchical custom type, and optionally its order among siblings. Pass 0 to move it to the top level. Moving an item beneath one of its own descendants is refused, since that would detach the branch.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, true, false ),
@@ -606,7 +648,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Set Custom Content Status', 'mosmcp-abilities' ),
 				'description'   => __( 'Publishes a custom content item, or returns it to draft, pending review or private. Publishing requires the type\'s own publish capability, which a custom type may define separately from posts.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, true, true ),
@@ -645,7 +687,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Trash Custom Content Item', 'mosmcp-abilities' ),
 				'description'   => __( 'Moves a custom content item to the trash, where it can be restored.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
+				'category'      => self::CATEGORY,
 				'capability'    => 'delete_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, true, true, false ),
@@ -673,7 +715,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Restore Custom Content Item', 'mosmcp-abilities' ),
 				'description'   => __( 'Restores a custom content item from the trash to its previous status.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
+				'category'      => self::CATEGORY,
 				'capability'    => 'delete_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, true, false ),
@@ -701,7 +743,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Permanently Delete Custom Content Item', 'mosmcp-abilities' ),
 				'description'   => __( 'Permanently deletes a custom content item and its fields. This cannot be undone and requires explicit confirmation. Prefer moving it to the trash.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
+				'category'      => self::CATEGORY,
 				'capability'    => 'delete_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, true, false, false ),
@@ -741,7 +783,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Get Custom Content Template', 'mosmcp-abilities' ),
 				'description'   => __( 'Reports which page template a custom content item uses, whether Elementor controls its layout, and the per-item theme display settings that decide how it renders.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( true, false, true, false ),
@@ -769,7 +811,7 @@ class Cpt_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Set Custom Content Template', 'mosmcp-abilities' ),
 				'description'   => __( 'Assigns a page template to a custom content item. Only templates the active theme and its plugins register are accepted, so a mistyped name is refused rather than silently falling back to the default.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-cpt',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, true, true ),

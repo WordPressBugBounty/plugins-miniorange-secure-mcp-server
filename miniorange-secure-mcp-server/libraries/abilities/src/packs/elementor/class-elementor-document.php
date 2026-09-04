@@ -52,6 +52,20 @@ class Elementor_Document {
 	const DATA_KEY = '_elementor_data';
 
 	/**
+	 * The meta key marking a post as built with Elementor ('builder').
+	 *
+	 * @var string
+	 */
+	const EDIT_MODE_KEY = '_elementor_edit_mode';
+
+	/**
+	 * The meta key holding the Elementor template type (e.g. 'wp-page').
+	 *
+	 * @var string
+	 */
+	const TEMPLATE_TYPE_KEY = '_elementor_template_type';
+
+	/**
 	 * Largest raw tree this pack will decode, in bytes.
 	 *
 	 * Decoding costs roughly ten times the JSON size in PHP array overhead, so an
@@ -312,7 +326,7 @@ class Elementor_Document {
 			'child_count' => isset( $node['elements'] ) && is_array( $node['elements'] ) ? count( $node['elements'] ) : 0,
 			'is_atomic'   => $is_atomic,
 			'editable'    => ! $is_atomic || isset( Elementor_Schema::ATOMIC_CONTENT[ $slug ] ),
-			'content'     => self::content_values( $slug, $settings, $is_atomic ),
+			'content'     => self::content_values( $slug, $settings, $is_atomic, $element ),
 		);
 	}
 
@@ -322,12 +336,15 @@ class Elementor_Document {
 	 * @param string               $slug      Widget or element slug.
 	 * @param array<string, mixed> $settings  Node settings.
 	 * @param bool                 $is_atomic Whether the node is atomic.
+	 * @param object|null          $element   The already-resolved widget/element object
+	 *                                        (see {@see Elementor_Schema::element()}), so an
+	 *                                        unmapped widget's heuristic lookup isn't repeated.
 	 * @return array<string, mixed>
 	 */
-	private static function content_values( $slug, array $settings, $is_atomic ) {
+	private static function content_values( $slug, array $settings, $is_atomic, $element = null ) {
 		$out = array();
 
-		foreach ( Elementor_Schema::content_controls( $slug ) as $role => $control ) {
+		foreach ( Elementor_Schema::content_controls( $slug, $element ) as $role => $control ) {
 			if ( ! array_key_exists( $control, $settings ) ) {
 				continue;
 			}
@@ -399,8 +416,8 @@ class Elementor_Document {
 			'version'       => Elementor_Schema::version(),
 			'has_data'      => '' !== $raw,
 			'data_bytes'    => strlen( $raw ),
-			'edit_mode'     => (string) get_post_meta( $post_id, '_elementor_edit_mode', true ),
-			'template_type' => (string) get_post_meta( $post_id, '_elementor_template_type', true ),
+			'edit_mode'     => (string) get_post_meta( $post_id, self::EDIT_MODE_KEY, true ),
+			'template_type' => (string) get_post_meta( $post_id, self::TEMPLATE_TYPE_KEY, true ),
 			'saved_version' => (string) get_post_meta( $post_id, '_elementor_version', true ),
 			'page_template' => (string) get_post_meta( $post_id, '_wp_page_template', true ),
 			'edit_url'      => admin_url( 'post.php?post=' . $post_id . '&action=elementor' ),

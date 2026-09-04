@@ -36,13 +36,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Posts_Pack extends Ability_Pack {
 
 	/**
+	 * Ability category slug.
+	 */
+	const CATEGORY = 'mosmcp-posts';
+
+	/**
 	 * Ability category for post abilities.
 	 *
 	 * @return array Category definition.
 	 */
 	public function category() {
 		return array(
-			'slug'        => 'mosmcp-posts',
+			'slug'        => self::CATEGORY,
 			'label'       => __( 'Posts', 'mosmcp-abilities' ),
 			'description' => __( 'Create, edit, publish, organize, and manage blog posts.', 'mosmcp-abilities' ),
 		);
@@ -100,7 +105,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Create Draft', 'mosmcp-abilities' ),
 				'description'   => __( 'Creates a new post as a draft, authored by the current user. The post is not published.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( false, false, false, false ),
 				'execute'       => array( Posts_Provider::class, 'create_draft' ),
@@ -115,12 +120,12 @@ class Posts_Pack extends Ability_Pack {
 				),
 				'output_schema' => Schema::object(
 					array(
-						'id'       => Schema::int(),
-						'title'    => Schema::str(),
-						'status'   => Schema::str(),
-						'slug'     => Schema::str( __( 'The URL slug as stored, which may differ from a requested one.', 'mosmcp-abilities' ) ),
-						'edit_url' => Schema::str(),
-						'view_url' => Schema::str(),
+						'id'        => Schema::int(),
+						'title'     => Schema::str(),
+						'status'    => Schema::str(),
+						'slug'      => Schema::str( __( 'The URL slug as stored, which may differ from a requested one.', 'mosmcp-abilities' ) ),
+						'edit_url'  => Schema::str(),
+						'view_url'  => Schema::str(),
 						'post_type' => Schema::str(),
 					),
 					array( 'id', 'title', 'status' )
@@ -146,7 +151,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'            => __( 'Duplicate Post', 'mosmcp-abilities' ),
 				'description'      => __( 'Copies an existing post as a new draft, including its Elementor layout, theme display settings, custom fields, SEO fields, categories, tags and featured image. Use this to create a post that matches the design of existing ones, then edit the copy. The duplicate is authored by the current user and is created as a draft unless another status is given.', 'mosmcp-abilities' ),
-				'category'         => 'mosmcp-posts',
+				'category'         => self::CATEGORY,
 				'capability'       => 'edit_post',
 				'cap_args'         => self::source_id_args(),
 				'permission_extra' => self::can_create_posts(),
@@ -235,7 +240,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'            => __( 'Update Post', 'mosmcp-abilities' ),
 				'description'      => __( 'Edits the title, content and/or excerpt of any post the current user has permission to edit, including posts written by other authors. Does not change the post status. If the post is built with Elementor, what visitors read comes from the Elementor layout rather than from this content, so change the text on the Elementor elements instead.', 'mosmcp-abilities' ),
-				'category'         => 'mosmcp-posts',
+				'category'         => self::CATEGORY,
 				'capability'       => 'edit_post',
 				'cap_args'         => self::id_args(),
 				'permission_extra' => self::can_edit_post(),
@@ -253,15 +258,15 @@ class Posts_Pack extends Ability_Pack {
 				),
 				'output_schema'    => Schema::object(
 					array(
-						'id'       => Schema::int(),
-						'title'    => Schema::str(),
-						'status'   => Schema::str(),
-						'slug'     => Schema::str( __( 'The URL slug as stored, which may differ from a requested one.', 'mosmcp-abilities' ) ),
-						'modified' => Schema::str(),
-						'updated'  => Schema::arr( array( 'type' => 'string' ), __( 'Fields that were changed.', 'mosmcp-abilities' ) ),
-						'warnings' => Schema::warnings( __( 'Notes about the update, such as the content not being visible because Elementor renders this post.', 'mosmcp-abilities' ) ),
-						'edit_url' => Schema::str(),
-						'view_url' => Schema::str(),
+						'id'        => Schema::int(),
+						'title'     => Schema::str(),
+						'status'    => Schema::str(),
+						'slug'      => Schema::str( __( 'The URL slug as stored, which may differ from a requested one.', 'mosmcp-abilities' ) ),
+						'modified'  => Schema::str(),
+						'updated'   => Schema::arr( array( 'type' => 'string' ), __( 'Fields that were changed.', 'mosmcp-abilities' ) ),
+						'warnings'  => Schema::warnings( __( 'Notes about the update, such as the content not being visible because Elementor renders this post.', 'mosmcp-abilities' ) ),
+						'edit_url'  => Schema::str(),
+						'view_url'  => Schema::str(),
 						'post_type' => Schema::str(),
 					),
 					array( 'id', 'title', 'status' )
@@ -281,7 +286,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'            => __( 'Set Post Featured Image', 'mosmcp-abilities' ),
 				'description'      => __( 'Sets the featured image of a post to an existing media library image, or removes it by passing 0. Many themes render the featured image as the post banner.', 'mosmcp-abilities' ),
-				'category'         => 'mosmcp-posts',
+				'category'         => self::CATEGORY,
 				'capability'       => 'edit_post',
 				'cap_args'         => self::id_args(),
 				'permission_extra' => self::can_edit_post(),
@@ -310,7 +315,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Get Post Template And Display Settings', 'mosmcp-abilities' ),
 				'description'   => __( 'Reports which page template a post uses, whether Elementor controls its layout, and the per-post theme settings (sidebar, content width, title visibility) that decide how it renders. Use this to find out why one post looks different from another.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( true, false, true, false ),
@@ -337,7 +342,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'            => __( 'Set Post Template', 'mosmcp-abilities' ),
 				'description'      => __( 'Assigns a page template to a post, for example one of Elementor\'s full-width or canvas templates. Only templates the active theme and its plugins actually register are accepted, so a mistyped slug is refused instead of silently falling back to the default.', 'mosmcp-abilities' ),
-				'category'         => 'mosmcp-posts',
+				'category'         => self::CATEGORY,
 				'capability'       => 'edit_post',
 				'cap_args'         => self::id_args(),
 				'permission_extra' => self::can_edit_post(),
@@ -366,7 +371,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Compare Post Settings', 'mosmcp-abilities' ),
 				'description'   => __( 'Compares all stored settings of two posts or pages and reports which are missing or different, highlighting the ones that affect layout. Use this when a new post does not look like an existing one, to find out exactly which settings it is missing.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::compare_args(),
 				'annotations'   => self::annotations( true, false, true, false ),
@@ -395,7 +400,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Update Own Post', 'mosmcp-abilities' ),
 				'description'   => __( 'Edits the title, content and/or excerpt of a post authored by the current user. Cannot edit posts written by other users. Only the fields you pass are changed; the post keeps its current status. If the post is built with Elementor, what visitors read comes from the Elementor layout rather than from this content, so change the text on the Elementor elements instead.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, false, true ),
@@ -412,15 +417,15 @@ class Posts_Pack extends Ability_Pack {
 				),
 				'output_schema' => Schema::object(
 					array(
-						'id'       => Schema::int(),
-						'title'    => Schema::str(),
-						'status'   => Schema::str(),
-						'slug'     => Schema::str( __( 'The URL slug as stored, which may differ from a requested one.', 'mosmcp-abilities' ) ),
-						'modified' => Schema::str(),
-						'updated'  => Schema::arr( array( 'type' => 'string' ), __( 'Fields that were changed.', 'mosmcp-abilities' ) ),
-						'warnings' => Schema::warnings( __( 'Notes about the update, such as the content not being visible because Elementor renders this post.', 'mosmcp-abilities' ) ),
-						'edit_url' => Schema::str(),
-						'view_url' => Schema::str(),
+						'id'        => Schema::int(),
+						'title'     => Schema::str(),
+						'status'    => Schema::str(),
+						'slug'      => Schema::str( __( 'The URL slug as stored, which may differ from a requested one.', 'mosmcp-abilities' ) ),
+						'modified'  => Schema::str(),
+						'updated'   => Schema::arr( array( 'type' => 'string' ), __( 'Fields that were changed.', 'mosmcp-abilities' ) ),
+						'warnings'  => Schema::warnings( __( 'Notes about the update, such as the content not being visible because Elementor renders this post.', 'mosmcp-abilities' ) ),
+						'edit_url'  => Schema::str(),
+						'view_url'  => Schema::str(),
 						'post_type' => Schema::str(),
 					),
 					array( 'id', 'title', 'status' )
@@ -440,7 +445,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'            => __( 'Publish Post', 'mosmcp-abilities' ),
 				'description'      => __( 'Changes a draft or pending post to published, making it publicly visible immediately.', 'mosmcp-abilities' ),
-				'category'         => 'mosmcp-posts',
+				'category'         => self::CATEGORY,
 				'capability'       => 'publish_posts',
 				'permission_extra' => self::can_edit_post(),
 				'annotations'      => self::annotations( false, false, false, true ),
@@ -477,7 +482,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Unpublish Post', 'mosmcp-abilities' ),
 				'description'   => __( 'Reverts a published post back to draft status, removing it from public view.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, false, true ),
@@ -504,7 +509,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'            => __( 'Schedule Post', 'mosmcp-abilities' ),
 				'description'      => __( 'Schedules a draft or pending post to be published automatically at a future date and time (site timezone).', 'mosmcp-abilities' ),
-				'category'         => 'mosmcp-posts',
+				'category'         => self::CATEGORY,
 				'capability'       => 'publish_posts',
 				'permission_extra' => self::can_edit_post(),
 				'annotations'      => self::annotations( false, false, false, true ),
@@ -542,7 +547,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'            => __( 'Set Post to Private', 'mosmcp-abilities' ),
 				'description'      => __( 'Sets a post to private status, making it visible only to administrators and editors.', 'mosmcp-abilities' ),
-				'category'         => 'mosmcp-posts',
+				'category'         => self::CATEGORY,
 				'capability'       => 'publish_posts',
 				'permission_extra' => self::can_edit_post(),
 				'annotations'      => self::annotations( false, false, false, true ),
@@ -569,7 +574,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Set Post to Pending Review', 'mosmcp-abilities' ),
 				'description'   => __( 'Sets a draft post to pending review, so an editor can review and publish it.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, false, true ),
@@ -596,7 +601,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Trash Post', 'mosmcp-abilities' ),
 				'description'   => __( 'Moves a post to the trash. The post is recoverable and can be restored later.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => 'delete_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, true, true, true ),
@@ -632,7 +637,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Restore Post from Trash', 'mosmcp-abilities' ),
 				'description'   => __( 'Restores a post from the trash back to its previous status.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => 'delete_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, true, true ),
@@ -667,7 +672,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Delete Post Permanently', 'mosmcp-abilities' ),
 				'description'   => __( 'Permanently deletes a post, bypassing the trash. This action is IRREVERSIBLE. Requires confirm=true.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => 'delete_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, true, true, true ),
@@ -702,7 +707,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Assign Category to Post', 'mosmcp-abilities' ),
 				'description'   => __( 'Adds a category to a post. Existing categories on the post are kept. Use mosmcp/category-find to resolve a category name to its ID first.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, true, true ),
@@ -730,7 +735,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Assign Tag to Post', 'mosmcp-abilities' ),
 				'description'   => __( 'Adds a tag to a post by tag name. Existing tags on the post are kept. If no tag with that name exists, it is created automatically (same as typing a new tag in the post editor).', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, true, true ),
@@ -758,7 +763,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Remove Category from Post', 'mosmcp-abilities' ),
 				'description'   => __( 'Removes a category from a post. Other categories on the post are kept. If the removed category was the only one, the post falls back to the default category (WordPress requires every post to have at least one).', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, true, true ),
@@ -786,7 +791,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Remove Tag from Post', 'mosmcp-abilities' ),
 				'description'   => __( 'Removes a tag from a post by tag name. Other tags on the post are kept. The tag itself is not deleted from the site.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, true, true ),
@@ -814,7 +819,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Find Post (ID by Name / Name by ID)', 'mosmcp-abilities' ),
 				'description'   => __( 'Looks up posts to resolve a post ID from a title/name, or a title from a post ID. Use this FIRST whenever the user refers to a post by its name and another ability requires a post ID. Provide "search" with the full or partial post title to get matching posts with their IDs, or provide "id" to get that post\'s title and details. Searches all statuses. Returns up to 10 matches plus the total number of matches.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Posts_Provider::class, 'find' ),
@@ -859,7 +864,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Get Post', 'mosmcp-abilities' ),
 				'description'   => __( 'Gets the full details of a single post by its ID, including content, status, author, dates, categories and tags.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => 'read',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Posts_Provider::class, 'get' ),
@@ -915,7 +920,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'List All Posts', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists all posts of every status (published, draft, pending, scheduled, private, trashed), with an optional status filter. Returns at most per_page posts (default 20) plus the total number of matching posts. Users who cannot edit others\' posts only see their own posts.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Posts_Provider::class, 'list_all' ),
@@ -1161,7 +1166,7 @@ class Posts_Pack extends Ability_Pack {
 			array(
 				'label'         => $label,
 				'description'   => $desc,
-				'category'      => 'mosmcp-posts',
+				'category'      => self::CATEGORY,
 				'capability'    => $capability,
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Posts_Provider::class, $method ),

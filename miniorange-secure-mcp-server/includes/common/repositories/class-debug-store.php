@@ -75,13 +75,14 @@ class Debug_Store {
 	 * log call, so a chatty request doesn't add N round-trips to the database.
 	 *
 	 * @param list<array<string, mixed>> $rows Rows shaped like {@see Debug_Logger::log()}.
-	 * @return void
+	 * @return bool True when the batch was written; false on a DB failure (or
+	 *              trivially true for an empty batch — there was nothing to fail).
 	 */
 	public static function insert_many( array $rows ) {
 		global $wpdb;
 
 		if ( empty( $rows ) ) {
-			return;
+			return true;
 		}
 
 		$table        = self::table();
@@ -108,24 +109,29 @@ class Debug_Store {
 		$sql         = "INSERT INTO %i {$columns_sql} VALUES " . implode( ', ', $placeholders );
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$wpdb->query( $wpdb->prepare( $sql, $values ) );
+		return false !== $wpdb->query( $wpdb->prepare( $sql, $values ) );
 	}
 
 	/**
 	 * Returns paginated, optionally filtered log rows with the total count.
 	 *
-	 * Accepted $args keys: page (int, 1-based), per_page (int, max 100),
+	 * Accepted $args keys: page (int, 1-based), per_page (int, max $per_page_cap),
 	 * level (string), channel (string), search (string, matched against
 	 * message), client_id (string), date_from (YYYY-MM-DD), date_to (YYYY-MM-DD).
 	 *
-	 * @param array<string, mixed> $args Query arguments.
+	 * @param array<string, mixed> $args         Query arguments.
+	 * @param int                  $per_page_cap Upper bound on per_page. Defaults to
+	 *                                            the admin list UI's page size (100);
+	 *                                            {@see export_chunk()} raises this so a
+	 *                                            full export isn't silently truncated
+	 *                                            to the UI's page size.
 	 * @return array{logs: list<array<string,mixed>>, total_count: int, page: int, per_page: int}
 	 */
-	public static function query( array $args ) {
+	public static function query( array $args, $per_page_cap = 100 ) {
 		global $wpdb;
 
 		$page     = max( 1, (int) ( isset( $args['page'] ) ? $args['page'] : 1 ) );
-		$per_page = max( 1, min( 100, (int) ( isset( $args['per_page'] ) ? $args['per_page'] : 50 ) ) );
+		$per_page = max( 1, min( $per_page_cap, (int) ( isset( $args['per_page'] ) ? $args['per_page'] : 50 ) ) );
 		$offset   = ( $page - 1 ) * $per_page;
 
 		$where  = array();
@@ -201,17 +207,35 @@ class Debug_Store {
 	}
 
 	/**
-	 * Returns every row matching the given filters, unpaginated, for export.
-	 * Capped at DEFAULT_MAX_ROWS as a safety valve against unbounded exports.
-	 *
-	 * @param array<string, mixed> $args Same filter keys as query(), minus pagination.
-	 * @return list<array<string, mixed>>
+	 * Chunk size {@see export_chunk()} pages through at, and the ceiling on
+	 * `per_page` passed to {@see query()} for an export. Small enough that one
+	 * chunk's rows/output stay a modest, bounded amount of memory regardless of
+	 * how large the full export is; large enough to keep the query count for a
+	 * near-DEFAULT_MAX_ROWS export reasonable (40 queries at the current size).
 	 */
-	public static function export( array $args ) {
-		$args['page']     = 1;
-		$args['per_page'] = self::DEFAULT_MAX_ROWS;
+	const EXPORT_CHUNK_SIZE = 500;
 
-		return self::query( $args )['logs'];
+	/**
+	 * Returns one page of rows matching the given filters, for a streamed
+	 * export — the caller (see Debug_Controller::download_logs()) requests
+	 * successive chunks and writes each to the response as it arrives, rather
+	 * than loading the whole (up to DEFAULT_MAX_ROWS) export into memory at
+	 * once the way a single unpaginated fetch would.
+	 *
+	 * @param array<string, mixed> $args  Same filter keys as query(), minus pagination.
+	 * @param int                  $chunk 1-based chunk index.
+	 * @return list<array<string, mixed>> Empty once every row up to DEFAULT_MAX_ROWS
+	 *                                    has been returned.
+	 */
+	public static function export_chunk( array $args, $chunk ) {
+		if ( ( $chunk - 1 ) * self::EXPORT_CHUNK_SIZE >= self::DEFAULT_MAX_ROWS ) {
+			return array();
+		}
+
+		$args['page']     = $chunk;
+		$args['per_page'] = self::EXPORT_CHUNK_SIZE;
+
+		return self::query( $args, self::EXPORT_CHUNK_SIZE )['logs'];
 	}
 
 	/**

@@ -85,9 +85,17 @@ class OAuth_Server {
 
 		Store::purge_expired();
 
-		// Remove orphaned registrations with the same client name that have no
-		// active or refreshable tokens. This prevents the clients table (and the
-		// NHI migration) from accumulating stale rows each time a broker re-registers.
+		// Remove orphaned registrations that have no active or refreshable tokens,
+		// left behind each time the same broker/app re-registers. This prevents the
+		// clients table (and the NHI migration) from accumulating stale rows.
+		//
+		// Matched on client_name AND the exact registered redirect_uris set, not name
+		// alone: two unrelated apps sharing a generic/default client_name (a real
+		// possibility — brokers often ship one) must not have each other's rows
+		// deleted just because a new, unrelated registration happens to share that
+		// name. The redirect_uris set is effectively unique per app/install, so
+		// requiring both to match ties the deletion to "the same client
+		// re-registering" rather than "any client with this name".
 		//
 		// Age guard: only prune clients older than the OAuth flow window. A client is
 		// token-less between registration and the token exchange; without this guard a
@@ -100,11 +108,12 @@ class OAuth_Server {
 				$wpdb->prepare(
 					'DELETE c FROM %i c
 					 LEFT JOIN %i t ON t.client_id = c.client_id AND t.expires >= %d
-					 WHERE c.client_name = %s AND c.created < %d AND t.token_hash IS NULL',
+					 WHERE c.client_name = %s AND c.redirect_uris = %s AND c.created < %d AND t.token_hash IS NULL',
 					Store::table( 'clients' ),
 					Store::table( 'tokens' ),
 					time(),
 					$client_name,
+					wp_json_encode( $redirect_uris ),
 					time() - 600
 				)
 			);
@@ -373,7 +382,7 @@ class OAuth_Server {
 		$hash = Tokens::hash( $refresh_token );
 		$row  = Store::get_token( $hash );
 
-		if ( ! $row || 'refresh' !== $row['type'] ) {
+		if ( ! $row || Tokens::TYPE_REFRESH !== $row['type'] ) {
 			return self::token_error( 'invalid_grant', __( 'Invalid refresh token.', 'miniorange-secure-mcp-server' ) );
 		}
 
@@ -414,7 +423,7 @@ class OAuth_Server {
 		Store::insert_token(
 			array(
 				'token_hash'  => $refresh_hash,
-				'type'        => 'refresh',
+				'type'        => Tokens::TYPE_REFRESH,
 				'client_id'   => $client_id,
 				'user_id'     => $user_id,
 				'scope'       => $scope,
@@ -429,7 +438,7 @@ class OAuth_Server {
 		Store::insert_token(
 			array(
 				'token_hash'  => Tokens::hash( $access ),
-				'type'        => 'access',
+				'type'        => Tokens::TYPE_ACCESS,
 				'client_id'   => $client_id,
 				'user_id'     => $user_id,
 				'scope'       => $scope,

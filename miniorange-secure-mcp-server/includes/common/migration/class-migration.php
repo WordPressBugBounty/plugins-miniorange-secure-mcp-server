@@ -31,6 +31,12 @@ class Migration {
 	/** One-time flag: duplicate ability grants have been deduplicated for exclusivity. */
 	const EXCLUSIVITY_BACKFILL_OPTION = 'mosmcp_ability_exclusivity_reconciled';
 
+	/** Schema version last recorded by install()/maybe_upgrade(). */
+	const DB_VERSION_OPTION = 'mosmcp_db_version';
+
+	/** Plugin version the RBAC/other upgrade-only migrations last ran against. */
+	const MIGRATED_VERSION_OPTION = 'mosmcp_migrated_version';
+
 	/**
 	 * Creates or updates the database schema and records the schema version.
 	 *
@@ -203,7 +209,7 @@ class Migration {
 
 		Tokens::ensure_salt();
 
-		update_option( 'mosmcp_db_version', MOSMCP_VERSION, false );
+		update_option( self::DB_VERSION_OPTION, MOSMCP_VERSION, false );
 	}
 
 	/**
@@ -242,15 +248,21 @@ class Migration {
 		foreach ( $rows as $row ) {
 			$name = '' !== (string) $row['client_name'] ? (string) $row['client_name'] : __( 'Migrated client', 'miniorange-secure-mcp-server' );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->insert(
+			$inserted = $wpdb->insert(
 				$nhis,
 				array(
+					'uuid'              => wp_generate_uuid4(),
 					'name'              => $name,
 					'allowed_abilities' => $row['allowed_abilities'],
 					'is_enabled'        => (int) $row['is_enabled'],
 					'created'           => (int) $row['created'],
 				)
 			);
+
+			if ( ! $inserted ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+				error_log( sprintf( 'MoSMCP: failed to migrate legacy OAuth client "%s" to an NHI: %s', $name, $wpdb->last_error ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_error_log
+			}
 		}
 	}
 
@@ -402,11 +414,11 @@ class Migration {
 	 * @return void
 	 */
 	public static function maybe_upgrade() {
-		$stored = get_option( 'mosmcp_db_version' );
+		$stored = get_option( self::DB_VERSION_OPTION );
 		if ( $stored !== MOSMCP_VERSION ) {
 			if ( false !== $stored && version_compare( (string) $stored, MOSMCP_VERSION, '<' ) ) {
 				// Flag the upgrade so the app shows an in-registry migration notice.
-				update_option( 'mosmcp_migrated_version', MOSMCP_VERSION, false );
+				update_option( self::MIGRATED_VERSION_OPTION, MOSMCP_VERSION, false );
 			}
 			self::install();
 		}

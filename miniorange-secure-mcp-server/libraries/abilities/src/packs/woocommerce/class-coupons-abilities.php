@@ -43,6 +43,31 @@ class Coupons_Abilities {
 	const DISCOUNT_TYPES = array( 'percent', 'fixed_cart', 'fixed_product' );
 
 	/**
+	 * Coupon post type.
+	 */
+	const POST_TYPE = 'shop_coupon';
+
+	/**
+	 * Validates $input['id'] and confirms it names an existing coupon.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return int|WP_Error
+	 */
+	private static function require_coupon_id( $input ) {
+		$coupon_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'coupon ID', 'mosmcp-abilities' ) );
+		if ( is_wp_error( $coupon_id ) ) {
+			return $coupon_id;
+		}
+
+		$post = get_post( $coupon_id );
+		if ( ! $post || self::POST_TYPE !== $post->post_type ) {
+			return WooCommerce_Response::error( 'wcab_coupon_not_found', __( 'No coupon was found with that ID.', 'mosmcp-abilities' ) );
+		}
+
+		return $coupon_id;
+	}
+
+	/**
 	 * Registers every Coupons ability. Called from {@see WooCommerce_Abilities_Loader}.
 	 *
 	 * @return void
@@ -351,7 +376,7 @@ class Coupons_Abilities {
 		$pagination = WooCommerce_Validator::validate_pagination( $input );
 
 		$query_args = array(
-			'post_type'      => 'shop_coupon',
+			'post_type'      => self::POST_TYPE,
 			'post_status'    => 'publish',
 			'posts_per_page' => $pagination['per_page'],
 			'paged'          => $pagination['page'],
@@ -460,14 +485,9 @@ class Coupons_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$coupon_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'coupon ID', 'mosmcp-abilities' ) );
+		$coupon_id = self::require_coupon_id( $input );
 		if ( is_wp_error( $coupon_id ) ) {
 			return $coupon_id;
-		}
-
-		$post = get_post( $coupon_id );
-		if ( ! $post || 'shop_coupon' !== $post->post_type ) {
-			return WooCommerce_Response::error( 'wcab_coupon_not_found', __( 'No coupon was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		WooCommerce_Helper::log( 'mosmcp/get-coupon', 'success', array( 'id' => $coupon_id ) );
@@ -644,14 +664,9 @@ class Coupons_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$coupon_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'coupon ID', 'mosmcp-abilities' ) );
+		$coupon_id = self::require_coupon_id( $input );
 		if ( is_wp_error( $coupon_id ) ) {
 			return $coupon_id;
-		}
-
-		$post = get_post( $coupon_id );
-		if ( ! $post || 'shop_coupon' !== $post->post_type ) {
-			return WooCommerce_Response::error( 'wcab_coupon_not_found', __( 'No coupon was found with that ID.', 'mosmcp-abilities' ) );
 		}
 		if ( ! WooCommerce_Permissions::can_edit_coupon( $coupon_id ) ) {
 			return WooCommerce_Response::error( 'wcab_cannot_edit', __( 'You are not allowed to edit this coupon.', 'mosmcp-abilities' ) );
@@ -660,7 +675,7 @@ class Coupons_Abilities {
 		$fields = $input;
 		unset( $fields['id'] );
 		if ( empty( $fields ) ) {
-			return WooCommerce_Response::error( 'wcab_nothing_to_update', __( 'Provide at least one field to update.', 'mosmcp-abilities' ) );
+			return WooCommerce_Response::nothing_to_update_error();
 		}
 
 		$coupon = new WC_Coupon( $coupon_id );
@@ -768,14 +783,9 @@ class Coupons_Abilities {
 		$started_at = microtime( true );
 		$input      = is_array( $input ) ? $input : array();
 
-		$coupon_id = WooCommerce_Validator::validate_id( isset( $input['id'] ) ? $input['id'] : null, __( 'coupon ID', 'mosmcp-abilities' ) );
+		$coupon_id = self::require_coupon_id( $input );
 		if ( is_wp_error( $coupon_id ) ) {
 			return $coupon_id;
-		}
-
-		$post = get_post( $coupon_id );
-		if ( ! $post || 'shop_coupon' !== $post->post_type ) {
-			return WooCommerce_Response::error( 'wcab_coupon_not_found', __( 'No coupon was found with that ID.', 'mosmcp-abilities' ) );
 		}
 		if ( ! WooCommerce_Permissions::can_delete_coupon( $coupon_id ) ) {
 			return WooCommerce_Response::error( 'wcab_cannot_delete', __( 'You are not allowed to delete this coupon.', 'mosmcp-abilities' ) );

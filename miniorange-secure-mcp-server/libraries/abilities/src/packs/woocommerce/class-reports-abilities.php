@@ -260,7 +260,12 @@ class Reports_Abilities {
 			)
 		);
 
-		$totals = self::aggregate_sales( $orders, $product_filter, $category_filter );
+		// Resolved once, up front: the alternative (a wc_get_product() call per line
+		// item inside aggregate_sales()'s per-order loop, to read its category IDs)
+		// is an N+1 that scales with every order in the date range.
+		$category_product_ids = $category_filter ? self::product_ids_in_category( $category_filter ) : null;
+
+		$totals = self::aggregate_sales( $orders, $product_filter, $category_filter, $category_product_ids );
 
 		$days          = max( 1, ( strtotime( $date_max ) - strtotime( $date_min ) ) / DAY_IN_SECONDS + 1 );
 		$net_sales     = $totals['total_sales'] - $totals['total_tax'] - $totals['total_shipping'] - $totals['total_refund_amount'];
@@ -297,12 +302,35 @@ class Reports_Abilities {
 	}
 
 	/**
-	 * @param \WC_Order[] $orders
-	 * @param int         $product_filter  Product ID to restrict to, or 0 for no filter.
-	 * @param int         $category_filter Category ID to restrict to, or 0 for no filter.
+	 * Builds the `date_created` query value `wc_get_orders()` expects, honoring
+	 * a partial range (either bound alone) rather than requiring both — a
+	 * caller-supplied `date_min` with no `date_max` means "since date_min",
+	 * not "ignore the filter and return all-time totals".
+	 *
+	 * @param string|null $date_min Start date (Y-m-d), or null.
+	 * @param string|null $date_max End date (Y-m-d), or null.
+	 * @return string
+	 */
+	private static function date_range_query( $date_min, $date_max ) {
+		if ( $date_min && $date_max ) {
+			return $date_min . '...' . $date_max;
+		}
+		if ( $date_min ) {
+			return '>=' . $date_min;
+		}
+		return '<=' . $date_max;
+	}
+
+	/**
+	 * @param \WC_Order[]          $orders
+	 * @param int                  $product_filter        Product ID to restrict to, or 0 for no filter.
+	 * @param int                  $category_filter       Category ID to restrict to, or 0 for no filter.
+	 * @param array<int, int>|null $category_product_ids  Product IDs in $category_filter, keyed by ID for O(1)
+	 *                                                     lookup (see {@see product_ids_in_category()}); null
+	 *                                                     when $category_filter is 0.
 	 * @return array<string, mixed>
 	 */
-	private static function aggregate_sales( array $orders, $product_filter, $category_filter ) {
+	private static function aggregate_sales( array $orders, $product_filter, $category_filter, $category_product_ids = null ) {
 		$total_orders        = 0;
 		$total_items         = 0;
 		$total_sales         = 0.0;
@@ -317,7 +345,7 @@ class Reports_Abilities {
 			if ( $scoped ) {
 				$matched = false;
 				foreach ( $order->get_items( 'line_item' ) as $item ) {
-					if ( ! self::line_item_matches( $item, $product_filter, $category_filter ) ) {
+					if ( ! self::line_item_matches( $item, $product_filter, $category_filter, $category_product_ids ) ) {
 						continue;
 					}
 					$matched      = true;
@@ -358,26 +386,42 @@ class Reports_Abilities {
 	}
 
 	/**
-	 * @param \WC_Order_Item_Product $item            The line item.
-	 * @param int                    $product_filter  Product ID to match, or 0 for no filter.
-	 * @param int                    $category_filter Category ID to match, or 0 for no filter.
+	 * @param \WC_Order_Item_Product $item                 The line item.
+	 * @param int                    $product_filter       Product ID to match, or 0 for no filter.
+	 * @param int                    $category_filter      Category ID to match, or 0 for no filter.
+	 * @param array<int, int>|null   $category_product_ids Product IDs in $category_filter (see
+	 *                                                      {@see product_ids_in_category()}); null when
+	 *                                                      $category_filter is 0.
 	 * @return bool
 	 */
-	private static function line_item_matches( $item, $product_filter, $category_filter ) {
+	private static function line_item_matches( $item, $product_filter, $category_filter, $category_product_ids = null ) {
 		$product_id = (int) $item->get_product_id();
 
 		if ( $product_filter && $product_id !== $product_filter ) {
 			return false;
 		}
 
-		if ( $category_filter ) {
-			$product = wc_get_product( $product_id );
-			if ( ! $product || ! in_array( $category_filter, $product->get_category_ids(), true ) ) {
-				return false;
-			}
+		if ( $category_filter && ! isset( $category_product_ids[ $product_id ] ) ) {
+			return false;
 		}
 
 		return true;
+	}
+
+	/**
+	 * Product IDs belonging to a product category, keyed by ID for O(1)
+	 * "is this product in the category" lookups.
+	 *
+	 * @param int $category_id Product category term ID.
+	 * @return array<int, int>
+	 */
+	private static function product_ids_in_category( $category_id ) {
+		$ids = get_objects_in_term( $category_id, 'product_cat' );
+		if ( is_wp_error( $ids ) || empty( $ids ) ) {
+			return array();
+		}
+
+		return array_flip( array_map( 'intval', $ids ) );
 	}
 
 	/*
@@ -608,11 +652,11 @@ class Reports_Abilities {
 		foreach ( wc_get_order_statuses() as $status_key => $label ) {
 			$slug = str_replace( 'wc-', '', $status_key );
 
-			if ( $date_min && $date_max ) {
+			if ( $date_min || $date_max ) {
 				$result = wc_get_orders(
 					array(
 						'status'       => array( $slug ),
-						'date_created' => $date_min . '...' . $date_max,
+						'date_created' => self::date_range_query( $date_min, $date_max ),
 						'limit'        => 1,
 						'paginate'     => true,
 						'return'       => 'ids',
@@ -921,8 +965,8 @@ class Reports_Abilities {
 			'limit'  => -1,
 			'return' => 'objects',
 		);
-		if ( $date_min && $date_max ) {
-			$order_args['date_created'] = $date_min . '...' . $date_max;
+		if ( $date_min || $date_max ) {
+			$order_args['date_created'] = self::date_range_query( $date_min, $date_max );
 		}
 
 		$orders = wc_get_orders( $order_args );

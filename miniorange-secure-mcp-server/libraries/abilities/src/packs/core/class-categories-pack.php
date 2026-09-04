@@ -34,13 +34,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Categories_Pack extends Ability_Pack {
 
 	/**
+	 * Ability category slug.
+	 */
+	const CATEGORY = 'mosmcp-categories';
+
+	/**
 	 * Ability category for category abilities.
 	 *
 	 * @return array Category definition.
 	 */
 	public function category() {
 		return array(
-			'slug'        => 'mosmcp-categories',
+			'slug'        => self::CATEGORY,
 			'label'       => __( 'Categories', 'mosmcp-abilities' ),
 			'description' => __( 'Create, edit, organize, and manage post categories.', 'mosmcp-abilities' ),
 		);
@@ -78,7 +83,7 @@ class Categories_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Create Category', 'mosmcp-abilities' ),
 				'description'   => __( 'Creates a new post category. Optionally set a parent category (to create a sub-category), a custom slug, and a description. Fails with a clear error if a category with the same name already exists.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-categories',
+				'category'      => self::CATEGORY,
 				'capability'    => 'manage_categories',
 				'annotations'   => self::annotations( false, false, false, false ),
 				'execute'       => array( Categories_Provider::class, 'create' ),
@@ -117,7 +122,7 @@ class Categories_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Delete Category', 'mosmcp-abilities' ),
 				'description'   => __( 'Deletes a post category. The posts in it are NOT deleted — they move to the default category. The default category itself cannot be deleted. Requires confirm=true.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-categories',
+				'category'      => self::CATEGORY,
 				'capability'    => 'manage_categories',
 				'annotations'   => self::annotations( false, true, true, true ),
 				'execute'       => array( Categories_Provider::class, 'delete' ),
@@ -152,7 +157,7 @@ class Categories_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Find Category (ID by Name / Name by ID)', 'mosmcp-abilities' ),
 				'description'   => __( 'Looks up post categories to resolve a category ID from a name, or a name from an ID. Use this FIRST whenever the user refers to a category by name and another ability requires a category ID. Provide "search" with the full or partial category name, or provide "id".', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-categories',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Categories_Provider::class, 'find' ),
@@ -178,7 +183,7 @@ class Categories_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Get Category', 'mosmcp-abilities' ),
 				'description'   => __( 'Gets the details of a single post category by its ID: name, slug, description, parent category, and how many posts it contains.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-categories',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Categories_Provider::class, 'get' ),
@@ -204,7 +209,7 @@ class Categories_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'List All Categories', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists all post categories, including empty ones, with their post counts and hierarchy (each item includes its parent category, if any). Returns at most per_page categories (default 20) plus the total.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-categories',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Categories_Provider::class, 'list_all' ),
@@ -225,7 +230,7 @@ class Categories_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'List Sub-Categories', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists the direct sub-categories (children) of a given post category, including empty ones.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-categories',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Categories_Provider::class, 'list_children' ),
@@ -259,7 +264,7 @@ class Categories_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'List Empty Categories', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists post categories that contain no posts — useful for finding categories that could be cleaned up or deleted.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-categories',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Categories_Provider::class, 'list_empty' ),
@@ -287,7 +292,7 @@ class Categories_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'List Posts in Category', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists the posts in a given category (including posts in its sub-categories), any status except trash, newest first. Returns at most per_page posts (default 20) plus the total.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-categories',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Categories_Provider::class, 'list_posts' ),
@@ -316,7 +321,7 @@ class Categories_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Update Category Description', 'mosmcp-abilities' ),
 				'description'   => __( 'Changes the description of an existing post category. The name and slug are not affected. Pass an empty string to clear the description.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-categories',
+				'category'      => self::CATEGORY,
 				'capability'    => 'manage_categories',
 				'annotations'   => self::annotations( false, false, true, true ),
 				'execute'       => array( Categories_Provider::class, 'update_description' ),
@@ -351,7 +356,7 @@ class Categories_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Rename Category', 'mosmcp-abilities' ),
 				'description'   => __( 'Changes the name of an existing post category. Posts in the category are not affected.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-categories',
+				'category'      => self::CATEGORY,
 				'capability'    => 'manage_categories',
 				'annotations'   => self::annotations( false, false, true, true ),
 				'execute'       => array( Categories_Provider::class, 'update_name' ),
@@ -378,7 +383,7 @@ class Categories_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Update Category Slug', 'mosmcp-abilities' ),
 				'description'   => __( 'Changes the URL slug of an existing post category. The name and description are not affected. Note: this changes the category archive URL, so old links to it will stop working.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-categories',
+				'category'      => self::CATEGORY,
 				'capability'    => 'manage_categories',
 				'annotations'   => self::annotations( false, false, true, true ),
 				'execute'       => array( Categories_Provider::class, 'update_slug' ),

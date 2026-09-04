@@ -233,7 +233,7 @@ class ACFA_Discovery_Abilities {
 		$post_id = isset( $input['post_id'] ) ? (int) $input['post_id'] : 0;
 		$field   = ACFA_Helpers::field_object( $input['field_key'], $post_id ? $post_id : null );
 		if ( ! $field ) {
-			return new WP_Error( 'acfa_field_not_found', __( 'No ACF field matches the given field key/name.', 'mosmcp-abilities' ) );
+			return new WP_Error( ACFA_Helpers::ERR_FIELD_NOT_FOUND, __( 'No ACF field matches the given field key/name.', 'mosmcp-abilities' ) );
 		}
 
 		$logic = ! empty( $field['conditional_logic'] ) && is_array( $field['conditional_logic'] )
@@ -243,7 +243,7 @@ class ACFA_Discovery_Abilities {
 		$is_visible = null;
 		if ( $post_id > 0 ) {
 			if ( ! get_post( $post_id ) ) {
-				return new WP_Error( 'acfa_invalid_post', __( 'The given post_id does not match an existing post.', 'mosmcp-abilities' ) );
+				return new WP_Error( ACFA_Helpers::ERR_INVALID_POST, __( 'The given post_id does not match an existing post.', 'mosmcp-abilities' ) );
 			}
 			$is_visible = ACFA_Helpers::evaluate_conditional_logic( $field, $post_id );
 		}

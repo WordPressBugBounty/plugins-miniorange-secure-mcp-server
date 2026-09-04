@@ -34,13 +34,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Media_Pack extends Ability_Pack {
 
 	/**
+	 * Ability category slug.
+	 */
+	const CATEGORY = 'mosmcp-media';
+
+	/**
 	 * Ability category for media abilities.
 	 *
 	 * @return array Category definition.
 	 */
 	public function category() {
 		return array(
-			'slug'        => 'mosmcp-media',
+			'slug'        => self::CATEGORY,
 			'label'       => __( 'Media', 'mosmcp-abilities' ),
 			'description' => __( 'Browse and manage the media library: list, inspect, retitle, and delete files.', 'mosmcp-abilities' ),
 		);
@@ -104,7 +109,7 @@ class Media_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Add Media From a URL', 'mosmcp-abilities' ),
 				'description'   => __( 'Downloads a file from a public web address and adds it to the media library, optionally attaching it to a post. Returns the new attachment_id, which other abilities take to set a featured image or fill an image widget. Only public http and https addresses can be fetched, and the file type is checked against the contents rather than the extension.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-media',
+				'category'      => self::CATEGORY,
 				'capability'    => 'upload_files',
 
 				/*
@@ -139,7 +144,7 @@ class Media_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Add Media From File Contents', 'mosmcp-abilities' ),
 				'description'   => __( 'Adds a file to the media library from base64-encoded contents, for when the file is not available at a URL. Returns the new attachment_id. The real file type is detected from the contents and must be one this site accepts, and the size must be within the site upload limit.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-media',
+				'category'      => self::CATEGORY,
 				'capability'    => 'upload_files',
 				'annotations'   => self::annotations( false, false, false, false ),
 				'execute'       => array( Media_Provider::class, 'upload_file' ),
@@ -169,7 +174,7 @@ class Media_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Count Media by Type', 'mosmcp-abilities' ),
 				'description'   => __( 'Returns how many items the media library contains in each category (all, images, audio, video, documents, spreadsheets, archives, unattached, mine) in a single call. Use this to answer questions like "what is in my media library?".', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-media',
+				'category'      => self::CATEGORY,
 				'capability'    => 'upload_files',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Media_Provider::class, 'count_by_type' ),
@@ -203,7 +208,7 @@ class Media_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Find Media (ID by Name / Name by ID)', 'mosmcp-abilities' ),
 				'description'   => __( 'Looks up media items to resolve a media ID from a title or filename, or a title from a media ID. Use this FIRST whenever the user refers to a media file by its name and another ability requires a media ID. Provide "search" with the full or partial title/filename, or provide "id". Returns up to 10 matches plus the total.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-media',
+				'category'      => self::CATEGORY,
 				'capability'    => 'upload_files',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Media_Provider::class, 'find' ),
@@ -248,7 +253,7 @@ class Media_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Get Media Details', 'mosmcp-abilities' ),
 				'description'   => __( 'Gets the full details of a single media item by its ID: URL, filename, mime type, file size, uploader, upload date, what it is attached to, caption, description, and (for images) alt text and dimensions.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-media',
+				'category'      => self::CATEGORY,
 				'capability'    => 'upload_files',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Media_Provider::class, 'get' ),
@@ -375,7 +380,7 @@ class Media_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Update Image Alt Text', 'mosmcp-abilities' ),
 				'description'   => __( 'Changes the alternative (alt) text of an image in the media library, used by screen readers and shown when the image cannot load. Only works on images.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-media',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, true, true ),
@@ -411,7 +416,7 @@ class Media_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Update Media Caption', 'mosmcp-abilities' ),
 				'description'   => __( 'Changes the caption of a media item in the media library. The caption is the short text usually displayed below the media on the site.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-media',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, false, true ),
@@ -447,7 +452,7 @@ class Media_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Update Media Description', 'mosmcp-abilities' ),
 				'description'   => __( 'Changes the description of a media item in the media library (the longer text shown on the attachment page, below the caption). Pass an empty string to clear it.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-media',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, false, true ),
@@ -483,7 +488,7 @@ class Media_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Update Media Title', 'mosmcp-abilities' ),
 				'description'   => __( 'Changes the title of a media item in the media library.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-media',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, false, false, true ),
@@ -518,7 +523,7 @@ class Media_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Delete Media Permanently', 'mosmcp-abilities' ),
 				'description'   => __( 'Permanently deletes a media item, including the actual file on disk and all its generated thumbnail sizes. Media has no trash — this action is IRREVERSIBLE. Requires confirm=true.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-media',
+				'category'      => self::CATEGORY,
 				'capability'    => 'delete_post',
 				'cap_args'      => self::id_args(),
 				'annotations'   => self::annotations( false, true, true, true ),
@@ -558,7 +563,7 @@ class Media_Pack extends Ability_Pack {
 			array(
 				'label'         => $label,
 				'description'   => $desc,
-				'category'      => 'mosmcp-media',
+				'category'      => self::CATEGORY,
 				'capability'    => 'upload_files',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Media_Provider::class, $method ),

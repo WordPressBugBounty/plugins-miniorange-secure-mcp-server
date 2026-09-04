@@ -68,7 +68,7 @@ class Pack_Registry {
 		}
 
 		foreach ( self::active_packs() as $pack ) {
-			if ( empty( $pack->abilities() ) ) {
+			if ( empty( self::abilities_for( $pack ) ) ) {
 				continue;
 			}
 
@@ -100,7 +100,7 @@ class Pack_Registry {
 		}
 
 		foreach ( self::active_packs() as $pack ) {
-			foreach ( $pack->abilities() as $ability ) {
+			foreach ( self::abilities_for( $pack ) as $ability ) {
 				if ( $ability instanceof Ability ) {
 					Ability_Registrar::register( $ability );
 				}
@@ -111,9 +111,18 @@ class Pack_Registry {
 	/**
 	 * Instantiates the manifest and filters it to packs whose dependency is met.
 	 *
+	 * Memoized: both Abilities API init hooks (register_categories(),
+	 * register_abilities()) call this once per request, and without caching each
+	 * call would re-instantiate every pack class and re-run is_available() for
+	 * a second time — pure duplicated work within the same request.
+	 *
 	 * @return Ability_Pack[]
 	 */
 	private static function active_packs() {
+		if ( null !== self::$active_packs ) {
+			return self::$active_packs;
+		}
+
 		$packs = array();
 
 		foreach ( self::pack_classes() as $class ) {
@@ -127,6 +136,44 @@ class Pack_Registry {
 			}
 		}
 
+		self::$active_packs = $packs;
+
 		return $packs;
 	}
+
+	/**
+	 * Memoized cache of {@see active_packs()}'s result for this request.
+	 *
+	 * @var Ability_Pack[]|null
+	 */
+	private static $active_packs = null;
+
+	/**
+	 * Returns (and memoizes) a pack's ability list.
+	 *
+	 * Building a pack's abilities() constructs a full Ability value object with
+	 * its schema per ability; without this cache, register_categories() (which
+	 * only needs to know whether the list is non-empty) and register_abilities()
+	 * (which needs the full list) would each rebuild it from scratch.
+	 *
+	 * @param Ability_Pack $pack The pack.
+	 * @return Ability[]
+	 */
+	private static function abilities_for( Ability_Pack $pack ) {
+		$key = spl_object_id( $pack );
+
+		if ( ! array_key_exists( $key, self::$abilities_cache ) ) {
+			self::$abilities_cache[ $key ] = $pack->abilities();
+		}
+
+		return self::$abilities_cache[ $key ];
+	}
+
+	/**
+	 * Memoized cache of {@see abilities_for()}'s results for this request, keyed
+	 * by spl_object_id() of the owning pack instance.
+	 *
+	 * @var array<int, Ability[]>
+	 */
+	private static $abilities_cache = array();
 }

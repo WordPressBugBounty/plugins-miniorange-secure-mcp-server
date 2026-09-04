@@ -83,16 +83,19 @@ class MCP_Server {
 		$is_notification = ! array_key_exists( 'id', $message );
 		$id              = $is_notification ? null : $message['id'];
 
+		// Notifications never receive a response, per JSON-RPC 2.0 — checked before
+		// any other early-return so a notification sent while zero NHIs are enabled
+		// is silently dropped rather than answered with an error object.
+		if ( $is_notification ) {
+			return null;
+		}
+
 		if ( NHI_Store::count_enabled() === 0 ) {
 			return self::error_response(
 				$id,
 				-32001,
 				'No NHI is enabled. Create or enable an NHI to allow MCP access: ' . admin_url( 'admin.php?page=mosmcp-abilities' ) . '#/nhi'
 			);
-		}
-
-		if ( $is_notification ) {
-			return null;
 		}
 
 		switch ( $method ) {

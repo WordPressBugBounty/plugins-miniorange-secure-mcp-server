@@ -23,6 +23,12 @@ use MoSMCP\Common\Services\Logging\Debug_Logger;
 class NHI_Store {
 
 	/**
+	 * Grant resource_type value for an ability grant (the only kind written today;
+	 * see the class docblock for the reserved-sentinel scheme other types would use).
+	 */
+	const RESOURCE_TYPE_ABILITY = 'ability';
+
+	/**
 	 * Returns the prefixed NHI table name.
 	 *
 	 * @return string Fully prefixed table name.
@@ -282,9 +288,9 @@ class NHI_Store {
 		$sql = "SELECT DISTINCT g.resource
 			FROM %i g
 			INNER JOIN %i n ON n.id = g.nhi_id
-			WHERE n.is_enabled = 1 AND g.resource_type = 'ability' AND g.role IN ( {$role_ph} )";
+			WHERE n.is_enabled = 1 AND g.resource_type = %s AND g.role IN ( {$role_ph} )";
 
-		$args = array_merge( array( self::grants_table(), self::table() ), $role_args );
+		$args = array_merge( array( self::grants_table(), self::table(), self::RESOURCE_TYPE_ABILITY ), $role_args );
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$abilities = $wpdb->get_col( $wpdb->prepare( $sql, $args ) );
@@ -317,10 +323,10 @@ class NHI_Store {
 		$sql  = "SELECT n.id, n.uuid, n.name
 				 FROM %i g
 				 INNER JOIN %i n ON n.id = g.nhi_id
-				 WHERE n.is_enabled = 1 AND g.resource_type = 'ability' AND g.role IN ( {$role_ph} )
+				 WHERE n.is_enabled = 1 AND g.resource_type = %s AND g.role IN ( {$role_ph} )
 				 ORDER BY n.id ASC
 				 LIMIT 1";
-		$args = array_merge( array( self::grants_table(), self::table() ), $role_args );
+		$args = array_merge( array( self::grants_table(), self::table(), self::RESOURCE_TYPE_ABILITY ), $role_args );
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$row = $wpdb->get_row( $wpdb->prepare( $sql, $args ), ARRAY_A );
@@ -347,10 +353,10 @@ class NHI_Store {
 		$sql = "SELECT n.uuid, n.name, g.resource
 			FROM %i g
 			INNER JOIN %i n ON n.id = g.nhi_id
-			WHERE n.is_enabled = 1 AND g.resource_type = 'ability' AND g.role IN ( {$role_ph} )
+			WHERE n.is_enabled = 1 AND g.resource_type = %s AND g.role IN ( {$role_ph} )
 			ORDER BY n.created DESC, n.id DESC, g.resource ASC";
 
-		$args = array_merge( array( self::grants_table(), self::table() ), $role_args );
+		$args = array_merge( array( self::grants_table(), self::table(), self::RESOURCE_TYPE_ABILITY ), $role_args );
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A );
@@ -384,7 +390,7 @@ class NHI_Store {
 		// Roles this NHI grants to ('*' role = every user).
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$grants = $wpdb->get_results(
-			$wpdb->prepare( 'SELECT role, resource FROM %i WHERE nhi_id = %d AND resource_type = %s', self::grants_table(), (int) $nhi_id, 'ability' ),
+			$wpdb->prepare( 'SELECT role, resource FROM %i WHERE nhi_id = %d AND resource_type = %s', self::grants_table(), (int) $nhi_id, self::RESOURCE_TYPE_ABILITY ),
 			ARRAY_A
 		);
 
@@ -424,6 +430,11 @@ class NHI_Store {
 		foreach ( (array) $client_rows as $c ) {
 			$client_name[ (string) $c['client_id'] ] = '' !== (string) $c['client_name'] ? (string) $c['client_name'] : (string) $c['client_id'];
 		}
+
+		// Prime the user cache for every distinct user in one batched query, so the
+		// per-row get_userdata() below hits cache instead of issuing its own query —
+		// otherwise this is an N+1 (one query per distinct connected user).
+		cache_users( array_values( array_unique( array_map( 'absint', wp_list_pluck( $rows, 'user_id' ) ) ) ) );
 
 		$by_user = array();
 		foreach ( (array) $rows as $row ) {
@@ -486,13 +497,13 @@ class NHI_Store {
 		if ( ! empty( $user_roles ) ) {
 			$ph   = self::placeholders( count( $user_roles ) );
 			$args = array_merge(
-				array( self::grants_table(), self::table(), (string) $ability ),
+				array( self::grants_table(), self::table(), self::RESOURCE_TYPE_ABILITY, (string) $ability ),
 				$user_roles
 			);
 			$sql  = "SELECT n.id, n.uuid, n.name
 					 FROM %i g
 					 INNER JOIN %i n ON n.id = g.nhi_id
-					 WHERE g.resource_type = 'ability'
+					 WHERE g.resource_type = %s
 					   AND g.resource      = %s
 					   AND g.role          IN ( {$ph} )
 					   AND n.is_enabled    = 1
@@ -504,16 +515,17 @@ class NHI_Store {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$row = $wpdb->get_row(
 				$wpdb->prepare(
-					"SELECT n.id, n.uuid, n.name
+					'SELECT n.id, n.uuid, n.name
 					 FROM %i g
 					 INNER JOIN %i n ON n.id = g.nhi_id
-					 WHERE g.resource_type = 'ability'
+					 WHERE g.resource_type = %s
 					   AND g.resource      = %s
 					   AND n.is_enabled    = 1
 					 ORDER BY n.id ASC
-					 LIMIT 1",
+					 LIMIT 1',
 					self::grants_table(),
 					self::table(),
+					self::RESOURCE_TYPE_ABILITY,
 					(string) $ability
 				),
 				ARRAY_A
@@ -570,11 +582,11 @@ class NHI_Store {
 
 		// Fetch all grants from other enabled NHIs for abilities appearing in our map.
 		// Role-level filtering is done in PHP to avoid dynamic tuple IN clauses.
-		$args = array_merge( array( self::grants_table(), self::table() ), $all_abilities, array( $nhi_id ) );
+		$args = array_merge( array( self::grants_table(), self::table(), self::RESOURCE_TYPE_ABILITY ), $all_abilities, array( $nhi_id ) );
 		$sql  = "SELECT g.role, g.resource AS ability, n.uuid, n.name
 				 FROM %i g
 				 INNER JOIN %i n ON n.id = g.nhi_id
-				 WHERE g.resource_type = 'ability'
+				 WHERE g.resource_type = %s
 				   AND g.resource     != '*'
 				   AND g.resource      IN ( {$ph} )
 				   AND g.nhi_id        != %d
@@ -622,13 +634,14 @@ class NHI_Store {
 				"SELECT g.resource AS ability, g.role, n.uuid, n.name
 				 FROM %i g
 				 INNER JOIN %i n ON n.id = g.nhi_id
-				 WHERE g.resource_type = 'ability'
+				 WHERE g.resource_type = %s
 				   AND g.resource     != '*'
 				   AND n.is_enabled    = 1
 				 GROUP BY g.resource, g.role
 				 ORDER BY n.id ASC",
 				self::grants_table(),
-				self::table()
+				self::table(),
+				self::RESOURCE_TYPE_ABILITY
 			),
 			ARRAY_A
 		);
@@ -650,10 +663,10 @@ class NHI_Store {
 	 * @param int    $nhi_id        The NHI id.
 	 * @param string $role          Role slug, or '*'.
 	 * @param string $ability       Ability name (resource identifier), or '*'.
-	 * @param string $resource_type Grant type (default 'ability').
+	 * @param string $resource_type Grant type (default RESOURCE_TYPE_ABILITY).
 	 * @return bool True when the row was written or already present.
 	 */
-	public static function add_grant( $nhi_id, $role, $ability, $resource_type = 'ability' ) {
+	public static function add_grant( $nhi_id, $role, $ability, $resource_type = self::RESOURCE_TYPE_ABILITY ) {
 		global $wpdb;
 
 		$ability = (string) $ability;
@@ -787,8 +800,8 @@ class NHI_Store {
 		}
 
 		$id_ph = self::placeholders( count( $ids ), '%d' );
-		$sql   = "SELECT nhi_id, role, resource FROM %i WHERE resource_type = 'ability' AND nhi_id IN ( {$id_ph} )";
-		$args  = array_merge( array( self::grants_table() ), $ids );
+		$sql   = "SELECT nhi_id, role, resource FROM %i WHERE resource_type = %s AND nhi_id IN ( {$id_ph} )";
+		$args  = array_merge( array( self::grants_table(), self::RESOURCE_TYPE_ABILITY ), $ids );
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A );

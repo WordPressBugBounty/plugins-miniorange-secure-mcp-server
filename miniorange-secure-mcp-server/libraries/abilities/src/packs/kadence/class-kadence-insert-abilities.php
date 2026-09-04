@@ -100,7 +100,14 @@ class Kadence_Insert_Abilities {
 				'input_schema'        => Schema::object(
 					array(
 						'title'   => Schema::str( __( 'Title of the new page.', 'mosmcp-abilities' ), array( 'minLength' => 1 ) ),
-						'columns' => Schema::int( __( 'Number of equal columns in the seed row (1-6).', 'mosmcp-abilities' ), array( 'minimum' => 1, 'maximum' => 6, 'default' => 1 ) ),
+						'columns' => Schema::int(
+							__( 'Number of equal columns in the seed row (1-6).', 'mosmcp-abilities' ),
+							array(
+								'minimum' => 1,
+								'maximum' => 6,
+								'default' => 1,
+							)
+						),
 					),
 					array( 'title' )
 				),
@@ -176,7 +183,14 @@ class Kadence_Insert_Abilities {
 					array_merge(
 						self::placement_props(),
 						array(
-							'columns' => Schema::int( __( 'Number of equal columns (1-6).', 'mosmcp-abilities' ), array( 'minimum' => 1, 'maximum' => 6, 'default' => 2 ) ),
+							'columns' => Schema::int(
+								__( 'Number of equal columns (1-6).', 'mosmcp-abilities' ),
+								array(
+									'minimum' => 1,
+									'maximum' => 6,
+									'default' => 2,
+								)
+							),
 						)
 					),
 					array( 'id' )
@@ -235,7 +249,14 @@ class Kadence_Insert_Abilities {
 						self::placement_props(),
 						array(
 							'text'  => Schema::str( __( 'The heading text.', 'mosmcp-abilities' ), array( 'minLength' => 1 ) ),
-							'level' => Schema::int( __( 'Heading level, 1-6.', 'mosmcp-abilities' ), array( 'minimum' => 1, 'maximum' => 6, 'default' => 2 ) ),
+							'level' => Schema::int(
+								__( 'Heading level, 1-6.', 'mosmcp-abilities' ),
+								array(
+									'minimum' => 1,
+									'maximum' => 6,
+									'default' => 2,
+								)
+							),
 						)
 					),
 					array( 'id', 'text' )
@@ -321,8 +342,21 @@ class Kadence_Insert_Abilities {
 					array_merge(
 						self::placement_props(),
 						array(
-							'icon' => Schema::str( __( 'Kadence icon identifier, e.g. "fe_star".', 'mosmcp-abilities' ), array( 'minLength' => 1, 'default' => 'fe_star' ) ),
-							'size' => Schema::int( __( 'Icon size in pixels.', 'mosmcp-abilities' ), array( 'minimum' => 8, 'maximum' => 400, 'default' => 48 ) ),
+							'icon' => Schema::str(
+								__( 'Kadence icon identifier, e.g. "fe_star".', 'mosmcp-abilities' ),
+								array(
+									'minLength' => 1,
+									'default'   => 'fe_star',
+								)
+							),
+							'size' => Schema::int(
+								__( 'Icon size in pixels.', 'mosmcp-abilities' ),
+								array(
+									'minimum' => 8,
+									'maximum' => 400,
+									'default' => 48,
+								)
+							),
 						)
 					),
 					array( 'id' )
@@ -404,7 +438,7 @@ class Kadence_Insert_Abilities {
 			'children'   => isset( $input['children'] ) && is_array( $input['children'] ) ? $input['children'] : array(),
 		);
 		if ( array_key_exists( 'content', $input ) ) {
-			$spec['content'] = (string) $input['content'];
+			$spec['content'] = wp_kses_post( (string) $input['content'] );
 		}
 
 		return Kadence_Insert_Engine::insert(
@@ -475,12 +509,8 @@ class Kadence_Insert_Abilities {
 			static function ( array $blocks, $post_id ) use ( $text, $level ) {
 				$uid = Kadence_Insert_Engine::new_id( $blocks, $post_id );
 				$tag = 'h' . $level;
-				$html = sprintf(
-					'<%1$s class="kt-adv-heading%2$s wp-block-kadence-advancedheading" data-kb-block="kb-adv-heading%2$s">%3$s</%1$s>',
-					$tag,
-					$uid,
-					$text
-				);
+
+				list( $html ) = Kadence_Insert_Engine::markup( 'kadence/advancedheading', $uid, array( 'level' => $level ), $text, false );
 
 				return Kadence_Insert_Engine::node(
 					'kadence/advancedheading',
@@ -631,9 +661,9 @@ class Kadence_Insert_Abilities {
 	private static function build_row( array $blocks, $post_id, $columns ) {
 		$row_uid = Kadence_Insert_Engine::new_id( $blocks, $post_id );
 
-		$cols        = array();
-		$working     = $blocks;
-		$column_ids  = array();
+		$cols       = array();
+		$working    = $blocks;
+		$column_ids = array();
 		for ( $i = 1; $i <= $columns; $i++ ) {
 			$col          = self::build_column( $working, $post_id, $i );
 			$cols[]       = $col;
@@ -642,12 +672,7 @@ class Kadence_Insert_Abilities {
 		}
 		self::$last_row_column_ids = $column_ids;
 
-		$lead  = sprintf(
-			'<div class="kt-row-layout-wrap kt-layout-id%1$s wp-block-kadence-rowlayout"><div class="kt-row-column-wrap kt-has-%2$d-columns kt-gutter-default kt-v-gutter-default">',
-			$row_uid,
-			$columns
-		);
-		$trail = '</div></div>';
+		list( , $lead, $trail ) = Kadence_Insert_Engine::markup( 'kadence/rowlayout', $row_uid, array( 'columns' => $columns ), null, true );
 
 		return Kadence_Insert_Engine::node(
 			'kadence/rowlayout',
@@ -673,6 +698,8 @@ class Kadence_Insert_Abilities {
 	private static function build_column( array $blocks, $post_id, $position = 1 ) {
 		$uid = Kadence_Insert_Engine::new_id( $blocks, $post_id );
 
+		list( , $lead, $trail ) = Kadence_Insert_Engine::markup( 'kadence/column', $uid, array(), null, false );
+
 		return Kadence_Insert_Engine::node(
 			'kadence/column',
 			array(
@@ -681,8 +708,8 @@ class Kadence_Insert_Abilities {
 			),
 			array(),
 			'',
-			sprintf( '<div class="wp-block-kadence-column kadence-column%s"><div class="kt-inside-inner-col">', $uid ),
-			'</div></div>'
+			$lead,
+			$trail
 		);
 	}
 }

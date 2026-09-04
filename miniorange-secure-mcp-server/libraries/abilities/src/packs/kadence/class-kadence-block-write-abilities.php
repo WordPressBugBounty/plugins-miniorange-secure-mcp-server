@@ -275,9 +275,9 @@ class Kadence_Block_Write_Abilities {
 	 * @return array<string, mixed>|WP_Error
 	 */
 	public static function execute_update_text( $input = array() ) {
-		$raw_text     = isset( $input['text'] ) ? (string) $input['text'] : '';
-		$rich_text    = wp_kses_post( $raw_text );
-		$plain_text   = sanitize_text_field( $raw_text );
+		$raw_text   = isset( $input['text'] ) ? (string) $input['text'] : '';
+		$rich_text  = wp_kses_post( $raw_text );
+		$plain_text = sanitize_text_field( $raw_text );
 
 		return Kadence_Write_Engine::run(
 			$input,
@@ -310,12 +310,12 @@ class Kadence_Block_Write_Abilities {
 	 * Applies a whole-wrapper text swap for TEXT_ATTR blocks (advancedheading, singlebtn).
 	 *
 	 * @param array<int, array<string, mixed>> $blocks   Block tree (by reference).
-	 * @param int[]                             $path     Path to the target node.
-	 * @param array<string, mixed>              $node     A copy of the target node (for reading old text).
-	 * @param string                             $block    Block name.
-	 * @param string                             $new_text New (rich-sanitized) text.
-	 * @param array<string, mixed>               $input    Ability input.
-	 * @param array<string, mixed>               $result   Result array (by reference).
+	 * @param int[]                            $path     Path to the target node.
+	 * @param array<string, mixed>             $node     A copy of the target node (for reading old text).
+	 * @param string                           $block    Block name.
+	 * @param string                           $new_text New (rich-sanitized) text.
+	 * @param array<string, mixed>             $input    Ability input.
+	 * @param array<string, mixed>             $result   Result array (by reference).
 	 * @return true
 	 */
 	private static function apply_simple_text( array &$blocks, array $path, $node, $block, $new_text, array $input, array &$result ) {
@@ -356,12 +356,12 @@ class Kadence_Block_Write_Abilities {
 	 * leaving the front-end title stale.
 	 *
 	 * @param array<int, array<string, mixed>> $blocks   Block tree (by reference).
-	 * @param int[]                             $path     Path to the target node.
-	 * @param array<string, mixed>              $node     A copy of the target node (for reading old text).
-	 * @param string                             $block    Block name.
-	 * @param string                             $new_text New (plain-sanitized) text.
-	 * @param array<string, mixed>               $input    Ability input.
-	 * @param array<string, mixed>               $result   Result array (by reference).
+	 * @param int[]                            $path     Path to the target node.
+	 * @param array<string, mixed>             $node     A copy of the target node (for reading old text).
+	 * @param string                           $block    Block name.
+	 * @param string                           $new_text New (plain-sanitized) text.
+	 * @param array<string, mixed>             $input    Ability input.
+	 * @param array<string, mixed>             $result   Result array (by reference).
 	 * @return true|WP_Error
 	 */
 	private static function apply_anchored_text( array &$blocks, array $path, $node, $block, $new_text, array $input, array &$result ) {
@@ -452,6 +452,19 @@ class Kadence_Block_Write_Abilities {
 					);
 				}
 
+				foreach ( $updated as $key ) {
+					if ( ! self::is_valid_attribute_value( $key, $attributes[ $key ] ) ) {
+						return Kadence_Write_Engine::error(
+							'validation_failed',
+							sprintf(
+								/* translators: %s: attribute name. */
+								__( 'Invalid value for attribute "%s".', 'mosmcp-abilities' ),
+								$key
+							)
+						);
+					}
+				}
+
 				Kadence_Write_Engine::mutate_at(
 					$blocks,
 					$path,
@@ -472,6 +485,60 @@ class Kadence_Block_Write_Abilities {
 				return true;
 			}
 		);
+	}
+
+	/**
+	 * Style attribute names whose values are a link target and must be validated
+	 * as a safe URL rather than accepted verbatim.
+	 *
+	 * @var string[]
+	 */
+	const LINK_ATTRS = array( 'link' );
+
+	/**
+	 * Style attribute names whose values must be a CSS color.
+	 *
+	 * @var string[]
+	 */
+	const COLOR_ATTRS = array( 'color', 'background', 'colorHover', 'backgroundHover', 'containerBackground', 'containerBorderColor' );
+
+	/**
+	 * Validates a single style-attribute value by its expected shape, so
+	 * update-attributes cannot be used to smuggle an unsafe URL scheme (e.g.
+	 * `javascript:`) into a link attribute or an arbitrary string into a color.
+	 *
+	 * @param string $key   Attribute name.
+	 * @param mixed  $value Caller-supplied value.
+	 * @return bool
+	 */
+	private static function is_valid_attribute_value( $key, $value ) {
+		if ( 'target' === $key ) {
+			return in_array( $value, array( '', '_self', '_blank' ), true );
+		}
+
+		if ( in_array( $key, self::LINK_ATTRS, true ) ) {
+			if ( ! is_string( $value ) ) {
+				return false;
+			}
+			if ( '' === $value ) {
+				return true;
+			}
+			$sanitized = esc_url_raw( $value, array( 'http', 'https', 'mailto', 'tel' ) );
+			return '' !== $sanitized;
+		}
+
+		if ( in_array( $key, self::COLOR_ATTRS, true ) ) {
+			if ( ! is_string( $value ) ) {
+				return false;
+			}
+			if ( '' === $value || 'transparent' === $value || 'inherit' === $value ) {
+				return true;
+			}
+			return 1 === preg_match( '/^#[0-9a-fA-F]{3,8}$/', $value )
+				|| 1 === preg_match( '/^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*(0|1|0?\.\d+)\s*)?\)$/', $value );
+		}
+
+		return is_scalar( $value );
 	}
 
 	/**

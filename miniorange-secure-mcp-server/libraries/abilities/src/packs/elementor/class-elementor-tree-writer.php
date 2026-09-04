@@ -97,10 +97,10 @@ class Elementor_Tree_Writer {
 
 			$before = self::count_nodes( $tree );
 
-			$report    = array(
-				'minted'         => array(),
-				'reassigned'     => array(),
-				'unknown_types'  => array(),
+			$report     = array(
+				'minted'        => array(),
+				'reassigned'    => array(),
+				'unknown_types' => array(),
 			);
 			$normalized = self::normalize( $supplied, $report );
 			if ( is_wp_error( $normalized ) ) {
@@ -300,11 +300,11 @@ class Elementor_Tree_Writer {
 			$supplied_id = isset( $node['id'] ) ? trim( (string) $node['id'] ) : '';
 
 			if ( '' === $supplied_id ) {
-				$clean['id']          = self::mint( $used );
-				$report['minted'][]   = $clean['id'];
+				$clean['id']        = self::mint( $used );
+				$report['minted'][] = $clean['id'];
 			} elseif ( isset( $used[ $supplied_id ] ) ) {
-				$clean['id']              = self::mint( $used );
-				$report['reassigned'][]   = $supplied_id . ' -> ' . $clean['id'];
+				$clean['id']            = self::mint( $used );
+				$report['reassigned'][] = $supplied_id . ' -> ' . $clean['id'];
 			} else {
 				$clean['id'] = $supplied_id;
 			}
@@ -332,7 +332,11 @@ class Elementor_Tree_Writer {
 	 * @return string
 	 */
 	private static function mint( array &$used ) {
-		$node = array( 'id' => '', 'elType' => 'widget', 'elements' => array() );
+		$node = array(
+			'id'       => '',
+			'elType'   => 'widget',
+			'elements' => array(),
+		);
 		Elementor_Structure_Writer::regenerate_ids( $node, $used );
 		return (string) $node['id'];
 	}
@@ -390,26 +394,26 @@ class Elementor_Tree_Writer {
 		$post_id  = (int) $post_id;
 		$warnings = array();
 
-		$edit_mode = (string) get_post_meta( $post_id, '_elementor_edit_mode', true );
+		$edit_mode = (string) get_post_meta( $post_id, Elementor_Document::EDIT_MODE_KEY, true );
 
 		if ( ! $set_mode ) {
 			if ( 'builder' !== $edit_mode ) {
 				$warnings[] = array(
 					'code'    => 'edit_mode_not_set',
 					'message' => __( 'The layout was written but this post is not in Elementor builder mode, so WordPress will render its post content instead. Set the builder edit mode to make the layout visible.', 'mosmcp-abilities' ),
-					'context' => '_elementor_edit_mode=' . $edit_mode,
+					'context' => Elementor_Document::EDIT_MODE_KEY . '=' . $edit_mode,
 				);
 			}
 			return $warnings;
 		}
 
 		if ( 'builder' !== $edit_mode ) {
-			update_post_meta( $post_id, '_elementor_edit_mode', 'builder' );
+			update_post_meta( $post_id, Elementor_Document::EDIT_MODE_KEY, 'builder' );
 		}
 
-		if ( '' === (string) get_post_meta( $post_id, '_elementor_template_type', true ) ) {
+		if ( '' === (string) get_post_meta( $post_id, Elementor_Document::TEMPLATE_TYPE_KEY, true ) ) {
 			$post_type = (string) get_post_type( $post_id );
-			update_post_meta( $post_id, '_elementor_template_type', wp_slash( 'page' === $post_type ? 'wp-page' : 'wp-post' ) );
+			update_post_meta( $post_id, Elementor_Document::TEMPLATE_TYPE_KEY, wp_slash( 'page' === $post_type ? 'wp-page' : 'wp-post' ) );
 		}
 
 		return $warnings;

@@ -31,6 +31,9 @@ use MoSMCP\Common\Views\Admin\Deactivation_Feedback;
  */
 class Hooks {
 
+	/** Plugin version the well-known rewrite rules were last flushed for. */
+	const REWRITE_VERSION_OPTION = 'mosmcp_rewrite_version';
+
 	/**
 	 * Registers all hooks. Invoked from the common loader.
 	 *
@@ -174,11 +177,11 @@ class Hooks {
 	 * @return void
 	 */
 	public static function maybe_flush_rewrite() {
-		if ( get_option( 'mosmcp_rewrite_version' ) === MOSMCP_VERSION ) {
+		if ( get_option( self::REWRITE_VERSION_OPTION ) === MOSMCP_VERSION ) {
 			return;
 		}
 		flush_rewrite_rules( false );
-		update_option( 'mosmcp_rewrite_version', MOSMCP_VERSION, false );
+		update_option( self::REWRITE_VERSION_OPTION, MOSMCP_VERSION, false );
 	}
 
 	/**
@@ -205,7 +208,8 @@ class Hooks {
 			$route = (string) wp_parse_url( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ), PHP_URL_PATH );
 		}
 
-		foreach ( array( '/mosmcp/v1/mcp', '/mosmcp/v1/token', '/mosmcp/v1/register' ) as $needle ) {
+		$prefix = '/' . MOSMCP_REST_NAMESPACE;
+		foreach ( array( $prefix . '/mcp', $prefix . '/token', $prefix . '/register' ) as $needle ) {
 			if ( false !== strpos( $route, $needle ) ) {
 				return null; // Clear the block; our own permission_callback decides.
 			}

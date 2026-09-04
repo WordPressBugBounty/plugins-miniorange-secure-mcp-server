@@ -391,7 +391,7 @@ class ACFA_Read_Abilities {
 			}
 		}
 		if ( ! $group ) {
-			return new WP_Error( 'acfa_group_not_found', __( 'No field group matches the given key or title.', 'mosmcp-abilities' ) );
+			return new WP_Error( ACFA_Helpers::ERR_GROUP_NOT_FOUND, __( 'No field group matches the given key or title.', 'mosmcp-abilities' ) );
 		}
 
 		$include_fields = ! isset( $input['include_fields'] ) || filter_var( $input['include_fields'], FILTER_VALIDATE_BOOLEAN );
@@ -445,7 +445,7 @@ class ACFA_Read_Abilities {
 		}
 		$field = ACFA_Helpers::field_object( $input['field_key'], $post_id );
 		if ( ! $field ) {
-			return new WP_Error( 'acfa_field_not_found', __( 'No ACF field matches the given field key/name for this post.', 'mosmcp-abilities' ) );
+			return new WP_Error( ACFA_Helpers::ERR_FIELD_NOT_FOUND, __( 'No ACF field matches the given field key/name for this post.', 'mosmcp-abilities' ) );
 		}
 		return array(
 			'field_key'  => $field['key'],
@@ -481,7 +481,7 @@ class ACFA_Read_Abilities {
 		$post_id = isset( $input['post_id'] ) ? (int) $input['post_id'] : null;
 		$field   = ACFA_Helpers::field_object( $input['field_key'], $post_id );
 		if ( ! $field ) {
-			return new WP_Error( 'acfa_field_not_found', __( 'No ACF field matches the given field key/name.', 'mosmcp-abilities' ) );
+			return new WP_Error( ACFA_Helpers::ERR_FIELD_NOT_FOUND, __( 'No ACF field matches the given field key/name.', 'mosmcp-abilities' ) );
 		}
 		return ACFA_Helpers::field_definition( $field );
 	}
@@ -569,11 +569,11 @@ class ACFA_Read_Abilities {
 		}
 		$field = ACFA_Helpers::field_object( $input['field_key'], $post_id );
 		if ( ! $field ) {
-			return new WP_Error( 'acfa_field_not_found', __( 'No ACF field matches the given field key/name for this post.', 'mosmcp-abilities' ) );
+			return new WP_Error( ACFA_Helpers::ERR_FIELD_NOT_FOUND, __( 'No ACF field matches the given field key/name for this post.', 'mosmcp-abilities' ) );
 		}
 		if ( ! in_array( $field['type'], array( 'repeater', 'flexible_content', 'group' ), true ) ) {
 			return new WP_Error(
-				'acfa_not_repeater',
+				ACFA_Helpers::ERR_NOT_REPEATER,
 				sprintf(
 					/* translators: %s: actual field type. */
 					__( 'Field is of type "%s", not a repeater, flexible content, or group field.', 'mosmcp-abilities' ),
@@ -625,7 +625,7 @@ class ACFA_Read_Abilities {
 		}
 		$field = ACFA_Helpers::field_object( $input['field_key'], $post_id );
 		if ( ! $field ) {
-			return new WP_Error( 'acfa_field_not_found', __( 'No ACF field matches the given field key/name for this post.', 'mosmcp-abilities' ) );
+			return new WP_Error( ACFA_Helpers::ERR_FIELD_NOT_FOUND, __( 'No ACF field matches the given field key/name for this post.', 'mosmcp-abilities' ) );
 		}
 		if ( ! in_array( $field['type'], array( 'relationship', 'post_object', 'user', 'page_link' ), true ) ) {
 			return new WP_Error(
@@ -655,14 +655,14 @@ class ACFA_Read_Abilities {
 	 */
 	public static function execute_get_options_page_fields( $input ) {
 		if ( ! current_user_can( 'manage_options' ) ) {
-			return new WP_Error( 'acfa_forbidden', __( 'You do not have permission to read options page fields.', 'mosmcp-abilities' ) );
+			return new WP_Error( ACFA_Helpers::ERR_FORBIDDEN, __( 'You do not have permission to read options page fields.', 'mosmcp-abilities' ) );
 		}
 		$acf_post_id = ACFA_Helpers::options_post_id( (string) $input['options_page'] );
 
 		if ( ! empty( $input['field_key'] ) ) {
 			$field = ACFA_Helpers::field_object( $input['field_key'], $acf_post_id );
 			if ( ! $field ) {
-				return new WP_Error( 'acfa_field_not_found', __( 'No ACF field matches the given field key/name on this options page.', 'mosmcp-abilities' ) );
+				return new WP_Error( ACFA_Helpers::ERR_FIELD_NOT_FOUND, __( 'No ACF field matches the given field key/name on this options page.', 'mosmcp-abilities' ) );
 			}
 			return array(
 				'field_name' => $field['name'],
@@ -695,7 +695,7 @@ class ACFA_Read_Abilities {
 		if ( ! empty( $input['field_key'] ) ) {
 			$field = ACFA_Helpers::field_object( $input['field_key'], $acf_post_id );
 			if ( ! $field ) {
-				return new WP_Error( 'acfa_field_not_found', __( 'No ACF field matches the given field key/name on this term.', 'mosmcp-abilities' ) );
+				return new WP_Error( ACFA_Helpers::ERR_FIELD_NOT_FOUND, __( 'No ACF field matches the given field key/name on this term.', 'mosmcp-abilities' ) );
 			}
 			return array(
 				'field_name' => $field['name'],

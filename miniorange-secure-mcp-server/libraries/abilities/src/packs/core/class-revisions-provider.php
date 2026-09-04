@@ -11,6 +11,7 @@
 
 namespace MoSMCP\Abilities\Packs\Core;
 
+use MoSMCP\Abilities\Support\Pagination;
 use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -249,6 +250,7 @@ class Revisions_Provider {
 		}
 
 		$per_page = isset( $input['per_page'] ) ? absint( $input['per_page'] ) : 20;
+		$per_page = min( $per_page, Pagination::MAX_PER_PAGE );
 		$offset   = isset( $input['offset'] ) ? absint( $input['offset'] ) : 0;
 
 		$all = wp_get_post_revisions(
@@ -296,6 +298,7 @@ class Revisions_Provider {
 		}
 
 		$per_page = isset( $input['per_page'] ) ? absint( $input['per_page'] ) : 20;
+		$per_page = min( $per_page, Pagination::MAX_PER_PAGE );
 		$offset   = isset( $input['offset'] ) ? absint( $input['offset'] ) : 0;
 
 		// Exclude autosaves from this list — see revision/list-autosaves for those.

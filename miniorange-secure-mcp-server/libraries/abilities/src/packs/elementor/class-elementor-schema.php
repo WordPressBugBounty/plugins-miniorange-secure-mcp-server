@@ -109,48 +109,48 @@ class Elementor_Schema {
 	 * @var array<string, array<string, string>>
 	 */
 	const CLASSIC_CONTENT = array(
-		'heading'      => array(
+		'heading'        => array(
 			'text' => 'title',
 			'link' => 'link',
 		),
-		'text-editor'  => array( 'text' => 'editor' ),
-		'text-path'    => array( 'text' => 'text' ),
-		'button'       => array(
+		'text-editor'    => array( 'text' => 'editor' ),
+		'text-path'      => array( 'text' => 'text' ),
+		'button'         => array(
 			'text' => 'text',
 			'link' => 'link',
 		),
-		'image'        => array(
+		'image'          => array(
 			'image' => 'image',
 			'text'  => 'caption',
 			'link'  => 'link',
 		),
-		'image-box'    => array(
+		'image-box'      => array(
 			'image' => 'image',
 			'text'  => 'title_text',
 			'body'  => 'description_text',
 			'link'  => 'link',
 		),
-		'icon-box'     => array(
+		'icon-box'       => array(
 			'text' => 'title_text',
 			'body' => 'description_text',
 			'link' => 'link',
 		),
-		'testimonial'  => array(
+		'testimonial'    => array(
 			'image' => 'testimonial_image',
 			'text'  => 'testimonial_name',
 			'body'  => 'testimonial_content',
 			'link'  => 'testimonial_link',
 		),
-		'video'        => array( 'link' => 'youtube_url' ),
-		'html'         => array( 'text' => 'html' ),
-		'shortcode'    => array( 'text' => 'shortcode' ),
-		'alert'        => array(
+		'video'          => array( 'link' => 'youtube_url' ),
+		'html'           => array( 'text' => 'html' ),
+		'shortcode'      => array( 'text' => 'shortcode' ),
+		'alert'          => array(
 			'text' => 'alert_title',
 			'body' => 'alert_description',
 		),
-		'counter'      => array( 'text' => 'title' ),
-		'progress'     => array( 'text' => 'title' ),
-		'toggle'       => array( 'text' => 'tab_title' ),
+		'counter'        => array( 'text' => 'title' ),
+		'progress'       => array( 'text' => 'title' ),
+		'toggle'         => array( 'text' => 'tab_title' ),
 		'call-to-action' => array(
 			'image' => 'bg_image',
 			'text'  => 'title',
@@ -394,6 +394,8 @@ class Elementor_Schema {
 			$categories = (array) $element->get_categories();
 		}
 
+		$content_controls = self::content_controls( $slug, $element );
+
 		return array(
 			'slug'             => $slug,
 			'title'            => method_exists( $element, 'get_title' ) ? (string) $element->get_title() : $slug,
@@ -402,8 +404,8 @@ class Elementor_Schema {
 			'is_pro'           => self::is_pro( $element ),
 			'is_atomic'        => $atomic,
 			'accepts_children' => 'element' === $kind,
-			'content_controls' => array_keys( self::content_controls( $slug ) ),
-			'editable'         => (bool) self::content_controls( $slug ),
+			'content_controls' => array_keys( $content_controls ),
+			'editable'         => (bool) $content_controls,
 		);
 	}
 
@@ -439,10 +441,14 @@ class Elementor_Schema {
 	 * that a widget nobody has mapped — a third-party addon, a Pro widget, a new
 	 * core widget — still reports something useful instead of nothing.
 	 *
-	 * @param string $slug Widget or element slug.
+	 * @param string      $slug    Widget or element slug.
+	 * @param object|null $element The already-resolved widget/element object, if the
+	 *                             caller has one in hand (see {@see Elementor_Schema::element()}).
+	 *                             Passing it avoids a second registry lookup for unmapped
+	 *                             widgets, which fall through to the heuristic below.
 	 * @return array<string, string>
 	 */
-	public static function content_controls( $slug ) {
+	public static function content_controls( $slug, $element = null ) {
 		$slug = (string) $slug;
 
 		if ( isset( self::ATOMIC_CONTENT[ $slug ] ) ) {
@@ -452,17 +458,19 @@ class Elementor_Schema {
 			return self::CLASSIC_CONTENT[ $slug ];
 		}
 
-		return self::heuristic_content_controls( $slug );
+		return self::heuristic_content_controls( $slug, $element );
 	}
 
 	/**
 	 * Best-effort content controls for an unmapped widget.
 	 *
-	 * @param string $slug Widget slug.
+	 * @param string      $slug    Widget slug.
+	 * @param object|null $element The already-resolved widget/element object, or null
+	 *                             to resolve it here.
 	 * @return array<string, string>
 	 */
-	private static function heuristic_content_controls( $slug ) {
-		$element = self::element( $slug );
+	private static function heuristic_content_controls( $slug, $element = null ) {
+		$element = $element ?? self::element( $slug );
 		if ( ! $element ) {
 			return array();
 		}
@@ -750,10 +758,10 @@ class Elementor_Schema {
 
 		foreach ( self::GROUP_CONTROLS as $family => $spec ) {
 			$out[] = array(
-				'family'            => (string) $family,
-				'activator'         => (string) $spec['activator'],
-				'activate_with'     => (string) $spec['activate'],
-				'fields'            => array_values( (array) $spec['fields'] ),
+				'family'        => (string) $family,
+				'activator'     => (string) $spec['activator'],
+				'activate_with' => (string) $spec['activate'],
+				'fields'        => array_values( (array) $spec['fields'] ),
 			);
 		}
 

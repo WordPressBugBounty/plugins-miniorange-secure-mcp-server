@@ -14,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 use MoSMCP\Common\Controllers\Abstract_Admin_Controller;
 use MoSMCP\Common\Repositories\NHI_Store;
 use MoSMCP\Common\Repositories\Store;
+use WP_Error;
 
 /**
  * Class Abstract_Contact_Controller
@@ -173,9 +174,9 @@ abstract class Abstract_Contact_Controller extends Abstract_Admin_Controller {
 	 * (callers are responsible for escaping/marking up their own cell content);
 	 * headers are escaped here.
 	 *
-	 * @param string[]        $headers   Column headers.
-	 * @param list<string[]>  $rows      Row data, each an array of cell HTML matching $headers.
-	 * @param string          $empty_text Text shown when $rows is empty.
+	 * @param string[]       $headers   Column headers.
+	 * @param list<string[]> $rows      Row data, each an array of cell HTML matching $headers.
+	 * @param string         $empty_text Text shown when $rows is empty.
 	 * @return string
 	 */
 	private static function render_table( array $headers, array $rows, $empty_text ) {
@@ -209,7 +210,9 @@ abstract class Abstract_Contact_Controller extends Abstract_Admin_Controller {
 	 * @param string $subject    Email subject line.
 	 * @param string $content    HTML email body.
 	 * @param bool   $blocking   Whether to wait for the API response (default true).
-	 * @return array|null Decoded response array, or null when $blocking is false.
+	 * @return array|WP_Error|null Decoded response array, a WP_Error when $blocking
+	 *                             is true and the request failed or the API returned
+	 *                             a non-2xx status, or null when $blocking is false.
 	 */
 	protected static function notify( $from_email, $subject, $content, $blocking = true ) {
 		$timestamp = (string) time();
@@ -253,7 +256,24 @@ abstract class Abstract_Contact_Controller extends Abstract_Admin_Controller {
 		}
 
 		if ( is_wp_error( $response ) ) {
-			return null;
+			return new WP_Error(
+				'mosmcp_notify_request_failed',
+				$response->get_error_message(),
+				array( 'status' => 502 )
+			);
+		}
+
+		$status = (int) wp_remote_retrieve_response_code( $response );
+		if ( $status < 200 || $status >= 300 ) {
+			return new WP_Error(
+				'mosmcp_notify_api_error',
+				sprintf(
+					/* translators: %d: HTTP status code returned by the notification API. */
+					__( 'The notification API returned an error (HTTP %d).', 'miniorange-secure-mcp-server' ),
+					$status
+				),
+				array( 'status' => 502 )
+			);
 		}
 
 		return json_decode( wp_remote_retrieve_body( $response ), true );

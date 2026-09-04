@@ -12,6 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use MoSMCP\Common\Controllers\Debug\Debug_Controller;
+use MoSMCP\Common\Repositories\Debug_Store;
 
 /**
  * Class Debug_Routes
@@ -23,7 +24,7 @@ use MoSMCP\Common\Controllers\Debug\Debug_Controller;
  *   POST   /debug-logs/status    — switch capture on/off
  *   DELETE /debug-logs           — clear the entire log (irreversible)
  *
- * The CSV download is served via admin-post.php instead — see
+ * The log download is served via admin-post.php instead — see
  * {@see Debug_Controller::download_logs()}.
  */
 class Debug_Routes {
@@ -56,7 +57,7 @@ class Debug_Routes {
 						),
 						'level'     => array(
 							'type' => 'string',
-							'enum' => array( '', 'debug', 'info', 'warning', 'error' ),
+							'enum' => array_merge( array( '' ), Debug_Store::LEVELS ),
 						),
 						'channel'   => array(
 							'type'    => 'string',

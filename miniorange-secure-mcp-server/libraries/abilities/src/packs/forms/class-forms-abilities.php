@@ -57,6 +57,24 @@ class Forms_Abilities {
 	const CATEGORY_FORMS = 'mosmcp-forms';
 
 	/**
+	 * WP_Error codes shared across this file's CF7/WPForms/Gravity Forms abilities.
+	 */
+	const ERR_FORM_NOT_FOUND  = 'moca_form_not_found';
+	const ERR_ENTRY_NOT_FOUND = 'moca_entry_not_found';
+	const ERR_MISSING_FORM_ID = 'moca_missing_form_id';
+
+	/**
+	 * Flamingo (CF7's submission-log companion plugin) post type and meta keys.
+	 */
+	const FLAMINGO_POST_TYPE    = 'flamingo_inbound';
+	const FLAMINGO_CHANNEL_META = '_channel';
+
+	/**
+	 * Meta key this pack uses to track whether a CF7/Flamingo entry has been read.
+	 */
+	const READ_META = '_moca_cf7_read';
+
+	/**
 	 * Registers the forms ability category. No-op unless a supported form plugin is active.
 	 *
 	 * @return void
@@ -736,7 +754,7 @@ class Forms_Abilities {
 
 		$form = $id > 0 ? WPCF7_ContactForm::get_instance( $id ) : null;
 		if ( ! $form ) {
-			return new WP_Error( 'moca_form_not_found', __( 'No Contact Form 7 form was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_FORM_NOT_FOUND, __( 'No Contact Form 7 form was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		return array(
@@ -759,7 +777,7 @@ class Forms_Abilities {
 
 		$form = $id > 0 ? WPCF7_ContactForm::get_instance( $id ) : null;
 		if ( ! $form ) {
-			return new WP_Error( 'moca_form_not_found', __( 'No Contact Form 7 form was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_FORM_NOT_FOUND, __( 'No Contact Form 7 form was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		$tags   = $form->scan_form_tags();
@@ -791,7 +809,7 @@ class Forms_Abilities {
 
 		$form = $id > 0 ? WPCF7_ContactForm::get_instance( $id ) : null;
 		if ( ! $form ) {
-			return new WP_Error( 'moca_form_not_found', __( 'No Contact Form 7 form was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_FORM_NOT_FOUND, __( 'No Contact Form 7 form was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		return array(
@@ -814,7 +832,7 @@ class Forms_Abilities {
 			'subject' => (string) $post->post_title,
 			'date'    => (string) $post->post_date,
 			'fields'  => (object) ( is_array( $fields ) ? $fields : array() ),
-			'read'    => (bool) get_post_meta( $post->ID, '_moca_cf7_read', true ),
+			'read'    => (bool) get_post_meta( $post->ID, self::READ_META, true ),
 		);
 	}
 
@@ -828,14 +846,14 @@ class Forms_Abilities {
 		$paginate = self::paginate_args( $input );
 
 		$args = array(
-			'post_type'      => 'flamingo_inbound',
+			'post_type'      => self::FLAMINGO_POST_TYPE,
 			'posts_per_page' => $paginate['per_page'],
 			'paged'          => $paginate['page'],
 		);
 		if ( ! empty( $input['form_id'] ) ) {
 			$args['meta_query'] = array(
 				array(
-					'key'   => '_channel',
+					'key'   => self::FLAMINGO_CHANNEL_META,
 					'value' => absint( $input['form_id'] ),
 				),
 			);
@@ -860,8 +878,8 @@ class Forms_Abilities {
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
 		$post = $id > 0 ? get_post( $id ) : null;
-		if ( ! $post || 'flamingo_inbound' !== $post->post_type ) {
-			return new WP_Error( 'moca_entry_not_found', __( 'No Flamingo submission was found with that ID.', 'mosmcp-abilities' ) );
+		if ( ! $post || self::FLAMINGO_POST_TYPE !== $post->post_type ) {
+			return new WP_Error( self::ERR_ENTRY_NOT_FOUND, __( 'No Flamingo submission was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		return self::flamingo_entry_summary( $post );
@@ -876,14 +894,14 @@ class Forms_Abilities {
 		$input = is_array( $input ) ? $input : array();
 
 		$args = array(
-			'post_type'      => 'flamingo_inbound',
+			'post_type'      => self::FLAMINGO_POST_TYPE,
 			'posts_per_page' => -1,
 			'fields'         => 'ids',
 		);
 		if ( ! empty( $input['form_id'] ) ) {
 			$args['meta_query'] = array(
 				array(
-					'key'   => '_channel',
+					'key'   => self::FLAMINGO_CHANNEL_META,
 					'value' => absint( $input['form_id'] ),
 				),
 			);
@@ -903,13 +921,13 @@ class Forms_Abilities {
 		$input = is_array( $input ) ? $input : array();
 
 		$args = array(
-			'post_type'      => 'flamingo_inbound',
+			'post_type'      => self::FLAMINGO_POST_TYPE,
 			'posts_per_page' => -1,
 		);
 		if ( ! empty( $input['form_id'] ) ) {
 			$args['meta_query'] = array(
 				array(
-					'key'   => '_channel',
+					'key'   => self::FLAMINGO_CHANNEL_META,
 					'value' => absint( $input['form_id'] ),
 				),
 			);
@@ -942,11 +960,11 @@ class Forms_Abilities {
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
 		$post = $id > 0 ? get_post( $id ) : null;
-		if ( ! $post || 'flamingo_inbound' !== $post->post_type ) {
-			return new WP_Error( 'moca_entry_not_found', __( 'No Flamingo submission was found with that ID.', 'mosmcp-abilities' ) );
+		if ( ! $post || self::FLAMINGO_POST_TYPE !== $post->post_type ) {
+			return new WP_Error( self::ERR_ENTRY_NOT_FOUND, __( 'No Flamingo submission was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
-		update_post_meta( $id, '_moca_cf7_read', (int) $read );
+		update_post_meta( $id, self::READ_META, (int) $read );
 
 		return array(
 			'id'   => $id,
@@ -964,8 +982,8 @@ class Forms_Abilities {
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
 		$post = $id > 0 ? get_post( $id ) : null;
-		if ( ! $post || 'flamingo_inbound' !== $post->post_type ) {
-			return new WP_Error( 'moca_entry_not_found', __( 'No Flamingo submission was found with that ID.', 'mosmcp-abilities' ) );
+		if ( ! $post || self::FLAMINGO_POST_TYPE !== $post->post_type ) {
+			return new WP_Error( self::ERR_ENTRY_NOT_FOUND, __( 'No Flamingo submission was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		if ( ! wp_trash_post( $id ) ) {
@@ -988,8 +1006,8 @@ class Forms_Abilities {
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
 		$post = $id > 0 ? get_post( $id ) : null;
-		if ( ! $post || 'flamingo_inbound' !== $post->post_type ) {
-			return new WP_Error( 'moca_entry_not_found', __( 'No Flamingo submission was found with that ID.', 'mosmcp-abilities' ) );
+		if ( ! $post || self::FLAMINGO_POST_TYPE !== $post->post_type ) {
+			return new WP_Error( self::ERR_ENTRY_NOT_FOUND, __( 'No Flamingo submission was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		if ( ! wp_delete_post( $id, true ) ) {
@@ -1581,7 +1599,7 @@ class Forms_Abilities {
 			return $content;
 		}
 		if ( ! $content ) {
-			return new WP_Error( 'moca_form_not_found', __( 'No WPForms form was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_FORM_NOT_FOUND, __( 'No WPForms form was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		return array(
@@ -1603,7 +1621,7 @@ class Forms_Abilities {
 			return $content;
 		}
 		if ( ! $content ) {
-			return new WP_Error( 'moca_form_not_found', __( 'No WPForms form was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_FORM_NOT_FOUND, __( 'No WPForms form was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		return array(
@@ -1621,7 +1639,7 @@ class Forms_Abilities {
 			return $content;
 		}
 		if ( ! $content ) {
-			return new WP_Error( 'moca_form_not_found', __( 'No WPForms form was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_FORM_NOT_FOUND, __( 'No WPForms form was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		return array(
@@ -1639,7 +1657,7 @@ class Forms_Abilities {
 			return $content;
 		}
 		if ( ! $content ) {
-			return new WP_Error( 'moca_form_not_found', __( 'No WPForms form was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_FORM_NOT_FOUND, __( 'No WPForms form was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		return array(
@@ -1677,7 +1695,7 @@ class Forms_Abilities {
 		$form_id = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
 		if ( $form_id <= 0 ) {
-			return new WP_Error( 'moca_missing_form_id', __( 'A WPForms form ID is required.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_MISSING_FORM_ID, __( 'A WPForms form ID is required.', 'mosmcp-abilities' ) );
 		}
 
 		$paginate = self::paginate_args( $input );
@@ -1709,7 +1727,7 @@ class Forms_Abilities {
 
 		$entry = $id > 0 ? wpforms()->entry->get( $id ) : null;
 		if ( ! $entry ) {
-			return new WP_Error( 'moca_entry_not_found', __( 'No WPForms entry was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_ENTRY_NOT_FOUND, __( 'No WPForms entry was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		return self::wpforms_entry_summary( $entry );
@@ -1725,7 +1743,7 @@ class Forms_Abilities {
 		$form_id = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
 		if ( $form_id <= 0 ) {
-			return new WP_Error( 'moca_missing_form_id', __( 'A WPForms form ID is required.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_MISSING_FORM_ID, __( 'A WPForms form ID is required.', 'mosmcp-abilities' ) );
 		}
 
 		$count = wpforms()->entry->get_entries( array( 'form_id' => $form_id ), true );
@@ -1746,7 +1764,7 @@ class Forms_Abilities {
 		$form_id = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
 		if ( $form_id <= 0 ) {
-			return new WP_Error( 'moca_missing_form_id', __( 'A WPForms form ID is required.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_MISSING_FORM_ID, __( 'A WPForms form ID is required.', 'mosmcp-abilities' ) );
 		}
 
 		$entries = wpforms()->entry->get_entries( array( 'form_id' => $form_id ) );
@@ -1777,7 +1795,7 @@ class Forms_Abilities {
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
 		if ( $id <= 0 || ! wpforms()->entry->get( $id ) ) {
-			return new WP_Error( 'moca_entry_not_found', __( 'No WPForms entry was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_ENTRY_NOT_FOUND, __( 'No WPForms entry was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		wpforms()->entry->update( $id, array( 'viewed' => $viewed ? 1 : 0 ) );
@@ -1798,7 +1816,7 @@ class Forms_Abilities {
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
 		if ( $id <= 0 || ! wpforms()->entry->get( $id ) ) {
-			return new WP_Error( 'moca_entry_not_found', __( 'No WPForms entry was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_ENTRY_NOT_FOUND, __( 'No WPForms entry was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		wpforms()->entry->update( $id, array( 'status' => 'trash' ) );
@@ -1819,7 +1837,7 @@ class Forms_Abilities {
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
 		if ( $id <= 0 || ! wpforms()->entry->get( $id ) ) {
-			return new WP_Error( 'moca_entry_not_found', __( 'No WPForms entry was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_ENTRY_NOT_FOUND, __( 'No WPForms entry was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		wpforms()->entry->update( $id, array( 'status' => '' ) );
@@ -1840,7 +1858,7 @@ class Forms_Abilities {
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
 		if ( $id <= 0 || ! wpforms()->entry->get( $id ) ) {
-			return new WP_Error( 'moca_entry_not_found', __( 'No WPForms entry was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_ENTRY_NOT_FOUND, __( 'No WPForms entry was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		if ( ! wpforms()->entry->delete( $id ) ) {
@@ -2385,7 +2403,7 @@ class Forms_Abilities {
 
 		$form = $id > 0 ? GFAPI::get_form( $id ) : false;
 		if ( ! $form ) {
-			return new WP_Error( 'moca_form_not_found', __( 'No Gravity Forms form was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_FORM_NOT_FOUND, __( 'No Gravity Forms form was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		return array(
@@ -2430,7 +2448,7 @@ class Forms_Abilities {
 
 		$form = $id > 0 ? GFAPI::get_form( $id ) : false;
 		if ( ! $form ) {
-			return new WP_Error( 'moca_form_not_found', __( 'No Gravity Forms form was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_FORM_NOT_FOUND, __( 'No Gravity Forms form was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		return array(
@@ -2450,7 +2468,7 @@ class Forms_Abilities {
 
 		$form = $id > 0 ? GFAPI::get_form( $id ) : false;
 		if ( ! $form ) {
-			return new WP_Error( 'moca_form_not_found', __( 'No Gravity Forms form was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_FORM_NOT_FOUND, __( 'No Gravity Forms form was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		return array(
@@ -2496,7 +2514,7 @@ class Forms_Abilities {
 		$form_id = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
 		if ( $form_id <= 0 ) {
-			return new WP_Error( 'moca_missing_form_id', __( 'A Gravity Forms form ID is required.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_MISSING_FORM_ID, __( 'A Gravity Forms form ID is required.', 'mosmcp-abilities' ) );
 		}
 
 		$paginate = self::paginate_args( $input );
@@ -2529,7 +2547,7 @@ class Forms_Abilities {
 
 		$entry = $id > 0 ? GFAPI::get_entry( $id ) : new WP_Error();
 		if ( is_wp_error( $entry ) ) {
-			return new WP_Error( 'moca_entry_not_found', __( 'No Gravity Forms entry was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_ENTRY_NOT_FOUND, __( 'No Gravity Forms entry was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
 		return self::gf_entry_summary( $entry );
@@ -2545,7 +2563,7 @@ class Forms_Abilities {
 		$form_id = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
 		if ( $form_id <= 0 ) {
-			return new WP_Error( 'moca_missing_form_id', __( 'A Gravity Forms form ID is required.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_MISSING_FORM_ID, __( 'A Gravity Forms form ID is required.', 'mosmcp-abilities' ) );
 		}
 
 		$count = GFAPI::count_entries( $form_id );
@@ -2566,7 +2584,7 @@ class Forms_Abilities {
 		$form_id = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
 		if ( $form_id <= 0 ) {
-			return new WP_Error( 'moca_missing_form_id', __( 'A Gravity Forms form ID is required.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_MISSING_FORM_ID, __( 'A Gravity Forms form ID is required.', 'mosmcp-abilities' ) );
 		}
 
 		$entries = GFAPI::get_entries( $form_id );
@@ -2587,7 +2605,7 @@ class Forms_Abilities {
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 		$entry = $id > 0 ? GFAPI::get_entry( $id ) : new WP_Error();
 		if ( is_wp_error( $entry ) ) {
-			return new WP_Error( 'moca_entry_not_found', __( 'No Gravity Forms entry was found with that ID.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_ENTRY_NOT_FOUND, __( 'No Gravity Forms entry was found with that ID.', 'mosmcp-abilities' ) );
 		}
 		return $id;
 	}

@@ -37,6 +37,17 @@ class ACFA_Helpers {
 	const NS = 'mosmcp';
 
 	/**
+	 * WP_Error codes shared across the ACF ability files (discovery, read, schema,
+	 * write) so a single error condition always surfaces the same code.
+	 */
+	const ERR_FIELD_NOT_FOUND = 'acfa_field_not_found';
+	const ERR_FORBIDDEN       = 'acfa_forbidden';
+	const ERR_GROUP_NOT_FOUND = 'acfa_group_not_found';
+	const ERR_LOCAL_GROUP     = 'acfa_local_group';
+	const ERR_NOT_REPEATER    = 'acfa_not_repeater';
+	const ERR_INVALID_POST    = 'acfa_invalid_post';
+
+	/**
 	 * Ability category slug.
 	 */
 	const CATEGORY = 'mosmcp-acf';
@@ -224,10 +235,10 @@ class ACFA_Helpers {
 	public static function require_post( $input, $cap = 'edit_post' ) {
 		$post_id = isset( $input['post_id'] ) ? (int) $input['post_id'] : 0;
 		if ( $post_id <= 0 || ! get_post( $post_id ) ) {
-			return new WP_Error( 'acfa_invalid_post', __( 'The given post_id does not match an existing post.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_INVALID_POST, __( 'The given post_id does not match an existing post.', 'mosmcp-abilities' ) );
 		}
 		if ( ! current_user_can( $cap, $post_id ) ) {
-			return new WP_Error( 'acfa_forbidden', __( 'You do not have permission to access this post.', 'mosmcp-abilities' ) );
+			return new WP_Error( self::ERR_FORBIDDEN, __( 'You do not have permission to access this post.', 'mosmcp-abilities' ) );
 		}
 		return $post_id;
 	}
@@ -357,6 +368,23 @@ class ACFA_Helpers {
 		$ids      = array_map( 'intval', (array) $raw );
 		$is_user  = ( 'user' === $field['type'] );
 		$resolved = array();
+
+		// At depth 2, every non-user ID below triggers its own get_fields() call,
+		// which reads postmeta under the hood — priming the cache for all of them
+		// in one query here means those per-ID calls hit cache instead of each
+		// issuing their own round-trip.
+		if ( 2 === (int) $resolve_depth && ! $is_user ) {
+			update_meta_cache(
+				'post',
+				array_filter(
+					$ids,
+					static function ( $id ) {
+						return $id > 0;
+					}
+				)
+			);
+		}
+
 		foreach ( $ids as $id ) {
 			if ( $id <= 0 ) {
 				continue;

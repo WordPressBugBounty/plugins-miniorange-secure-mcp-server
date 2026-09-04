@@ -11,6 +11,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use MoSMCP\Common\Services\OAuth\Tokens;
+
 /**
  * Class Store
  *
@@ -110,15 +112,16 @@ class Store {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT c.client_id, c.client_name, c.is_enabled, c.allowed_abilities, c.created,
+				'SELECT c.client_id, c.client_name, c.is_enabled, c.allowed_abilities, c.created,
 				        COUNT(t.token_hash) AS active_token_count
 				 FROM %i AS c
 				 LEFT JOIN %i AS t
-				        ON t.client_id = c.client_id AND t.type = 'access' AND t.expires >= %d
+				        ON t.client_id = c.client_id AND t.type = %s AND t.expires >= %d
 				 GROUP BY c.client_id
-				 ORDER BY c.created DESC",
+				 ORDER BY c.created DESC',
 				$clients_table,
 				$tokens_table,
+				Tokens::TYPE_ACCESS,
 				$now
 			),
 			ARRAY_A
@@ -130,10 +133,10 @@ class Store {
 
 		return array_map(
 			function ( $row ) {
-				$row['is_enabled']        = (int) $row['is_enabled'];
-				$row['created']           = (int) $row['created'];
+				$row['is_enabled']         = (int) $row['is_enabled'];
+				$row['created']            = (int) $row['created'];
 				$row['active_token_count'] = (int) $row['active_token_count'];
-				$row['allowed_abilities'] = null !== $row['allowed_abilities']
+				$row['allowed_abilities']  = null !== $row['allowed_abilities']
 					? json_decode( $row['allowed_abilities'], true )
 					: null;
 				return $row;
@@ -191,8 +194,9 @@ class Store {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(*) FROM %i WHERE type = 'access' AND expires >= %d",
+				'SELECT COUNT(*) FROM %i WHERE type = %s AND expires >= %d',
 				self::table( 'tokens' ),
+				Tokens::TYPE_ACCESS,
 				time()
 			)
 		);
@@ -209,8 +213,9 @@ class Store {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(DISTINCT user_id) FROM %i WHERE type = 'access' AND expires >= %d",
+				'SELECT COUNT(DISTINCT user_id) FROM %i WHERE type = %s AND expires >= %d',
 				self::table( 'tokens' ),
+				Tokens::TYPE_ACCESS,
 				time()
 			)
 		);
@@ -233,8 +238,9 @@ class Store {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(*) FROM %i WHERE type = 'refresh'",
-				self::table( 'tokens' )
+				'SELECT COUNT(*) FROM %i WHERE type = %s',
+				self::table( 'tokens' ),
+				Tokens::TYPE_REFRESH
 			)
 		) > 0;
 	}

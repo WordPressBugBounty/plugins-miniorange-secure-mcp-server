@@ -34,13 +34,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Tags_Pack extends Ability_Pack {
 
 	/**
+	 * Ability category slug.
+	 */
+	const CATEGORY = 'mosmcp-tags';
+
+	/**
 	 * Ability category for tag abilities.
 	 *
 	 * @return array Category definition.
 	 */
 	public function category() {
 		return array(
-			'slug'        => 'mosmcp-tags',
+			'slug'        => self::CATEGORY,
 			'label'       => __( 'Tags', 'mosmcp-abilities' ),
 			'description' => __( 'Create, edit, and manage post tags.', 'mosmcp-abilities' ),
 		);
@@ -77,7 +82,7 @@ class Tags_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Create Tag', 'mosmcp-abilities' ),
 				'description'   => __( 'Creates a new post tag. Optionally set a custom slug and a description. Fails with a clear error if a tag with the same name already exists.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-tags',
+				'category'      => self::CATEGORY,
 				'capability'    => 'manage_categories',
 				'annotations'   => self::annotations( false, false, false, false ),
 				'execute'       => array( Tags_Provider::class, 'create' ),
@@ -114,7 +119,7 @@ class Tags_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Delete Tag', 'mosmcp-abilities' ),
 				'description'   => __( 'Deletes a post tag. The posts using it are NOT deleted — they simply lose the tag. Requires confirm=true.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-tags',
+				'category'      => self::CATEGORY,
 				'capability'    => 'manage_categories',
 				'annotations'   => self::annotations( false, true, true, true ),
 				'execute'       => array( Tags_Provider::class, 'delete' ),
@@ -148,7 +153,7 @@ class Tags_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Find Tag (ID by Name / Name by ID)', 'mosmcp-abilities' ),
 				'description'   => __( 'Looks up post tags to resolve a tag ID from a name, or a name from an ID. Use this FIRST whenever the user refers to a tag by name and another ability requires a tag ID. Provide "search" with the full or partial tag name, or provide "id".', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-tags',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Tags_Provider::class, 'find' ),
@@ -174,7 +179,7 @@ class Tags_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Get Tag', 'mosmcp-abilities' ),
 				'description'   => __( 'Gets the details of a single post tag by its ID: name, slug, description, and how many posts use it.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-tags',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Tags_Provider::class, 'get' ),
@@ -200,7 +205,7 @@ class Tags_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'List All Tags', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists all post tags, including unused ones, with their post counts. Returns at most per_page tags (default 20) plus the total.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-tags',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Tags_Provider::class, 'list_all' ),
@@ -228,7 +233,7 @@ class Tags_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'List Posts with Tag', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists the posts that carry a given tag, any status except trash, newest first. Returns at most per_page posts (default 20) plus the total.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-tags',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Tags_Provider::class, 'list_posts' ),
@@ -257,7 +262,7 @@ class Tags_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'List Unused Tags', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists post tags that are not used by any post — useful for finding tags that could be cleaned up or deleted.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-tags',
+				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Tags_Provider::class, 'list_unused' ),
@@ -278,7 +283,7 @@ class Tags_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Update Tag Description', 'mosmcp-abilities' ),
 				'description'   => __( 'Changes the description of an existing post tag. The name and slug are not affected. Pass an empty string to clear the description.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-tags',
+				'category'      => self::CATEGORY,
 				'capability'    => 'manage_categories',
 				'annotations'   => self::annotations( false, false, true, true ),
 				'execute'       => array( Tags_Provider::class, 'update_description' ),
@@ -313,7 +318,7 @@ class Tags_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Rename Tag', 'mosmcp-abilities' ),
 				'description'   => __( 'Changes the name of an existing post tag. Posts using the tag are not affected.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-tags',
+				'category'      => self::CATEGORY,
 				'capability'    => 'manage_categories',
 				'annotations'   => self::annotations( false, false, true, true ),
 				'execute'       => array( Tags_Provider::class, 'update_name' ),
@@ -340,7 +345,7 @@ class Tags_Pack extends Ability_Pack {
 			array(
 				'label'         => __( 'Update Tag Slug', 'mosmcp-abilities' ),
 				'description'   => __( 'Changes the URL slug of an existing post tag. The name and description are not affected. Note: this changes the tag archive URL, so old links to it will stop working.', 'mosmcp-abilities' ),
-				'category'      => 'mosmcp-tags',
+				'category'      => self::CATEGORY,
 				'capability'    => 'manage_categories',
 				'annotations'   => self::annotations( false, false, true, true ),
 				'execute'       => array( Tags_Provider::class, 'update_slug' ),

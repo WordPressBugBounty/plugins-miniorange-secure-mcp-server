@@ -88,7 +88,21 @@ class Config {
 			self::$text_domain = (string) $config['text_domain'];
 		}
 		if ( array_key_exists( 'packs', $config ) ) {
-			self::$packs = is_array( $config['packs'] ) ? array_map( 'strval', $config['packs'] ) : null;
+			if ( is_array( $config['packs'] ) ) {
+				self::$packs = array_map( 'strval', $config['packs'] );
+			} elseif ( is_string( $config['packs'] ) && '' !== $config['packs'] ) {
+				// A bare string is a common shorthand mistake for a single-element
+				// array ('packs' => 'core' meaning ['core']); honor that intent
+				// instead of silently falling open to "every pack enabled".
+				self::$packs = array( $config['packs'] );
+			} else {
+				self::$packs = null;
+				_doing_it_wrong(
+					__METHOD__,
+					esc_html__( 'The "packs" option must be an array of pack group names (or a single string); the supplied value was ignored and every pack is enabled.', 'mosmcp-abilities' ),
+					esc_html( self::$version )
+				);
+			}
 		}
 	}
 

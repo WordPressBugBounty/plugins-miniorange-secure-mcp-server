@@ -11,6 +11,7 @@
 
 namespace MoSMCP\Abilities\Packs\Core;
 
+use MoSMCP\Abilities\Support\Pagination;
 use WP_Error;
 use WP_Query;
 
@@ -206,6 +207,7 @@ class Tags_Provider {
 	 */
 	public static function list_all( $input = array() ) {
 		$per_page = isset( $input['per_page'] ) ? absint( $input['per_page'] ) : 20;
+		$per_page = min( $per_page, Pagination::MAX_PER_PAGE );
 		$offset   = isset( $input['offset'] ) ? absint( $input['offset'] ) : 0;
 
 		$terms = get_terms(
@@ -254,6 +256,7 @@ class Tags_Provider {
 		}
 
 		$per_page = isset( $input['per_page'] ) ? absint( $input['per_page'] ) : 20;
+		$per_page = min( $per_page, Pagination::MAX_PER_PAGE );
 		$offset   = isset( $input['offset'] ) ? absint( $input['offset'] ) : 0;
 
 		$args = array(
@@ -299,6 +302,7 @@ class Tags_Provider {
 	 */
 	public static function list_unused( $input = array() ) {
 		$per_page = isset( $input['per_page'] ) ? absint( $input['per_page'] ) : 20;
+		$per_page = min( $per_page, Pagination::MAX_PER_PAGE );
 		$offset   = isset( $input['offset'] ) ? absint( $input['offset'] ) : 0;
 
 		$terms = get_terms(

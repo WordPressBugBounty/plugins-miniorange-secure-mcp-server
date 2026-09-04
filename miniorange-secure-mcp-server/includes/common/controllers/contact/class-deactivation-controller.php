@@ -63,8 +63,8 @@ class Deactivation_Controller extends Abstract_Contact_Controller {
 		$query = '[Secure MCP Server : ' . MOSMCP_VERSION . '] ' . $query;
 
 		$content = '<div >Hello, <br><br>'
-			. 'First Name :' . esc_html( $current_user->user_firstname ) . '<br><br>'
-			. 'Last  Name :' . esc_html( $current_user->user_lastname ) . '   <br><br>'
+			. 'First Name :' . esc_html( $current_user->first_name ) . '<br><br>'
+			. 'Last  Name :' . esc_html( $current_user->last_name ) . '   <br><br>'
 			. 'Company :<a href="' . esc_url( $site_url ) . '" target="_blank" >' . esc_html( $site_url ) . '</a><br><br>'
 			. 'Phone Number :<br><br>'
 			. 'Email :<a href="mailto:' . esc_attr( $current_user->user_email ) . '" target="_blank">' . esc_html( $current_user->user_email ) . '</a><br><br>'

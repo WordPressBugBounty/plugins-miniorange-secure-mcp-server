@@ -1,6 +1,6 @@
 <?php
 /**
- * Handles the debug log REST endpoints and the CSV download action.
+ * Handles the debug log REST endpoints and the log download action.
  *
  * @package Miniorange_Secure_MCP_Server
  */
@@ -20,10 +20,10 @@ use WP_REST_Response;
  * Class Debug_Controller
  *
  * Exposes the plugin's internal debug log to admin users: a paginated/filtered
- * list, capture on/off toggle, clear, and a CSV export. The export runs
- * through admin-post.php (see {@see download_logs()}) rather than the REST
- * API, since a REST route always JSON-encodes its response and can't stream a
- * plain file download.
+ * list, capture on/off toggle, clear, and a plain-text log export. The export
+ * runs through admin-post.php (see {@see download_logs()}) rather than the
+ * REST API, since a REST route always JSON-encodes its response and can't
+ * stream a plain file download.
  */
 class Debug_Controller extends Abstract_Admin_Controller {
 
@@ -33,7 +33,7 @@ class Debug_Controller extends Abstract_Admin_Controller {
 	const DOWNLOAD_ACTION = 'mosmcp_download_debug_logs';
 
 	/**
-	 * Nonce action used to authorize the CSV download link.
+	 * Nonce action used to authorize the log download link.
 	 */
 	const DOWNLOAD_NONCE_ACTION = 'mosmcp_download_debug_logs';
 
@@ -95,7 +95,7 @@ class Debug_Controller extends Abstract_Admin_Controller {
 	}
 
 	/**
-	 * Streams the (optionally filtered) debug log as a CSV attachment.
+	 * Streams the (optionally filtered) debug log as a plain-text attachment.
 	 *
 	 * Registered as an admin-post.php action rather than a REST route so the
 	 * response can be a raw file download instead of JSON. Verifies both the
@@ -120,14 +120,29 @@ class Debug_Controller extends Abstract_Admin_Controller {
 			'date_to'   => isset( $_GET['date_to'] ) ? sanitize_text_field( wp_unslash( $_GET['date_to'] ) ) : '',
 		);
 
-		$rows = Debug_Store::export( $args );
-
 		nocache_headers();
 		header( 'Content-Type: text/plain; charset=utf-8' );
+		header( 'X-Content-Type-Options: nosniff' );
 		header( 'Content-Disposition: attachment; filename="mosmcp-debug-' . gmdate( 'Y-m-d-His' ) . '.log"' );
 
-		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Raw log file stream, not HTML output.
-		echo self::to_log( $rows );
+		// Streamed in bounded chunks rather than loading the whole (up to
+		// Debug_Store::DEFAULT_MAX_ROWS) export into one array/string: a large,
+		// high-cardinality log could otherwise approach hundreds of MB in a single
+		// request, risking memory exhaustion or a timeout on constrained hosting.
+		for ( $chunk = 1; ; $chunk++ ) {
+			$rows = Debug_Store::export_chunk( $args, $chunk );
+			if ( empty( $rows ) ) {
+				break;
+			}
+
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Raw log file stream, not HTML output.
+			echo self::to_log( $rows );
+
+			if ( ob_get_level() > 0 ) {
+				ob_flush();
+			}
+			flush();
+		}
 		exit;
 	}
 

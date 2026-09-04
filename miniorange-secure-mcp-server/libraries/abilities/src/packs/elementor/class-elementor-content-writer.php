@@ -188,7 +188,7 @@ class Elementor_Content_Writer {
 		}
 
 		$is_atomic = Elementor_Schema::is_atomic( $element );
-		$roles     = Elementor_Schema::content_controls( $slug );
+		$roles     = Elementor_Schema::content_controls( $slug, $element );
 
 		if ( ! $roles ) {
 			return new WP_Error(
@@ -470,7 +470,7 @@ class Elementor_Content_Writer {
 		 * Preserving whatever is already there means changing a destination does not
 		 * silently reset "open in new tab".
 		 */
-		$existing = isset( $settings[ $control ] ) && is_array( $settings[ $control ] ) ? $settings[ $control ] : array();
+		$existing        = isset( $settings[ $control ] ) && is_array( $settings[ $control ] ) ? $settings[ $control ] : array();
 		$existing['url'] = (string) $safe;
 
 		return $existing;

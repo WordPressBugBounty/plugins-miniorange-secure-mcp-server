@@ -74,7 +74,7 @@ class Debug_Logger {
 	 *
 	 * @var string[]
 	 */
-	const REDACTED_KEY_PATTERNS = array( 'password', 'secret', 'token', 'authorization', 'api_key', 'apikey', 'private_key' );
+	const REDACTED_KEY_PATTERNS = array( 'password', 'secret', 'token', 'authorization', 'api_key', 'apikey', 'private_key', 'salt' );
 
 	/**
 	 * Cached capture-enabled flag for the current request.
@@ -233,7 +233,7 @@ class Debug_Logger {
 			$ip     = filter_var( $raw_ip, FILTER_VALIDATE_IP ) ? $raw_ip : '';
 		}
 
-		$message = self::truncate( (string) $message, self::MAX_MESSAGE_LENGTH );
+		$message = self::truncate( self::redact_message( (string) $message ), self::MAX_MESSAGE_LENGTH );
 
 		$encoded_context = null;
 		if ( ! empty( $context ) ) {
@@ -245,7 +245,7 @@ class Debug_Logger {
 
 		return array(
 			'created'     => time(),
-			'level'       => in_array( $level, array( 'debug', 'info', 'warning', 'error' ), true ) ? $level : 'info',
+			'level'       => in_array( $level, Debug_Store::LEVELS, true ) ? $level : 'info',
 			'channel'     => '' !== $channel ? substr( $channel, 0, 50 ) : 'general',
 			'message'     => $message,
 			'context'     => $encoded_context,
@@ -306,14 +306,18 @@ class Debug_Logger {
 
 	/**
 	 * Masks values of any context key that looks like it might hold a secret,
-	 * recursively. Defense in depth: call sites should avoid logging secrets in
-	 * the first place, but this keeps an accidental inclusion from persisting.
+	 * recursively — including into nested objects (e.g. a WP_Error's
+	 * get_error_data(), whose shape is up to whichever ability raised it), not
+	 * just nested arrays. Defense in depth: call sites should avoid logging
+	 * secrets in the first place, but this keeps an accidental inclusion from
+	 * persisting.
 	 *
-	 * @param array<string, mixed> $context Raw context.
+	 * @param array<string, mixed>|object $context Raw context.
 	 * @return array<string, mixed> Context with sensitive values masked.
 	 */
-	private static function redact( array $context ) {
-		$result = array();
+	private static function redact( $context ) {
+		$context = is_object( $context ) ? get_object_vars( $context ) : $context;
+		$result  = array();
 
 		foreach ( $context as $key => $value ) {
 			$is_sensitive = false;
@@ -326,7 +330,7 @@ class Debug_Logger {
 
 			if ( $is_sensitive ) {
 				$result[ $key ] = '***redacted***';
-			} elseif ( is_array( $value ) ) {
+			} elseif ( is_array( $value ) || is_object( $value ) ) {
 				$result[ $key ] = self::redact( $value );
 			} else {
 				$result[ $key ] = $value;
@@ -334,6 +338,23 @@ class Debug_Logger {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Masks "key: value" / "key=value" fragments embedded in free-text messages
+	 * where the key looks like it might hold a secret. {@see redact()} only
+	 * covers structured `context` values keyed by name — a secret can also end
+	 * up woven into the human-readable `message` string itself (e.g. a WP_Error
+	 * message like "Invalid API key sk-live-XXXX" surfaced via
+	 * get_error_message()), which this catches without mangling ordinary prose.
+	 *
+	 * @param string $message Raw message.
+	 * @return string Message with sensitive-looking fragments masked.
+	 */
+	private static function redact_message( $message ) {
+		$pattern = '/\b(' . implode( '|', self::REDACTED_KEY_PATTERNS ) . ')\w*\s*[:=]\s*\S+/i';
+
+		return (string) preg_replace( $pattern, '$1=***redacted***', $message );
 	}
 
 	/**

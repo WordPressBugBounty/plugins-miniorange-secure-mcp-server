@@ -4,7 +4,7 @@ Tags: mcp, ai, mcp-server, chatgpt, claude
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.4.9
+Stable tag: 1.4.10
 License: Expat
 License URI: https://plugins.miniorange.com/mit-license
 
@@ -324,6 +324,10 @@ The Abilities API does not record which plugin registered a given ability. The n
 
 == Changelog ==
 
+= 1.4.10 =
+* Fixed: the health endpoint is no longer cacheable. Page and edge caches (e.g. LiteSpeed, Cloudflare) could previously serve a stale "no agent" state, causing a connected client to report "No NHI configured" even after an agent was enabled.
+* Minor bug fixes.
+
 = 1.4.9 =
 * Debug logging framework: a built-in diagnostic log for MCP and OAuth activity.
 * Minor Bug fixes.
@@ -424,6 +428,9 @@ The Abilities API does not record which plugin registered a given ability. The n
 * Initial release: read-only viewer for abilities registered through the WordPress Abilities API.
 
 == Upgrade Notice ==
+
+= 1.4.10 =
+Fixed: the health endpoint is no longer cacheable. Page and edge caches (e.g. LiteSpeed, Cloudflare) could previously serve a stale "no agent" state, causing a connected client to report "No NHI configured" even after an agent was enabled. Minor bug fixes.
 
 = 1.4.9 =
 Adds a built-in debug logging framework, and minor bug fixes.

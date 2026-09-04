@@ -38,39 +38,38 @@ class Audit_Routes {
 					'callback'            => array( Audit_Controller::class, 'list_logs' ),
 					'permission_callback' => array( Audit_Controller::class, 'check_permission' ),
 					'args'                => array(
-						'page'      => array(
+						'page'       => array(
 							'type'    => 'integer',
 							'minimum' => 1,
 							'default' => 1,
 						),
-						'per_page'  => array(
+						'per_page'   => array(
 							'type'    => 'integer',
 							'minimum' => 1,
 							'maximum' => 100,
 							'default' => 25,
 						),
-						'user_id'   => array(
-							'type'    => 'integer',
-							'minimum' => 0,
-							'default' => 0,
-						),
-						'nhi_uuid'  => array(
+						'user_login' => array(
 							'type'    => 'string',
 							'default' => '',
 						),
-						'tool_name' => array(
+						'nhi_uuid'   => array(
 							'type'    => 'string',
 							'default' => '',
 						),
-						'status'    => array(
+						'tool_name'  => array(
+							'type'    => 'string',
+							'default' => '',
+						),
+						'status'     => array(
 							'type' => 'string',
 							'enum' => array( '', 'success', 'failed', 'denied' ),
 						),
-						'date_from' => array(
+						'date_from'  => array(
 							'type'    => 'string',
 							'default' => '',
 						),
-						'date_to'   => array(
+						'date_to'    => array(
 							'type'    => 'string',
 							'default' => '',
 						),
