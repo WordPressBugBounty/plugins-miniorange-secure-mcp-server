@@ -14,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 use MoSMCP\Common\Controllers\Debug\Debug_Controller;
 use MoSMCP\Common\Migration\Migration;
 use MoSMCP\Common\Repositories\NHI_Store;
+use MoSMCP\Common\Repositories\Store;
 use MoSMCP\Common\Utils\Utils;
 
 /**
@@ -223,6 +224,7 @@ class Admin_App {
 
 		return array(
 			'restRoot'               => esc_url_raw( rest_url() ),
+			'siteUrl'                => esc_url_raw( Utils::issuer_url() ),
 			'restNamespace'          => MOSMCP_REST_NAMESPACE,
 			'nonce'                  => wp_create_nonce( 'wp_rest' ),
 			'pluginUrl'              => esc_url_raw( plugins_url( '/', MOSMCP_PLUGIN_FILE ) ),
@@ -242,6 +244,39 @@ class Admin_App {
 			// Bundled ability sets whose companion plugin is inactive, for the
 			// in-app discovery callout. Admin-only; empty for members.
 			'dormantPacks'           => $is_admin ? Dormant_Abilities_Provider::packs() : array(),
+			// Direct-connection deprecation notice. Admin-only, and absent entirely
+			// for sites with no direct connection — so a gateway-only install never
+			// sees the notice.
+			'directConnection'       => $is_admin ? self::direct_connection_payload() : null,
+		);
+	}
+
+	/**
+	 * Deprecation payload for sites that have a direct connection.
+	 *
+	 * Returns null when the site has none, so gateway-only and never-connected
+	 * installs get no notice at all. `live` separates "someone is using direct right
+	 * now" from "direct was used at some point and has gone idle", which the notice
+	 * uses to pick its wording.
+	 *
+	 * @return array{live:bool, clients:string[]}|null
+	 */
+	private static function direct_connection_payload() {
+		$summary = Store::connection_summary();
+
+		// Gated on direct_live, not direct: client rows are never garbage-collected,
+		// so a site that tried a direct connection once (or whose registration never
+		// completed) keeps that row forever. Counting those would warn people who have
+		// since moved to the gateway, every time they open the plugin. An unexpired
+		// refresh token is what separates "a direct connection is in use" from "a
+		// direct connection was registered here at some point".
+		if ( $summary['direct_live'] < 1 ) {
+			return null;
+		}
+
+		return array(
+			'live'    => $summary['direct_live'] > 0,
+			'clients' => $summary['direct_names'],
 		);
 	}
 

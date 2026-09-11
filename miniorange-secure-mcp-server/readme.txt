@@ -4,7 +4,7 @@ Tags: mcp, ai, mcp-server, chatgpt, claude
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.4.10
+Stable tag: 1.4.11
 License: Expat
 License URI: https://plugins.miniorange.com/mit-license
 
@@ -18,7 +18,7 @@ Ask AI to write blog posts, edit Elementor and Kadence page layouts, manage cust
 
 Unlike other WordPress MCP server plugins that give AI full admin access, we put you in complete control. Role-based AI permissions, Turn each tool on or off, self-hosted OAuth 2.1 login, and full activity logs are all included, with no restrictions.
 
-Video: Connect Chagpt to WordPress Using Secure MCP Server 
+Video: Connect ChatGPT to WordPress Using Secure MCP Server 
 
 [youtube https://www.youtube.com/watch?v=yFzNXnguK00]
 
@@ -239,7 +239,7 @@ Once you connect Claude or ChatGPT to WordPress with this MCP plugin, just chat:
 2. Go to Plugins &rarr; Add New.
 3. Search "Secure MCP Server" 
 4. Click Install Now, then Activate.
-5. Done â€” the plugin is now active.
+5. Done — the plugin is now active.
 
 = How to Connect Claude to WordPress =
 
@@ -274,7 +274,7 @@ Once you connect Claude or ChatGPT to WordPress with this MCP plugin, just chat:
 
 = What is the NHI Registry? =
 
-The NHI (Non-Human Identity) Registry is where you create and manage named, role-based ability policies for AI clients. Each NHI maps WordPress roles to the abilities those roles may invoke. When an AI client makes an MCP request, the effective set of allowed abilities is the union â€” across every enabled NHI â€” of the abilities granted to the connecting user's role(s). So two users connecting the same client to the same site can see different tools, based on their roles. You can create as many NHIs as you need and toggle them on or off independently.
+The NHI (Non-Human Identity) Registry is where you create and manage named, role-based ability policies for AI clients. Each NHI maps WordPress roles to the abilities those roles may invoke. When an AI client makes an MCP request, the effective set of allowed abilities is the union — across every enabled NHI — of the abilities granted to the connecting user's role(s). So two users connecting the same client to the same site can see different tools, based on their roles. You can create as many NHIs as you need and toggle them on or off independently.
 
 = Can I disable an NHI without deleting it? =
 
@@ -282,7 +282,7 @@ Yes. Every NHI has an enable/disable toggle in the NHI Registry screen. A disabl
 
 = Does this WordPress MCP server work with WooCommerce? =
 
-Yes â€” full WooCommerce MCP support with 45 tools covering products, variations, orders, customers, coupons, and reports. Perfect for AI-powered store management.
+Yes — full WooCommerce MCP support with 45 tools covering products, variations, orders, customers, coupons, and reports. Perfect for AI-powered store management.
 
 = Does it work with Yoast SEO? =
 
@@ -290,7 +290,7 @@ Yes. 8 dedicated Yoast SEO MCP tools for meta descriptions, focus keywords, Open
 
 = Does it work with Contact Form 7, WPForms, and Gravity Forms? =
 
-Yes â€” all three form plugins supported with 40 MCP tools total. Read entries, export CSV, moderate submissions, delete for GDPR compliance.
+Yes — all three form plugins supported with 40 MCP tools total. Read entries, export CSV, moderate submissions, delete for GDPR compliance.
 
 = Is it safe to connect AI to my WordPress site? =
 
@@ -314,15 +314,20 @@ The Abilities API does not record which plugin registered a given ability. The n
 
 == Screenshots ==
 
-1. The onboarding quick-start guide for Secure MCP Server â€” register your first agent and walk through connecting an AI client, step by step.
-2. The AI Agents list â€” role-based ability policies for each registered agent, plus which ability packs are ready to use.
-3. An agent's Overview tab â€” configuration, the access policy granted to each role, and its latest activity.
-4. The Activity Log â€” every ability execution across every agent, filterable by agent, status, ability, user, and date.
+1. The onboarding quick-start guide for Secure MCP Server — register your first agent and walk through connecting an AI client, step by step.
+2. The AI Agents list — role-based ability policies for each registered agent, plus which ability packs are ready to use.
+3. An agent's Overview tab — configuration, the access policy granted to each role, and its latest activity.
+4. The Activity Log — every ability execution across every agent, filterable by agent, status, ability, user, and date.
 5. Connecting an AI client: create a connector in ChatGPT, Claude, or any other MCP-compatible client, then paste the MCP URL via the miniOrange Gateway or a direct connection.
-6. The MCP Server Dashboard â€” active agents, total executions, success rate, and average latency at a glance.
-7. A member's "Your AI Access" view â€” the tools available to their role, with a one-click path to connect an AI client.
+6. The MCP Server Dashboard — active agents, total executions, success rate, and average latency at a glance.
+7. A member's "Your AI Access" view — the tools available to their role, with a one-click path to connect an AI client.
 
 == Changelog ==
+
+= 1.4.11 =
+* Security and performance improvements to the MCP connection flow.
+* Added SEO post meta update ability for Rank Math.
+* Added product sale schedule date fields to the WooCommerce abilities.
 
 = 1.4.10 =
 * Fixed: the health endpoint is no longer cacheable. Page and edge caches (e.g. LiteSpeed, Cloudflare) could previously serve a stale "no agent" state, causing a connected client to report "No NHI configured" even after an agent was enabled.
@@ -357,7 +362,7 @@ The Abilities API does not record which plugin registered a given ability. The n
 
 = 1.4.5 =
 * ChatGPT is now shown first when connecting a client, with a direct link to the official plugin listing and clearer, more accurate setup steps.
-* Added a warning, shown across the plugin, when the site is only reachable on localhost â€” AI clients running elsewhere can't connect to it until it's made publicly reachable.
+* Added a warning, shown across the plugin, when the site is only reachable on localhost — AI clients running elsewhere can't connect to it until it's made publicly reachable.
 * Refreshed the sign-in (OAuth authorization) screen to match the rest of the plugin's design.
 * Fixed the connection dialogs occasionally rendering behind the WordPress admin toolbar.
 * Fixed a brief flicker on the dashboard when it first loads.
@@ -373,23 +378,23 @@ The Abilities API does not record which plugin registered a given ability. The n
 * Added a guided onboarding checklist for new installs: register an agent, add the MCP URL to your AI client, and approve the connection, shown on the dashboard until setup is complete.
 
 = 1.4.1 =
-* New ability â€” "Update Page": edits the title and/or content of an existing page.
+* New ability — "Update Page": edits the title and/or content of an existing page.
 
 = 1.4.0 =
-* New â€” bundled abilities library: 260+ ready-to-use, security-reviewed WordPress abilities exposed as MCP tools out of the box. Core content (posts, pages, categories, tags, media, revisions), users & roles, and comments are always available; ability sets for WooCommerce, Advanced Custom Fields, Yoast SEO, Contact Form 7 (with Flamingo), WPForms, and Gravity Forms activate automatically when those plugins are present.
-* Every bundled ability is capability-gated, carries explicit MCP tool annotations (read-only / destructive / idempotent / open-world), declares full input/output JSON schemas, and is reachable only through the governed MCP endpoint â€” never the public REST API.
+* New — bundled abilities library: 260+ ready-to-use, security-reviewed WordPress abilities exposed as MCP tools out of the box. Core content (posts, pages, categories, tags, media, revisions), users & roles, and comments are always available; ability sets for WooCommerce, Advanced Custom Fields, Yoast SEO, Contact Form 7 (with Flamingo), WPForms, and Gravity Forms activate automatically when those plugins are present.
+* Every bundled ability is capability-gated, carries explicit MCP tool annotations (read-only / destructive / idempotent / open-world), declares full input/output JSON schemas, and is reachable only through the governed MCP endpoint — never the public REST API.
 * Security hardening in the bundled abilities: reserved user-meta keys (capabilities, role level, session tokens) can never be read or written through an ability; role grants are limited to roles whose capabilities the caller already holds; and CSV entry exports are neutralized against spreadsheet formula injection.
 * Fixed the role & ability editor incorrectly flagging object-level abilities (those gated by per-object capabilities such as editing or deleting a specific post or page) as capability conflicts for every role, including Administrator. These capabilities are resolved per request against the target object, so they are no longer shown as conflicts; the runtime permission check is unchanged and was always correct.
 * Added a "Test Connection" check that confirms an AI client will actually be able to reach and sign in to your site, run from both your server and an outside vantage so it catches firewall, CDN, and reverse-proxy issues a same-server check would miss. Available on the Connect to AI page and beside Register Agent on the AI Agents screen.
 * Added a Troubleshooting guide, always available from the toolbar, that explains the common reasons an AI client can't connect and gives copy-paste Apache/Nginx fixes for each. When a connection test finds an issue, the most likely cause is highlighted automatically.
-* Reliability on CDN/cached hosts: the OAuth and MCP endpoints (discovery, registration, the MCP transport, and the authentication challenge) now send "Cache-Control: no-store", so an edge cache or CDN â€” such as Pantheon's Varnish, Cloudflare, WP Engine, or Kinsta â€” can no longer cache and misdeliver these per-request responses, which could otherwise intermittently break AI-client connections.
+* Reliability on CDN/cached hosts: the OAuth and MCP endpoints (discovery, registration, the MCP transport, and the authentication challenge) now send "Cache-Control: no-store", so an edge cache or CDN — such as Pantheon's Varnish, Cloudflare, WP Engine, or Kinsta — can no longer cache and misdeliver these per-request responses, which could otherwise intermittently break AI-client connections.
 
 = 1.3.1 =
 * Minor fixes and reliability improvements in the MCP Server plugin.
 
 = 1.3.0 =
 * Execution activity log: a full audit trail of every tool call, filterable by agent, status, or time range, with per-event detail including latency and error context.
-* Dashboard redesign: four focused metrics â€” Active Agents, Total Executions, Success Rate, and Average Latency â€” for an at-a-glance view of MCP server health.
+* Dashboard redesign: four focused metrics — Active Agents, Total Executions, Success Rate, and Average Latency — for an at-a-glance view of MCP server health.
 * Activity timeline on the agent overview: the last 5 executions appear inline on each NHI's overview tab.
 * Denied and unknown-tool calls are now correctly attributed to the responsible NHI, so the audit log is never missing an agent name.
 
@@ -429,6 +434,9 @@ The Abilities API does not record which plugin registered a given ability. The n
 
 == Upgrade Notice ==
 
+= 1.4.11 =
+Security and performance improvements to the MCP connection flow, a new Rank Math SEO post meta update ability, and product sale schedule date fields for WooCommerce.
+
 = 1.4.10 =
 Fixed: the health endpoint is no longer cacheable. Page and edge caches (e.g. LiteSpeed, Cloudflare) could previously serve a stale "no agent" state, causing a connected client to report "No NHI configured" even after an agent was enabled. Minor bug fixes.
 
@@ -460,7 +468,7 @@ Redesigns the role & ability editor as a role-by-resource matrix and adds a guid
 Adds an "Update Page" ability so an AI client can edit pages.
 
 = 1.4.0 =
-Adds a bundled library of 260+ ready-to-use WordPress abilities (core content, users & roles, comments, plus sets that auto-activate for WooCommerce, Advanced Custom Fields, Yoast SEO, Contact Form 7, WPForms, and Gravity Forms â€” every ability capability-gated and governed by the NHI Registry), a Test Connection check, and a Troubleshooting guide for diagnosing AI-client connection issues. Also fixes false "capability conflict" warnings for object-level abilities (display-only; permission enforcement is unchanged). No database changes and no manual upgrade steps required.
+Adds a bundled library of 260+ ready-to-use WordPress abilities (core content, users & roles, comments, plus sets that auto-activate for WooCommerce, Advanced Custom Fields, Yoast SEO, Contact Form 7, WPForms, and Gravity Forms — every ability capability-gated and governed by the NHI Registry), a Test Connection check, and a Troubleshooting guide for diagnosing AI-client connection issues. Also fixes false "capability conflict" warnings for object-level abilities (display-only; permission enforcement is unchanged). No database changes and no manual upgrade steps required.
 
 = 1.3.1 =
 Minor fixes and reliability improvements. No upgrade steps required.

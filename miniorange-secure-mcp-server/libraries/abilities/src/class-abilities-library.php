@@ -18,6 +18,7 @@ use MoSMCP\Abilities\Packs\Acf\ACFA_Helpers;
 use MoSMCP\Abilities\Packs\Yoast\YSOA_Helpers;
 use MoSMCP\Abilities\Packs\Forms\Forms_Abilities;
 use MoSMCP\Abilities\Packs\Kadence\Kadence_Helpers;
+use MoSMCP\Abilities\Packs\Rankmath\Rankmath_Loader;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -155,6 +156,9 @@ class Abilities_Library {
 		if ( self::enabled( 'kadence' ) ) {
 			Kadence_Helpers::register_categories();
 		}
+		if ( self::enabled( 'rankmath' ) ) {
+			Rankmath_Loader::register_categories();
+		}
 	}
 
 	/**
@@ -182,6 +186,9 @@ class Abilities_Library {
 		}
 		if ( self::enabled( 'kadence' ) ) {
 			Kadence_Helpers::register_abilities();
+		}
+		if ( self::enabled( 'rankmath' ) ) {
+			Rankmath_Loader::register_abilities();
 		}
 	}
 

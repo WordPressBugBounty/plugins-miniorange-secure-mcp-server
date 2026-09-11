@@ -25,6 +25,30 @@ use MoSMCP\Common\Services\OAuth\Tokens;
 class Store {
 
 	/**
+	 * Hosts that identify the miniOrange gateway as the registering party.
+	 *
+	 * An allow-list rather than one constant so a staging gateway can be added
+	 * without touching connection_source().
+	 */
+	const GATEWAY_HOSTS = array( 'gateway.miniorange.ai' );
+
+	/**
+	 * Values returned by connection_source().
+	 */
+	const SOURCE_GATEWAY = 'gateway';
+	const SOURCE_DIRECT  = 'direct';
+
+	/**
+	 * Transient holding the cached connection_summary() result, and its lifetime.
+	 *
+	 * The admin bootstrap reads the summary on every plugin page load, so the join
+	 * behind it is cached. Invalidated on client insert/delete; the TTL is only a
+	 * backstop for a missed invalidation.
+	 */
+	const SUMMARY_TRANSIENT = 'mosmcp_connection_summary';
+	const SUMMARY_TTL       = 300;
+
+	/**
 	 * Returns the prefixed table name for a given short key.
 	 *
 	 * @param string $key One of 'clients', 'codes', 'tokens'.
@@ -50,7 +74,11 @@ class Store {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		return (bool) $wpdb->insert( self::table( 'clients' ), $data );
+		$ok = (bool) $wpdb->insert( self::table( 'clients' ), $data );
+
+		delete_transient( self::SUMMARY_TRANSIENT );
+
+		return $ok;
 	}
 
 	/**
@@ -69,6 +97,129 @@ class Store {
 		);
 
 		return $row ? $row : null;
+	}
+
+	/**
+	 * Classifies a set of registered redirect URIs as gateway or direct.
+	 *
+	 * Nothing reaches the MCP endpoint without registering as an OAuth client first,
+	 * and whoever registers supplies its own redirect URI: the gateway supplies a
+	 * callback on its own host, while an AI client talking straight to this site
+	 * supplies its own (chatgpt.com, claude.ai, a loopback for desktop apps). So the
+	 * redirect URI's host already records which route was used — and since these rows
+	 * are never garbage-collected, it records it for connections made long before
+	 * this code shipped.
+	 *
+	 * Gateway only when EVERY URI is on a gateway host: a registration mixing a
+	 * gateway callback with a foreign one is not the gateway, and accepting it as one
+	 * would be a way to opt out of the deprecation notice.
+	 *
+	 * Matched on the parsed host, never a substring of the stored JSON — a
+	 * `LIKE '%gateway.miniorange.ai%'` would also match
+	 * `https://elsewhere.example/?x=gateway.miniorange.ai`.
+	 *
+	 * @param string[] $redirect_uris Registered redirect URIs.
+	 * @return string self::SOURCE_GATEWAY or self::SOURCE_DIRECT.
+	 */
+	public static function connection_source( array $redirect_uris ) {
+		if ( empty( $redirect_uris ) ) {
+			return self::SOURCE_DIRECT;
+		}
+
+		foreach ( $redirect_uris as $uri ) {
+			if ( ! is_string( $uri ) ) {
+				return self::SOURCE_DIRECT;
+			}
+
+			$host = wp_parse_url( $uri, PHP_URL_HOST );
+			if ( ! is_string( $host ) || ! in_array( strtolower( $host ), self::GATEWAY_HOSTS, true ) ) {
+				return self::SOURCE_DIRECT;
+			}
+		}
+
+		return self::SOURCE_GATEWAY;
+	}
+
+	/**
+	 * Classifies a client row by the redirect URIs stored on it.
+	 *
+	 * Derived on read rather than stored in a column: `redirect_uris` is already
+	 * persisted and immutable for the life of the row, so a column would only
+	 * duplicate it — and would need a schema change plus a backfill to say the same
+	 * thing.
+	 *
+	 * @param array<string, mixed> $client Client row.
+	 * @return string self::SOURCE_GATEWAY or self::SOURCE_DIRECT.
+	 */
+	public static function client_connection_source( array $client ) {
+		$uris = isset( $client['redirect_uris'] ) ? json_decode( (string) $client['redirect_uris'], true ) : array();
+
+		return self::connection_source( is_array( $uris ) ? $uris : array() );
+	}
+
+	/**
+	 * Site-level gateway/direct counts, for the deprecation notice.
+	 *
+	 * `direct_live` counts direct clients still holding an unexpired refresh token.
+	 * Refresh tokens last 14 days and only go away via rotation or client deletion,
+	 * making them the closest available signal for "this connection is in active
+	 * use"; access tokens expire hourly and would read as idle almost immediately.
+	 *
+	 * @return array{gateway:int, direct:int, direct_live:int, direct_names:string[]}
+	 */
+	public static function connection_summary() {
+		global $wpdb;
+
+		$cached = get_transient( self::SUMMARY_TRANSIENT );
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT c.client_name, c.redirect_uris,
+				        COUNT(t.token_hash) AS live_refresh
+				 FROM %i AS c
+				 LEFT JOIN %i AS t
+				        ON t.client_id = c.client_id AND t.type = %s AND t.expires >= %d
+				 GROUP BY c.client_id',
+				self::table( 'clients' ),
+				self::table( 'tokens' ),
+				Tokens::TYPE_REFRESH,
+				time()
+			),
+			ARRAY_A
+		);
+
+		$summary = array(
+			'gateway'      => 0,
+			'direct'       => 0,
+			'direct_live'  => 0,
+			'direct_names' => array(),
+		);
+
+		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+			if ( self::SOURCE_GATEWAY === self::client_connection_source( $row ) ) {
+				++$summary['gateway'];
+				continue;
+			}
+
+			++$summary['direct'];
+
+			if ( (int) $row['live_refresh'] > 0 ) {
+				++$summary['direct_live'];
+			}
+
+			$name = trim( (string) $row['client_name'] );
+			if ( '' !== $name && ! in_array( $name, $summary['direct_names'], true ) ) {
+				$summary['direct_names'][] = $name;
+			}
+		}
+
+		set_transient( self::SUMMARY_TRANSIENT, $summary, self::SUMMARY_TTL );
+
+		return $summary;
 	}
 
 	/**
@@ -181,6 +332,8 @@ class Store {
 		$wpdb->delete( self::table( 'codes' ), array( 'client_id' => $client_id ) );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->delete( self::table( 'clients' ), array( 'client_id' => $client_id ) );
+
+		delete_transient( self::SUMMARY_TRANSIENT );
 	}
 
 	/**

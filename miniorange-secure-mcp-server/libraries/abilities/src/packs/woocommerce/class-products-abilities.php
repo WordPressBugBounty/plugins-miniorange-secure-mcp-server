@@ -248,6 +248,14 @@ class Products_Abilities {
 				'type'        => 'string',
 				'description' => __( 'Sale price. Pass an empty string to clear it.', 'mosmcp-abilities' ),
 			),
+			'date_on_sale_from'  => array(
+				'type'        => array( 'string', 'null' ),
+				'description' => __( 'Sale start date (YYYY-MM-DD). Pass null or an empty string to clear it.', 'mosmcp-abilities' ),
+			),
+			'date_on_sale_to'    => array(
+				'type'        => array( 'string', 'null' ),
+				'description' => __( 'Sale end date (YYYY-MM-DD). Pass null or an empty string to clear it, e.g. to make an active sale indefinite.', 'mosmcp-abilities' ),
+			),
 			'sku'                => array(
 				'type'        => 'string',
 				'description' => __( 'Stock keeping unit.', 'mosmcp-abilities' ),
@@ -961,6 +969,31 @@ class Products_Abilities {
 	 * @param array<string, mixed> $input   The ability input (writable fields only).
 	 * @return true|WP_Error
 	 */
+	/**
+	 * Validates a clearable YYYY-MM-DD date value and, if valid, applies it to
+	 * $product via $setter_method. Shared by date_on_sale_from/date_on_sale_to:
+	 * null/"" means "clear" (passed through to the setter as ''), anything else
+	 * is validated first.
+	 *
+	 * @param \WC_Product $product       The product being written to.
+	 * @param string      $field_name    Human-readable field name, for error messages.
+	 * @param mixed       $value         The raw input value for this field.
+	 * @param string      $setter_method WC_Product setter to call, e.g. 'set_date_on_sale_from'.
+	 * @return string|WP_Error The value applied ('' when cleared), or WP_Error on invalid input.
+	 */
+	private static function validate_and_set_date( $product, $field_name, $value, $setter_method ) {
+		if ( null === $value || '' === $value ) {
+			$product->$setter_method( '' );
+			return '';
+		}
+		$validated = WooCommerce_Validator::validate_date( $value, $field_name );
+		if ( is_wp_error( $validated ) ) {
+			return $validated;
+		}
+		$product->$setter_method( $validated );
+		return $validated;
+	}
+
 	private static function apply_writable_fields( $product, array $input ) {
 		if ( isset( $input['slug'] ) ) {
 			$product->set_slug( sanitize_title( (string) $input['slug'] ) );
@@ -989,6 +1022,24 @@ class Products_Abilities {
 				}
 			}
 			$product->set_sale_price( $sale_price );
+		}
+		$has_date_on_sale_from = array_key_exists( 'date_on_sale_from', $input );
+		$has_date_on_sale_to   = array_key_exists( 'date_on_sale_to', $input );
+
+		if ( $has_date_on_sale_from ) {
+			$date_on_sale_from = self::validate_and_set_date( $product, __( 'date_on_sale_from', 'mosmcp-abilities' ), $input['date_on_sale_from'], 'set_date_on_sale_from' );
+			if ( is_wp_error( $date_on_sale_from ) ) {
+				return $date_on_sale_from;
+			}
+		}
+		if ( $has_date_on_sale_to ) {
+			$date_on_sale_to = self::validate_and_set_date( $product, __( 'date_on_sale_to', 'mosmcp-abilities' ), $input['date_on_sale_to'], 'set_date_on_sale_to' );
+			if ( is_wp_error( $date_on_sale_to ) ) {
+				return $date_on_sale_to;
+			}
+		}
+		if ( $has_date_on_sale_from && $has_date_on_sale_to && '' !== $date_on_sale_from && '' !== $date_on_sale_to && $date_on_sale_from > $date_on_sale_to ) {
+			return WooCommerce_Response::error( 'wcab_invalid_date', __( 'date_on_sale_from must not be after date_on_sale_to.', 'mosmcp-abilities' ) );
 		}
 		if ( isset( $input['featured'] ) ) {
 			$product->set_featured( (bool) $input['featured'] );

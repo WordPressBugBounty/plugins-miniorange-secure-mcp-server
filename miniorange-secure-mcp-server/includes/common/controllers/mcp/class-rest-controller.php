@@ -157,6 +157,7 @@ class REST_Controller {
 				'user_id'     => (int) $row['user_id'],
 				'client_id'   => (string) $row['client_id'],
 				'client_name' => isset( $client['client_name'] ) ? (string) $client['client_name'] : '',
+				'source'      => Store::client_connection_source( $client ),
 				'ip'          => $ip,
 				'nhi_id'      => $primary_nhi ? (int) $primary_nhi['id'] : null,
 				'nhi_uuid'    => $primary_nhi ? (string) $primary_nhi['uuid'] : '',
