@@ -4,7 +4,7 @@ Tags: mcp, ai, mcp-server, chatgpt, claude
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.4.11
+Stable tag: 1.4.12
 License: Expat
 License URI: https://plugins.miniorange.com/mit-license
 
@@ -153,11 +153,11 @@ The first WordPress MCP server that can safely edit a page builder. AI reads and
 
 Every edit rewrites only the block you target and leaves the rest of the page byte-for-byte identical, and responsive desktop, tablet, and mobile values can be set directly. Kadence tools appear once you grant them to a role in the AI Agent Registry.
 
-== WordPress Site Administration: 35 MCP Tools ==
+== WordPress Site Administration: 34 MCP Tools ==
 
 * **Site Settings, Read (10 tools):** Get title, tagline, URL, timezone, language, permalinks, posts-per-page, homepage, privacy policy page, and search visibility.
 * **Site Settings, Write (7 tools):** Update title, tagline, timezone, and posts-per-page, and set homepage, posts page, and privacy policy page.
-* **Plugin Management (9 tools):** List, activate, deactivate, delete, and update plugins with confirmation, and get details, version, and author.
+* **Plugin Management (8 tools):** List plugins, get full details for one (name, version, author, update status), count them by status, list the ones with updates waiting, activate, deactivate, update, and turn automatic updates on or off. Name a plugin however you like: its folder, its file, or its display name all work. Installing and deleting plugins are intentionally not offered yet, because both are irreversible and belong behind a human approval step rather than a flag your AI can set for itself.
 * **Theme Management (3 tools):** List installed themes, get the active theme, and get theme details by slug.
 * **Updates & Site Health (6 tools):** Check core, plugin, and theme updates, and get WordPress version, PHP/MySQL info, and Site Health status.
 
@@ -324,6 +324,10 @@ The Abilities API does not record which plugin registered a given ability. The n
 
 == Changelog ==
 
+= 1.4.12 =
+* Added 34 site administration abilities covering site settings, plugin management, theme details, and update and Site Health checks.
+* Minor bug fixes.
+
 = 1.4.11 =
 * Security and performance improvements to the MCP connection flow.
 * Added SEO post meta update ability for Rank Math.
@@ -433,6 +437,9 @@ The Abilities API does not record which plugin registered a given ability. The n
 * Initial release: read-only viewer for abilities registered through the WordPress Abilities API.
 
 == Upgrade Notice ==
+
+= 1.4.12 =
+Adds 34 site administration abilities covering site settings, plugin management, theme details, and update and Site Health checks. Minor bug fixes.
 
 = 1.4.11 =
 Security and performance improvements to the MCP connection flow, a new Rank Math SEO post meta update ability, and product sale schedule date fields for WooCommerce.

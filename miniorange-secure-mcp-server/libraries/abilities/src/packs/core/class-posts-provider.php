@@ -801,7 +801,7 @@ class Posts_Provider {
 			'id'          => (int) $post->ID,
 			'title'       => (string) get_the_title( $post ),
 			'content'     => (string) $post->post_content,
-			'excerpt'     => (string) wp_trim_words( $post->post_content, 40 ),
+			'excerpt'     => Post_Fields::display_excerpt( $post, Post_Fields::EXCERPT_LENGTH_FULL ),
 			'status'      => (string) $post->post_status,
 			'author_id'   => (int) $post->post_author,
 			'author_name' => $author ? (string) $author->display_name : '',
@@ -878,7 +878,7 @@ class Posts_Provider {
 				'id'          => (int) $post->ID,
 				'title'       => (string) get_the_title( $post ),
 				'author_name' => self::author_name( $post ),
-				'excerpt'     => (string) wp_trim_words( $post->post_content, 20 ),
+				'excerpt'     => Post_Fields::display_excerpt( $post, Post_Fields::EXCERPT_LENGTH_PREVIEW ),
 				'modified'    => (string) $post->post_modified,
 				'edit_url'    => self::edit_url( (int) $post->ID ),
 			);
@@ -916,7 +916,7 @@ class Posts_Provider {
 			$drafts[] = array(
 				'id'       => (int) $post->ID,
 				'title'    => (string) get_the_title( $post ),
-				'excerpt'  => (string) wp_trim_words( $post->post_content, 20 ),
+				'excerpt'  => Post_Fields::display_excerpt( $post, Post_Fields::EXCERPT_LENGTH_PREVIEW ),
 				'modified' => (string) $post->post_modified,
 				'edit_url' => self::edit_url( (int) $post->ID ),
 			);
@@ -949,7 +949,7 @@ class Posts_Provider {
 				'id'          => (int) $post->ID,
 				'title'       => (string) get_the_title( $post ),
 				'author_name' => self::author_name( $post ),
-				'excerpt'     => (string) wp_trim_words( $post->post_content, 20 ),
+				'excerpt'     => Post_Fields::display_excerpt( $post, Post_Fields::EXCERPT_LENGTH_PREVIEW ),
 				'modified'    => (string) $post->post_modified,
 				'edit_url'    => self::edit_url( (int) $post->ID ),
 			);
@@ -980,7 +980,7 @@ class Posts_Provider {
 			$posts[] = array(
 				'id'       => (int) $post->ID,
 				'title'    => (string) get_the_title( $post ),
-				'excerpt'  => (string) wp_trim_words( $post->post_content, 20 ),
+				'excerpt'  => Post_Fields::display_excerpt( $post, Post_Fields::EXCERPT_LENGTH_PREVIEW ),
 				'modified' => (string) $post->post_modified,
 				'edit_url' => self::edit_url( (int) $post->ID ),
 			);
@@ -1012,7 +1012,7 @@ class Posts_Provider {
 				'id'          => (int) $post->ID,
 				'title'       => (string) get_the_title( $post ),
 				'author_name' => self::author_name( $post ),
-				'excerpt'     => (string) wp_trim_words( $post->post_content, 20 ),
+				'excerpt'     => Post_Fields::display_excerpt( $post, Post_Fields::EXCERPT_LENGTH_PREVIEW ),
 				'date'        => (string) $post->post_date,
 				'link'        => (string) get_permalink( $post ),
 				'edit_url'    => self::edit_url( (int) $post->ID ),

@@ -49,6 +49,33 @@ class Post_Fields {
 	);
 
 	/**
+	 * Word cap applied to a manual excerpt before it is returned.
+	 *
+	 * post_excerpt has no length ceiling of its own — a site can hold a
+	 * multi-paragraph value there — and callers include list abilities that
+	 * return many rows in one response to an AI client with finite context.
+	 * Generous enough that a real manual excerpt is never visibly cut, but
+	 * bounded so one oversized row cannot balloon a list response.
+	 *
+	 * @var int
+	 */
+	const MANUAL_EXCERPT_CAP_WORDS = 100;
+
+	/**
+	 * Word cap for the excerpt on a single-item get (page-get, post-get).
+	 *
+	 * @var int
+	 */
+	const EXCERPT_LENGTH_FULL = 40;
+
+	/**
+	 * Word cap for the excerpt in list abilities, which return many rows at once.
+	 *
+	 * @var int
+	 */
+	const EXCERPT_LENGTH_PREVIEW = 20;
+
+	/**
 	 * Applies a title/content/excerpt update and reports what changed.
 	 *
 	 * @param WP_Post              $post           Target post.
@@ -131,6 +158,31 @@ class Post_Fields {
 			'view_url'  => (string) get_permalink( $updated->ID ),
 			'warnings'  => $warnings,
 		);
+	}
+
+	/**
+	 * The excerpt as WordPress itself would display it.
+	 *
+	 * A manual excerpt (post_excerpt) is preferred over an auto-generated one —
+	 * that is what get_the_excerpt() does — but unlike get_the_excerpt() it is
+	 * still capped at MANUAL_EXCERPT_CAP_WORDS, since post_excerpt has no length
+	 * ceiling of its own and this is read by list abilities returning many rows
+	 * to an AI client at once. Only when no manual excerpt is stored does this
+	 * fall back to an auto-generated one from post_content. Reading post_content
+	 * unconditionally, as list views did before, hid a manual excerpt entirely:
+	 * it reported the post as unchanged right after a caller successfully wrote one.
+	 *
+	 * @param WP_Post $post      Target post.
+	 * @param int     $num_words Word count for the auto-generated fallback.
+	 * @return string
+	 */
+	public static function display_excerpt( WP_Post $post, $num_words = self::EXCERPT_LENGTH_FULL ) {
+		$manual = (string) $post->post_excerpt;
+		if ( '' !== trim( $manual ) ) {
+			return (string) wp_trim_words( $manual, self::MANUAL_EXCERPT_CAP_WORDS );
+		}
+
+		return (string) wp_trim_words( $post->post_content, $num_words );
 	}
 
 	/**

@@ -16,6 +16,10 @@ use MoSMCP\Abilities\Packs\Core\Tags_Pack;
 use MoSMCP\Abilities\Packs\Comments\Comments_Pack;
 use MoSMCP\Abilities\Packs\Cpt\Cpt_Pack;
 use MoSMCP\Abilities\Packs\Elementor\Elementor_Pack;
+use MoSMCP\Abilities\Packs\Site\Health_Pack;
+use MoSMCP\Abilities\Packs\Site\Plugins_Pack;
+use MoSMCP\Abilities\Packs\Site\Site_Settings_Pack;
+use MoSMCP\Abilities\Packs\Site\Themes_Pack;
 use MoSMCP\Abilities\Packs\Users\Users_Pack;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -52,6 +56,10 @@ class Pack_Registry {
 			Comments_Pack::class,
 			Cpt_Pack::class,
 			Elementor_Pack::class,
+			Site_Settings_Pack::class,
+			Plugins_Pack::class,
+			Themes_Pack::class,
+			Health_Pack::class,
 		);
 	}
 
