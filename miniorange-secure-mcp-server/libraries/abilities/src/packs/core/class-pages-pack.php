@@ -136,7 +136,7 @@ class Pages_Pack extends Ability_Pack {
 			'mosmcp/page-update',
 			array(
 				'label'         => __( 'Update Page', 'mosmcp-abilities' ),
-				'description'   => __( 'Edits the title, content and/or excerpt of an existing page, including pages authored by other users. Requires edit rights on that specific page, so a contributor still cannot edit a published page. Replaces the fields you pass and leaves the rest untouched; the page keeps its current status. If the post is built with Elementor, what visitors read comes from the Elementor layout rather than from this content, so change the text on the Elementor elements instead.', 'mosmcp-abilities' ),
+				'description'   => __( 'Edits the title, content and/or excerpt of an existing page, including pages authored by other users. Requires edit rights on that specific page, so a contributor still cannot edit a published page. Replaces the fields you pass and leaves the rest untouched; the page keeps its current status. If the post is built with Elementor, what visitors read comes from the Elementor layout rather than from this content, so change the text on the Elementor elements instead. This replaces a whole field with the text you supply. To change only part of the text, use mosmcp/content-replace-in-post instead: it is far cheaper on a long page and cannot lose formatting, shortcodes or block markup the way rewriting the whole field can.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_page',
 				'cap_args'      => self::id_args(),
@@ -356,7 +356,7 @@ class Pages_Pack extends Ability_Pack {
 			'mosmcp/page-update-own',
 			array(
 				'label'         => __( 'Update Own Page', 'mosmcp-abilities' ),
-				'description'   => __( 'Edits the title, content and/or excerpt of a page authored by the current user. Cannot edit pages written by other users. Only the fields you pass are changed; the page keeps its current status. If the post is built with Elementor, what visitors read comes from the Elementor layout rather than from this content, so change the text on the Elementor elements instead.', 'mosmcp-abilities' ),
+				'description'   => __( 'Edits the title, content and/or excerpt of a page authored by the current user. Cannot edit pages written by other users. Only the fields you pass are changed; the page keeps its current status. If the post is built with Elementor, what visitors read comes from the Elementor layout rather than from this content, so change the text on the Elementor elements instead. This replaces a whole field with the text you supply. To change only part of the text, use mosmcp/content-replace-in-post instead: it is far cheaper on a long page and cannot lose formatting, shortcodes or block markup the way rewriting the whole field can.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_page',
 				'cap_args'      => self::id_args(),
@@ -691,6 +691,7 @@ class Pages_Pack extends Ability_Pack {
 								array( 'id', 'title', 'status' )
 							)
 						),
+						'notes'   => Schema::arr( Schema::str() ),
 					),
 					array( 'showing', 'total', 'matches' )
 				),
@@ -807,7 +808,8 @@ class Pages_Pack extends Ability_Pack {
 				'modified'    => Schema::str(),
 				'edit_url'    => Schema::str(),
 			),
-			array( 'id', 'title', 'modified' )
+			array( 'id', 'title', 'modified' ),
+			'drafts'
 		);
 	}
 
@@ -831,7 +833,8 @@ class Pages_Pack extends Ability_Pack {
 				'modified' => Schema::str(),
 				'edit_url' => Schema::str(),
 			),
-			array( 'id', 'title', 'modified' )
+			array( 'id', 'title', 'modified' ),
+			'drafts'
 		);
 	}
 
@@ -959,7 +962,7 @@ class Pages_Pack extends Ability_Pack {
 	}
 
 	/**
-	 * Builds a read-only, paginated list ability (output rows keyed "pages").
+	 * Builds a read-only, paginated list ability.
 	 *
 	 * @param string               $name       Ability name.
 	 * @param string               $label      Ability label.
@@ -969,9 +972,10 @@ class Pages_Pack extends Ability_Pack {
 	 * @param string               $noun       Plural noun for pagination descriptions.
 	 * @param array<string, mixed> $item_props Output item properties.
 	 * @param string[]             $item_req   Required output item fields.
+	 * @param string               $items_key  Key the provider returns the rows under.
 	 * @return Ability
 	 */
-	private function paginated_list( $name, $label, $desc, $capability, $method, $noun, array $item_props, array $item_req ) {
+	private function paginated_list( $name, $label, $desc, $capability, $method, $noun, array $item_props, array $item_req, $items_key = 'pages' ) {
 		return new Ability(
 			$name,
 			array(
@@ -982,26 +986,31 @@ class Pages_Pack extends Ability_Pack {
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Pages_Provider::class, $method ),
 				'input_schema'  => Schema::object( Schema::pagination_props( $noun ) ),
-				'output_schema' => self::page_list_output( $item_props, $item_req ),
+				'output_schema' => self::page_list_output( $item_props, $item_req, $items_key ),
 			)
 		);
 	}
 
 	/**
-	 * Standard { showing, total, pages } list output schema.
+	 * Standard { showing, total, <items_key> } list output schema.
+	 *
+	 * The key is declared rather than assumed: the provider returns draft
+	 * listings under "drafts", and a schema that always said "pages" rejected
+	 * those responses as invalid output.
 	 *
 	 * @param array<string, mixed> $item_props Output item properties.
 	 * @param string[]             $item_req   Required output item fields.
+	 * @param string               $items_key  Key the provider returns the rows under.
 	 * @return array<string, mixed>
 	 */
-	private static function page_list_output( array $item_props, array $item_req ) {
+	private static function page_list_output( array $item_props, array $item_req, $items_key = 'pages' ) {
 		return Schema::object(
 			array(
-				'showing' => Schema::int(),
-				'total'   => Schema::int(),
-				'pages'   => Schema::arr( Schema::object( $item_props, $item_req ) ),
+				'showing'  => Schema::int(),
+				'total'    => Schema::int(),
+				$items_key => Schema::arr( Schema::object( $item_props, $item_req ) ),
 			),
-			array( 'showing', 'total', 'pages' )
+			array( 'showing', 'total', $items_key )
 		);
 	}
 

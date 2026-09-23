@@ -318,7 +318,7 @@ class Cpt_Pack extends Ability_Pack {
 			'mosmcp/cpt-update',
 			array(
 				'label'         => __( 'Update Custom Content Item', 'mosmcp-abilities' ),
-				'description'   => __( 'Edits the title, body and/or excerpt of a custom content item. Fields the type does not support are refused rather than written where nothing would display them. A custom type\'s real information usually lives in its custom fields, so use the field abilities for those.', 'mosmcp-abilities' ),
+				'description'   => __( 'Edits the title, body and/or excerpt of a custom content item. Fields the type does not support are refused rather than written where nothing would display them. A custom type\'s real information usually lives in its custom fields, so use the field abilities for those. This replaces a whole field with the text you supply. To change only part of the text, use mosmcp/content-replace-in-post instead: it is far cheaper on a long page and cannot lose formatting, shortcodes or block markup the way rewriting the whole field can.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
@@ -427,7 +427,7 @@ class Cpt_Pack extends Ability_Pack {
 			'mosmcp/cpt-set-field',
 			array(
 				'label'           => __( 'Set Custom Field', 'mosmcp-abilities' ),
-				'description'     => __( 'Writes one custom field on a custom content item — a price, a duration, a list of features. Values are checked against the field\'s declared type. Fields managed by Advanced Custom Fields are refused, because ACF stores each field as a pair of rows and writing only one breaks it; use the ACF abilities for those. Private fields no plugin has declared are also refused. Read the item first to see which fields it has and which are writable.', 'mosmcp-abilities' ),
+				'description'     => __( 'Writes one custom field on a custom content item — a price, a duration, a list of features. Values are checked against the field\'s declared type. Fields managed by Advanced Custom Fields are refused, because ACF stores each field as a pair of rows and writing only one breaks it; use the ACF abilities for those. Private fields no plugin has declared are also refused. Read the item first to see which fields it has and which are writable. This writes the whole field value. To change only part of the text inside it, use mosmcp/content-replace-in-meta instead.', 'mosmcp-abilities' ),
 				'category'        => self::CATEGORY,
 				'capability'      => 'edit_post',
 				'cap_args'        => self::id_args(),

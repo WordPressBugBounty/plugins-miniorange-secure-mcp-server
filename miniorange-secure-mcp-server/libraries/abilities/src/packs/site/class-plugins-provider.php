@@ -496,6 +496,12 @@ class Plugins_Provider {
 		$log = $skin->get_upgrade_messages();
 		$log = is_array( $log ) ? implode( ' ', array_map( 'wp_strip_all_tags', $log ) ) : '';
 
+		// Name a misconfiguration that produces an unreadable failure. WordPress empties
+		// the upgrade folder before unpacking, so a temp directory pointing inside it has
+		// the downloaded archive deleted underneath it, and the only symptom is
+		// "Missing archive file". Every update on such a site fails, from wp-admin too.
+		$log .= self::temp_dir_collision_note();
+
 		$still_active = is_plugin_active( $file );
 		$extra        = '';
 
@@ -589,6 +595,41 @@ class Plugins_Provider {
 			'current'  => $current,
 			'changed'  => ( $previous !== $current ),
 			'notes'    => $notes,
+		);
+	}
+
+	/**
+	 * Names the temp-directory misconfiguration that makes every update fail.
+	 *
+	 * WP_Upgrader empties wp-content/upgrade before unpacking a package. When
+	 * WP_TEMP_DIR points at that same folder, the archive WordPress just downloaded
+	 * is deleted in that sweep, and the failure surfaces only as a missing archive
+	 * file with no hint of the cause. It is a site configuration problem rather than
+	 * anything to do with the plugin being updated, and it affects the Plugins
+	 * screen in wp-admin exactly as much as it affects this ability.
+	 *
+	 * @return string Empty when the configuration is fine, otherwise a sentence naming it.
+	 */
+	private static function temp_dir_collision_note() {
+		if ( ! defined( 'WP_TEMP_DIR' ) || '' === (string) WP_TEMP_DIR ) {
+			return '';
+		}
+
+		$temp    = rtrim( wp_normalize_path( (string) WP_TEMP_DIR ), '/' );
+		$upgrade = rtrim( wp_normalize_path( WP_CONTENT_DIR . '/upgrade' ), '/' );
+
+		if ( '' === $temp || '' === $upgrade ) {
+			return '';
+		}
+
+		if ( $temp !== $upgrade && 0 !== strpos( $temp . '/', $upgrade . '/' ) ) {
+			return '';
+		}
+
+		return ' ' . sprintf(
+			/* translators: %s: the configured WP_TEMP_DIR path. */
+			__( 'Likely cause: this site sets WP_TEMP_DIR to "%s", which is inside the folder WordPress empties before unpacking an update, so the downloaded file is deleted before it can be used. Every plugin and theme update on this site will fail the same way, including from the Plugins screen. Point WP_TEMP_DIR at a different directory in wp-config.php.', 'mosmcp-abilities' ),
+			(string) WP_TEMP_DIR
 		);
 	}
 

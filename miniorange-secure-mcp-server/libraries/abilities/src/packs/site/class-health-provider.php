@@ -314,7 +314,11 @@ class Health_Provider {
 				'script_debug'            => defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG,
 				'file_mods_allowed'       => ! ( defined( 'DISALLOW_FILE_MODS' ) && DISALLOW_FILE_MODS ),
 				'file_edit_allowed'       => ! ( defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT ),
-				'persistent_object_cache' => wp_using_ext_object_cache(),
+				// Cast: wp_using_ext_object_cache() returns NULL, not false, when no
+				// persistent cache has been registered, and a null fails the boolean
+				// output schema, which rejected this whole ability on any site without
+				// object caching.
+				'persistent_object_cache' => (bool) wp_using_ext_object_cache(),
 				'cron_disabled'           => defined( 'DISABLE_WP_CRON' ) && DISABLE_WP_CRON,
 			),
 			'server'    => array(

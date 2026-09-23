@@ -1,7 +1,8 @@
 <?php
 /**
- * Detects bundled ability sets that are dormant because their companion plugin
- * is not active, so the admin SPA can advertise them.
+ * Detects which bundled, provider-gated ability sets are active on this site and
+ * which are dormant because their companion plugin is not active, so the admin
+ * SPA can name the live ones and advertise the rest.
  *
  * This is a server-side data provider only: which WordPress plugins are active
  * can only be determined in PHP, so the SPA receives the result through the
@@ -29,18 +30,40 @@ class Dormant_Abilities_Provider {
 	 * @return array<int, array{label:string, count:int}>
 	 */
 	public static function packs() {
-		$dormant = array();
+		return self::filtered( false );
+	}
+
+	/**
+	 * The provider-gated packs that ARE active on this site.
+	 *
+	 * Their abilities are already registered and counted in the headline total,
+	 * so the SPA names them rather than leaving them anonymous inside it.
+	 *
+	 * @return array<int, array{label:string, count:int}>
+	 */
+	public static function active_packs() {
+		return self::filtered( true );
+	}
+
+	/**
+	 * Providers whose activity matches the wanted state.
+	 *
+	 * @param bool $wanted Whether to return the active providers or the dormant ones.
+	 * @return array<int, array{label:string, count:int}>
+	 */
+	private static function filtered( $wanted ) {
+		$matched = array();
 
 		foreach ( self::providers() as $provider ) {
-			if ( ! call_user_func( $provider['active'] ) ) {
-				$dormant[] = array(
+			if ( (bool) call_user_func( $provider['active'] ) === (bool) $wanted ) {
+				$matched[] = array(
 					'label' => $provider['label'],
 					'count' => $provider['count'],
 				);
 			}
 		}
 
-		return $dormant;
+		return $matched;
 	}
 
 	/**
@@ -66,10 +89,24 @@ class Dormant_Abilities_Provider {
 				},
 			),
 			array(
+				'label'  => __( 'Elementor', 'miniorange-secure-mcp-server' ),
+				'count'  => 10,
+				'active' => static function () {
+					return class_exists( 'Elementor\Plugin' );
+				},
+			),
+			array(
 				'label'  => __( 'Yoast SEO', 'miniorange-secure-mcp-server' ),
 				'count'  => 7,
 				'active' => static function () {
 					return function_exists( 'YoastSEO' ) || class_exists( 'WPSEO_Meta' );
+				},
+			),
+			array(
+				'label'  => __( 'Rank Math', 'miniorange-secure-mcp-server' ),
+				'count'  => 1,
+				'active' => static function () {
+					return defined( 'RANK_MATH_VERSION' );
 				},
 			),
 			array(
@@ -91,6 +128,13 @@ class Dormant_Abilities_Provider {
 				'count'  => 14,
 				'active' => static function () {
 					return class_exists( 'GFAPI' );
+				},
+			),
+			array(
+				'label'  => __( 'Fluent Forms', 'miniorange-secure-mcp-server' ),
+				'count'  => 14,
+				'active' => static function () {
+					return defined( 'FLUENTFORM_VERSION' );
 				},
 			),
 			array(

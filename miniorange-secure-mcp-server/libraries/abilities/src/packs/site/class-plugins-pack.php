@@ -291,7 +291,12 @@ class Plugins_Pack extends Ability_Pack {
 						),
 						'expect_version' => Schema::str( __( 'Optional. The version you expect to install. If a different version is on offer, the update is refused rather than installing something nobody reviewed.', 'mosmcp-abilities' ) ),
 					),
-					array( 'plugin', 'confirm' )
+					// `confirm` is deliberately NOT required. Marking it required makes the
+					// schema reject the call before the ability runs, so the caller gets a
+					// generic "confirm is required" rather than the refusal naming the
+					// plugin and what replacing its files means. Optional here, enforced in
+					// the provider, is what actually surfaces the warning.
+					array( 'plugin' )
 				),
 				'output_schema' => Schema::object(
 					array(

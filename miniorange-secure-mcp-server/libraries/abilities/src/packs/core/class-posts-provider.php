@@ -771,11 +771,78 @@ class Posts_Provider {
 			$matches[] = self::format_find_match( $post );
 		}
 
-		return array(
+		$result = array(
 			'showing' => count( $matches ),
 			'total'   => (int) $query->found_posts,
 			'matches' => $matches,
 		);
+
+		// A caller who only knows a title cannot know whether it is a post or a
+		// page. Finding nothing here is a dead end unless we say where else to
+		// look, so point at the content that does carry the name.
+		if ( empty( $matches ) ) {
+			$elsewhere = self::find_in_other_types( $search, 'post' );
+			if ( ! empty( $elsewhere ) ) {
+				$result['notes'] = $elsewhere;
+			}
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Looks for the same title outside this ability's post type.
+	 *
+	 * Returns human-readable notes naming what was found and which ability
+	 * reaches it, so an assistant can recover instead of reporting that nothing
+	 * with that name exists.
+	 *
+	 * @param string $search    The title searched for.
+	 * @param string $exclude   The post type already searched.
+	 * @return string[] Notes, empty when nothing else matches.
+	 */
+	private static function find_in_other_types( $search, $exclude ) {
+		if ( '' === $search ) {
+			return array();
+		}
+
+		$types = get_post_types( array( 'public' => true ), 'names' );
+		unset( $types[ $exclude ], $types['attachment'] );
+		if ( empty( $types ) ) {
+			return array();
+		}
+
+		$query = new WP_Query(
+			array(
+				'post_type'      => array_values( $types ),
+				'post_status'    => self::ALL_STATUSES,
+				's'              => $search,
+				'search_columns' => array( 'post_title' ),
+				'posts_per_page' => 5,
+				'no_found_rows'  => true,
+			)
+		);
+
+		$notes = array();
+		foreach ( $query->posts as $found ) {
+			if ( ! current_user_can( 'read_post', $found->ID ) ) {
+				continue;
+			}
+
+			$ability = ( 'page' === $found->post_type ) ? 'mosmcp/page-find' : 'mosmcp/cpt-get';
+
+			$notes[] = sprintf(
+				/* translators: 1: post type, 2: title, 3: ID, 4: status, 5: ability name. */
+				__( 'No posts matched, but the %1$s "%2$s" (ID %3$d, %4$s) has that name. Use %5$s or address it by that ID.', 'mosmcp-abilities' ),
+				$found->post_type,
+				get_the_title( $found ),
+				(int) $found->ID,
+				$found->post_status,
+				$ability
+			);
+		}
+
+		return $notes;
 	}
 
 	/**

@@ -43,6 +43,38 @@ class Ability_Registrar {
 	const WEAK_CAPS = array( 'read', 'exist', 'true', '1' );
 
 	/**
+	 * Kinds of object an object-level capability can be checked against.
+	 *
+	 * @var string
+	 */
+	const SUBJECT_POST    = 'post';
+	const SUBJECT_COMMENT = 'comment';
+	const SUBJECT_USER    = 'user';
+
+	/**
+	 * Object-level capabilities, mapped to the kind of object they address and
+	 * the broader capability that governs that kind.
+	 *
+	 * Used to tell "this object does not exist" apart from "you may not touch
+	 * this object", which current_user_can() reports identically.
+	 *
+	 * @var array<string, string[]>
+	 */
+	const OBJECT_CAP_SUBJECTS = array(
+		'edit_post'         => array( self::SUBJECT_POST, 'edit_posts' ),
+		'delete_post'       => array( self::SUBJECT_POST, 'edit_posts' ),
+		'read_post'         => array( self::SUBJECT_POST, 'edit_posts' ),
+		'publish_post'      => array( self::SUBJECT_POST, 'edit_posts' ),
+		'edit_post_meta'    => array( self::SUBJECT_POST, 'edit_posts' ),
+		'delete_post_meta'  => array( self::SUBJECT_POST, 'edit_posts' ),
+		'read_post_meta'    => array( self::SUBJECT_POST, 'edit_posts' ),
+		'edit_comment'      => array( self::SUBJECT_COMMENT, 'moderate_comments' ),
+		'moderate_comments' => array( self::SUBJECT_COMMENT, 'moderate_comments' ),
+		'edit_user'         => array( self::SUBJECT_USER, 'edit_users' ),
+		'delete_user'       => array( self::SUBJECT_USER, 'edit_users' ),
+	);
+
+	/**
 	 * Validates and registers a single ability.
 	 *
 	 * @param Ability $ability Ability definition.
@@ -278,6 +310,20 @@ class Ability_Registrar {
 			}
 
 			if ( ! current_user_can( $capability, ...$args ) ) {
+				/*
+				 * An object-level capability also fails when the object does not
+				 * exist at all. Refusing here reports a stale or mistyped ID as a
+				 * permission problem, which sends the caller looking at their
+				 * grants instead of at the ID -- and stops an assistant retrying
+				 * with a correct one. Let the execute callback answer instead: it
+				 * already reports "no post with that ID" precisely. Deferral is
+				 * limited to callers who hold the capability generally, so a
+				 * caller without it still learns nothing about which IDs exist.
+				 */
+				if ( self::object_is_absent( $capability, $args ) ) {
+					return true;
+				}
+
 				return false;
 			}
 
@@ -287,6 +333,54 @@ class Ability_Registrar {
 
 			return true;
 		};
+	}
+
+	/**
+	 * Whether a failed object-level capability check failed because the target
+	 * object is absent rather than because the caller lacks permission.
+	 *
+	 * Only object capabilities whose subject can be looked up cheaply are
+	 * considered, and only for a caller who holds the broader capability that
+	 * governs that kind of object. Anything else returns false, so the ordinary
+	 * permission refusal stands.
+	 *
+	 * @param string       $capability The declared capability.
+	 * @param array<mixed> $args       Resolved current_user_can() arguments.
+	 * @return bool True when the object does not exist and the caller may be told so.
+	 */
+	private static function object_is_absent( $capability, array $args ) {
+		if ( ! isset( self::OBJECT_CAP_SUBJECTS[ $capability ] ) || empty( $args ) ) {
+			return false;
+		}
+
+		list( $kind, $general ) = self::OBJECT_CAP_SUBJECTS[ $capability ];
+
+		$id = $args[0];
+		if ( ! is_numeric( $id ) || (int) $id <= 0 ) {
+			return false;
+		}
+		$id = (int) $id;
+
+		switch ( $kind ) {
+			case self::SUBJECT_POST:
+				$exists = null !== get_post( $id );
+				break;
+			case self::SUBJECT_COMMENT:
+				$exists = null !== get_comment( $id );
+				break;
+			case self::SUBJECT_USER:
+				$exists = false !== get_userdata( $id );
+				break;
+			default:
+				return false;
+		}
+
+		if ( $exists ) {
+			// The object is there, so the refusal really is about permission.
+			return false;
+		}
+
+		return current_user_can( $general );
 	}
 
 	/**

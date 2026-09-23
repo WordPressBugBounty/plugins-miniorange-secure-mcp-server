@@ -15,7 +15,10 @@ use MoSMCP\Abilities\Packs\Core\Revisions_Pack;
 use MoSMCP\Abilities\Packs\Core\Tags_Pack;
 use MoSMCP\Abilities\Packs\Comments\Comments_Pack;
 use MoSMCP\Abilities\Packs\Cpt\Cpt_Pack;
+use MoSMCP\Abilities\Packs\Editing\Editing_Pack;
 use MoSMCP\Abilities\Packs\Elementor\Elementor_Pack;
+use MoSMCP\Abilities\Packs\FluentForms\Fluent_Forms_Pack;
+use MoSMCP\Abilities\Packs\Maintenance\Maintenance_Pack;
 use MoSMCP\Abilities\Packs\Site\Health_Pack;
 use MoSMCP\Abilities\Packs\Site\Plugins_Pack;
 use MoSMCP\Abilities\Packs\Site\Site_Settings_Pack;
@@ -60,6 +63,9 @@ class Pack_Registry {
 			Plugins_Pack::class,
 			Themes_Pack::class,
 			Health_Pack::class,
+			Maintenance_Pack::class,
+			Editing_Pack::class,
+			Fluent_Forms_Pack::class,
 		);
 	}
 

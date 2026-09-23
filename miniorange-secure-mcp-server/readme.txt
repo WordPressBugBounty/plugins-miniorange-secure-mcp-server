@@ -4,7 +4,7 @@ Tags: mcp, ai, mcp-server, chatgpt, claude
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.4.12
+Stable tag: 1.4.13
 License: Expat
 License URI: https://plugins.miniorange.com/mit-license
 
@@ -324,6 +324,12 @@ The Abilities API does not record which plugin registered a given ability. The n
 
 == Changelog ==
 
+= 1.4.13 =
+* Added surgical content editing: change part of the text in a post, a custom field or a setting without rewriting the whole thing.
+* Added 8 maintenance abilities covering scheduled events, permalinks, caches, and the site error log.
+* Added Fluent Forms support: 14 abilities for forms, fields, confirmation messages, email notifications and submissions.
+* Minor bug fixes.
+
 = 1.4.12 =
 * Added 34 site administration abilities covering site settings, plugin management, theme details, and update and Site Health checks.
 * Minor bug fixes.
@@ -437,6 +443,9 @@ The Abilities API does not record which plugin registered a given ability. The n
 * Initial release: read-only viewer for abilities registered through the WordPress Abilities API.
 
 == Upgrade Notice ==
+
+= 1.4.13 =
+Adds surgical content editing, so your AI can change part of a page without rewriting it, plus 8 maintenance abilities for scheduled events, permalinks, caches and the error log, and 14 Fluent Forms abilities. Minor bug fixes.
 
 = 1.4.12 =
 Adds 34 site administration abilities covering site settings, plugin management, theme details, and update and Site Health checks. Minor bug fixes.

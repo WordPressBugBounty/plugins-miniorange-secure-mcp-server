@@ -326,24 +326,73 @@ class Site_Support {
 
 		$needle = strtolower( $reference );
 
-		// Folder name, single-file basename, or basename without the .php suffix.
-		foreach ( array_keys( $installed ) as $file ) {
-			$dir  = dirname( $file );
-			$base = basename( $file );
+		/*
+		 * Each rule is applied as a COMPLETE pass over every installed plugin before
+		 * the next rule is tried, and a pass that matches more than one plugin refuses
+		 * rather than picking one.
+		 *
+		 * Doing this per-iteration instead is a real bug, not a style point: a folder
+		 * named "acme" and a different plugin at "acme-addon/acme.php" both match the
+		 * reference "acme", one by folder and one by basename. Whichever the directory
+		 * listing reached first won, so an operation could act on a plugin the caller
+		 * never named — including defeating the host-plugin self-protection check.
+		 */
+		$rules = array(
+			// Folder name.
+			static function ( $file, $data ) use ( $needle ) {
+				unset( $data );
+				$dir = dirname( $file );
+				return '.' !== $dir && strtolower( $dir ) === $needle;
+			},
+			// Single-file plugin basename, with or without the .php suffix.
+			static function ( $file, $data ) use ( $needle ) {
+				unset( $data );
+				$base = strtolower( basename( $file ) );
+				return $base === $needle || $base === $needle . '.php';
+			},
+			// Display name, exact.
+			static function ( $file, $data ) use ( $needle ) {
+				unset( $file );
+				return isset( $data['Name'] ) && strtolower( (string) $data['Name'] ) === $needle;
+			},
 
-			if ( '.' !== $dir && strtolower( $dir ) === $needle ) {
-				return $file;
+			/*
+			 * Display name, partial. Plugin names are longer than anyone says out loud
+			 * ("Akismet Anti-spam: Spam Protection"), so an exact-only match fails for
+			 * the name a person or a model actually uses.
+			 */
+			static function ( $file, $data ) use ( $needle ) {
+				unset( $file );
+				return isset( $data['Name'] ) && false !== strpos( strtolower( (string) $data['Name'] ), $needle );
+			},
+		);
+
+		foreach ( $rules as $matches_rule ) {
+			$hits = array();
+
+			foreach ( $installed as $file => $data ) {
+				if ( $matches_rule( (string) $file, (array) $data ) ) {
+					$hits[] = (string) $file;
+				}
 			}
 
-			if ( strtolower( $base ) === $needle || strtolower( $base ) === $needle . '.php' ) {
-				return $file;
+			if ( 1 === count( $hits ) ) {
+				return $hits[0];
 			}
-		}
 
-		// Display name, case-insensitive.
-		foreach ( $installed as $file => $data ) {
-			if ( isset( $data['Name'] ) && strtolower( (string) $data['Name'] ) === $needle ) {
-				return $file;
+			if ( count( $hits ) > 1 ) {
+				return self::error(
+					'mosmcp_plugin_ambiguous',
+					sprintf(
+						/* translators: 1: the plugin reference supplied, 2: comma-separated list of matching plugin files. */
+						__( '"%1$s" matches more than one installed plugin: %2$s. Name it exactly, using the plugin file shown above, so the wrong plugin is not acted on.', 'mosmcp-abilities' ),
+						$reference,
+						implode( ', ', $hits )
+					),
+					self::CAUSE_INVALID_INPUT,
+					true,
+					array( 'candidates' => $hits )
+				);
 			}
 		}
 

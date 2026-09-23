@@ -244,6 +244,9 @@ class Admin_App {
 			// Bundled ability sets whose companion plugin is inactive, for the
 			// in-app discovery callout. Admin-only; empty for members.
 			'dormantPacks'           => $is_admin ? Dormant_Abilities_Provider::packs() : array(),
+			// The provider-gated sets that are active here, so the SPA can name them
+			// inside the ready-to-use total. Admin-only; empty for members.
+			'activePacks'            => $is_admin ? Dormant_Abilities_Provider::active_packs() : array(),
 			// Direct-connection deprecation notice. Admin-only, and absent entirely
 			// for sites with no direct connection — so a gateway-only install never
 			// sees the notice.

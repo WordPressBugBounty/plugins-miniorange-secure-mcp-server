@@ -94,7 +94,7 @@ class Elementor_Pack extends Ability_Pack {
 			'mosmcp/elementor-page-write',
 			array(
 				'label'         => __( 'Write Elementor Layout', 'mosmcp-abilities' ),
-				'description'   => __( 'Replaces a post or page\'s entire Elementor layout with the element tree you supply, and can build one on a post that has none. Anything not included is removed, so prefer the targeted editing abilities for ordinary changes. Element IDs may be omitted and will be generated. Unknown widget types are refused rather than silently dropped.', 'mosmcp-abilities' ),
+				'description'   => __( 'Replaces a post or page\'s entire Elementor layout with the element tree you supply, and can build one on a post that has none. Anything not included is removed, so prefer the targeted editing abilities for ordinary changes. Element IDs may be omitted and will be generated. Unknown widget types are refused rather than silently dropped. Also known as: replace the Elementor layout, build a page with the page builder.', 'mosmcp-abilities' ),
 				'category'      => 'mosmcp-elementor',
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
@@ -132,10 +132,11 @@ class Elementor_Pack extends Ability_Pack {
 			'mosmcp/elementor-render-preview',
 			array(
 				'label'         => __( 'Preview Rendered Elementor Layout', 'mosmcp-abilities' ),
-				'description'   => __( 'Renders an Elementor layout to the markup a visitor would receive, so a change can be checked rather than assumed. Render the whole post, or pass an element_id to render just that element. Ask for the text format to read the copy without the markup around it.', 'mosmcp-abilities' ),
+				'description'   => __( 'Renders an Elementor layout to the markup a visitor would receive, so a change can be checked rather than assumed. Render the whole post, or pass an element_id to render just that element. Ask for the text format to read the copy without the markup around it. Also known as: preview the Elementor page, see how it looks, check the rendered layout.', 'mosmcp-abilities' ),
 				'category'      => 'mosmcp-elementor',
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
+
 				/*
 				 * Read-only in the sense that matters: it changes no content. Marked
 				 * open-world because rendering executes shortcodes and third-party
@@ -198,7 +199,7 @@ class Elementor_Pack extends Ability_Pack {
 			'mosmcp/elementor-element-duplicate',
 			array(
 				'label'         => __( 'Duplicate Elementor Element', 'mosmcp-abilities' ),
-				'description'   => __( 'Copies one element of an Elementor layout, along with anything nested inside it, and places the copy immediately after the original. The copy is given new element IDs so it can be edited independently. This is the reliable way to extend a repeating section such as a list of cards.', 'mosmcp-abilities' ),
+				'description'   => __( 'Copies one element of an Elementor layout, along with anything nested inside it, and places the copy immediately after the original. The copy is given new element IDs so it can be edited independently. This is the reliable way to extend a repeating section such as a list of cards. Also known as: copy an Elementor widget, duplicate a section, repeat a card.', 'mosmcp-abilities' ),
 				'category'      => 'mosmcp-elementor',
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
@@ -227,7 +228,7 @@ class Elementor_Pack extends Ability_Pack {
 			'mosmcp/elementor-element-move',
 			array(
 				'label'         => __( 'Move Elementor Element', 'mosmcp-abilities' ),
-				'description'   => __( 'Changes where an element sits in an Elementor layout: pass a position to reorder it among its current siblings, or a target container ID to move it into a different container. An element cannot be moved inside itself.', 'mosmcp-abilities' ),
+				'description'   => __( 'Changes where an element sits in an Elementor layout: pass a position to reorder it among its current siblings, or a target container ID to move it into a different container. An element cannot be moved inside itself. Also known as: reorder Elementor widgets, move a section up or down, rearrange the layout.', 'mosmcp-abilities' ),
 				'category'      => 'mosmcp-elementor',
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
@@ -258,7 +259,7 @@ class Elementor_Pack extends Ability_Pack {
 			'mosmcp/elementor-element-delete',
 			array(
 				'label'         => __( 'Delete Elementor Element', 'mosmcp-abilities' ),
-				'description'   => __( 'Removes one element from an Elementor layout. Anything nested inside it is removed with it, and the response reports how many nested elements that was. This cannot be undone from here; the post\'s revision history is the way back.', 'mosmcp-abilities' ),
+				'description'   => __( 'Removes one element from an Elementor layout. Anything nested inside it is removed with it, and the response reports how many nested elements that was. This cannot be undone from here; the post\'s revision history is the way back. Also known as: remove an Elementor widget, delete a section, remove a page builder element.', 'mosmcp-abilities' ),
 				'category'      => 'mosmcp-elementor',
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
@@ -322,7 +323,7 @@ class Elementor_Pack extends Ability_Pack {
 			'mosmcp/elementor-element-set-content',
 			array(
 				'label'         => __( 'Edit Elementor Element Content', 'mosmcp-abilities' ),
-				'description'   => __( 'Changes the text, image or link of a single element inside an Elementor layout, leaving the design untouched. Only content settings can be reached, so this cannot alter colours, fonts or spacing. Read the layout first to get the element_id you want to change.', 'mosmcp-abilities' ),
+				'description'   => __( 'Changes the text, image or link of a single element inside an Elementor layout, leaving the design untouched. Only content settings can be reached, so this cannot alter colours, fonts or spacing. Read the layout first to get the element_id you want to change. Also known as: edit Elementor text, change heading, change button text, page builder content.', 'mosmcp-abilities' ),
 				'category'      => 'mosmcp-elementor',
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
@@ -383,7 +384,7 @@ class Elementor_Pack extends Ability_Pack {
 			'mosmcp/elementor-element-set-style',
 			array(
 				'label'         => __( 'Edit Elementor Element Styling', 'mosmcp-abilities' ),
-				'description'   => __( 'Changes the appearance of a single element inside an Elementor layout: text colour, font size, weight, family, line height, letter spacing, text transform, alignment, padding, margin and background colour. Nothing else is reachable, so content and layout structure cannot be altered. Lengths take a unit ("42px", "1.4em"); padding and margin take CSS shorthand ("10px 20px"); colours must be hex or rgba. Pass an empty string to clear a property and fall back to the theme default. Read the layout first to get the element_id.', 'mosmcp-abilities' ),
+				'description'   => __( 'Changes the appearance of a single element inside an Elementor layout: text colour, font size, weight, family, line height, letter spacing, text transform, alignment, padding, margin and background colour. Nothing else is reachable, so content and layout structure cannot be altered. Lengths take a unit ("42px", "1.4em"); padding and margin take CSS shorthand ("10px 20px"); colours must be hex or rgba. Pass an empty string to clear a property and fall back to the theme default. Read the layout first to get the element_id. Also known as: Elementor styling, change colour, change font size, text alignment, page builder design.', 'mosmcp-abilities' ),
 				'category'      => 'mosmcp-elementor',
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
@@ -464,7 +465,7 @@ class Elementor_Pack extends Ability_Pack {
 			'mosmcp/elementor-page-read',
 			array(
 				'label'         => __( 'Read Elementor Layout', 'mosmcp-abilities' ),
-				'description'   => __( 'Lists the elements that make up a post or page built with Elementor, with each element\'s ID and its text, image and link values. Styling is omitted to keep the response small. Use the element IDs from this list to edit specific parts of the layout.', 'mosmcp-abilities' ),
+				'description'   => __( 'Lists the elements that make up a post or page built with Elementor, with each element\'s ID and its text, image and link values. Styling is omitted to keep the response small. Use the element IDs from this list to edit specific parts of the layout. Also known as: page builder, read the Elementor layout, inspect the page structure.', 'mosmcp-abilities' ),
 				'category'      => 'mosmcp-elementor',
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
@@ -557,7 +558,7 @@ class Elementor_Pack extends Ability_Pack {
 			'mosmcp/elementor-list-widget-types',
 			array(
 				'label'         => __( 'List Elementor Widget Types', 'mosmcp-abilities' ),
-				'description'   => __( 'Lists the Elementor widgets and containers available on this site, including any added by Elementor Pro or third-party addons, and which of them this plugin can edit the content of.', 'mosmcp-abilities' ),
+				'description'   => __( 'Lists the Elementor widgets and containers available on this site, including any added by Elementor Pro or third-party addons, and which of them this plugin can edit the content of. Also known as: available Elementor widgets, page builder elements, what widgets can I use.', 'mosmcp-abilities' ),
 				'category'      => 'mosmcp-elementor',
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),
@@ -624,7 +625,7 @@ class Elementor_Pack extends Ability_Pack {
 			'mosmcp/elementor-widget-schema',
 			array(
 				'label'         => __( 'Get Elementor Widget Schema', 'mosmcp-abilities' ),
-				'description'   => __( 'Reports the settings a given Elementor widget accepts. Widgets expose well over a hundred settings each, so by default only names and types are returned; pass a prefix to narrow to one family, or names to get full detail for specific settings.', 'mosmcp-abilities' ),
+				'description'   => __( 'Reports the settings a given Elementor widget accepts. Widgets expose well over a hundred settings each, so by default only names and types are returned; pass a prefix to narrow to one family, or names to get full detail for specific settings. Also known as: Elementor widget settings, what options does this widget have.', 'mosmcp-abilities' ),
 				'category'      => 'mosmcp-elementor',
 				'capability'    => 'edit_posts',
 				'annotations'   => self::annotations( true, false, true, false ),

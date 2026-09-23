@@ -239,7 +239,7 @@ class Posts_Pack extends Ability_Pack {
 			'mosmcp/post-update',
 			array(
 				'label'            => __( 'Update Post', 'mosmcp-abilities' ),
-				'description'      => __( 'Edits the title, content and/or excerpt of any post the current user has permission to edit, including posts written by other authors. Does not change the post status. If the post is built with Elementor, what visitors read comes from the Elementor layout rather than from this content, so change the text on the Elementor elements instead.', 'mosmcp-abilities' ),
+				'description'      => __( 'Edits the title, content and/or excerpt of any post the current user has permission to edit, including posts written by other authors. Does not change the post status. If the post is built with Elementor, what visitors read comes from the Elementor layout rather than from this content, so change the text on the Elementor elements instead. This replaces a whole field with the text you supply. To change only part of the text, use mosmcp/content-replace-in-post instead: it is far cheaper on a long page and cannot lose formatting, shortcodes or block markup the way rewriting the whole field can.', 'mosmcp-abilities' ),
 				'category'         => self::CATEGORY,
 				'capability'       => 'edit_post',
 				'cap_args'         => self::id_args(),
@@ -399,7 +399,7 @@ class Posts_Pack extends Ability_Pack {
 			'mosmcp/post-update-own',
 			array(
 				'label'         => __( 'Update Own Post', 'mosmcp-abilities' ),
-				'description'   => __( 'Edits the title, content and/or excerpt of a post authored by the current user. Cannot edit posts written by other users. Only the fields you pass are changed; the post keeps its current status. If the post is built with Elementor, what visitors read comes from the Elementor layout rather than from this content, so change the text on the Elementor elements instead.', 'mosmcp-abilities' ),
+				'description'   => __( 'Edits the title, content and/or excerpt of a post authored by the current user. Cannot edit posts written by other users. Only the fields you pass are changed; the post keeps its current status. If the post is built with Elementor, what visitors read comes from the Elementor layout rather than from this content, so change the text on the Elementor elements instead. This replaces a whole field with the text you supply. To change only part of the text, use mosmcp/content-replace-in-post instead: it is far cheaper on a long page and cannot lose formatting, shortcodes or block markup the way rewriting the whole field can.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
@@ -846,6 +846,7 @@ class Posts_Pack extends Ability_Pack {
 								array( 'id', 'title', 'status' )
 							)
 						),
+						'notes'   => Schema::arr( Schema::str() ),
 					),
 					array( 'showing', 'total', 'matches' )
 				),

@@ -618,11 +618,72 @@ class Pages_Provider {
 			$matches[] = self::format_find_match( $page );
 		}
 
-		return array(
+		$result = array(
 			'showing' => count( $matches ),
 			'total'   => (int) $query->found_posts,
 			'matches' => $matches,
 		);
+
+		// See the note in Posts_Provider::find(): a title alone does not say
+		// whether the content is a page, so a miss should say where else to look.
+		if ( empty( $matches ) ) {
+			$elsewhere = self::find_in_other_types( $search );
+			if ( ! empty( $elsewhere ) ) {
+				$result['notes'] = $elsewhere;
+			}
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Looks for the same title outside the page post type.
+	 *
+	 * @param string $search The title searched for.
+	 * @return string[] Notes, empty when nothing else matches.
+	 */
+	private static function find_in_other_types( $search ) {
+		if ( '' === $search ) {
+			return array();
+		}
+
+		$types = get_post_types( array( 'public' => true ), 'names' );
+		unset( $types['page'], $types['attachment'] );
+		if ( empty( $types ) ) {
+			return array();
+		}
+
+		$query = new WP_Query(
+			array(
+				'post_type'      => array_values( $types ),
+				'post_status'    => self::ALL_STATUSES,
+				's'              => $search,
+				'search_columns' => array( 'post_title' ),
+				'posts_per_page' => 5,
+				'no_found_rows'  => true,
+			)
+		);
+
+		$notes = array();
+		foreach ( $query->posts as $found ) {
+			if ( ! current_user_can( 'read_post', $found->ID ) ) {
+				continue;
+			}
+
+			$ability = ( 'post' === $found->post_type ) ? 'mosmcp/post-find' : 'mosmcp/cpt-get';
+
+			$notes[] = sprintf(
+				/* translators: 1: post type, 2: title, 3: ID, 4: status, 5: ability name. */
+				__( 'No pages matched, but the %1$s "%2$s" (ID %3$d, %4$s) has that name. Use %5$s or address it by that ID.', 'mosmcp-abilities' ),
+				$found->post_type,
+				get_the_title( $found ),
+				(int) $found->ID,
+				$found->post_status,
+				$ability
+			);
+		}
+
+		return $notes;
 	}
 
 	/**
