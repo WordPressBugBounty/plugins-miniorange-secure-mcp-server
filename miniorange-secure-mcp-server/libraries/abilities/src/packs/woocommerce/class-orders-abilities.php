@@ -296,7 +296,7 @@ class Orders_Abilities {
 			'mosmcp/list-orders',
 			array(
 				'label'               => __( 'List Orders', 'mosmcp-abilities' ),
-				'description'         => __( 'Lists WooCommerce orders, filterable by status, customer, date range, or a text search across order number, billing name, email, and phone. Results include customer billing details.', 'mosmcp-abilities' ),
+				'description'         => __( 'Lists WooCommerce orders, filterable by status, customer, date range, or a text search across order number, billing name, email, and phone. Results include customer billing details. Also known as: orders, recent orders, sales, purchases, what has sold.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -439,7 +439,7 @@ class Orders_Abilities {
 			'mosmcp/get-order',
 			array(
 				'label'               => __( 'Get Order', 'mosmcp-abilities' ),
-				'description'         => __( 'Gets a single WooCommerce order by ID, including line items, billing, shipping, taxes, shipping/fee/coupon lines, and refunds.', 'mosmcp-abilities' ),
+				'description'         => __( 'Gets a single WooCommerce order by ID, including line items, billing, shipping, taxes, shipping/fee/coupon lines, and refunds. Also known as: order details, order status, what did the customer buy.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -510,7 +510,7 @@ class Orders_Abilities {
 			'mosmcp/create-order',
 			array(
 				'label'               => __( 'Create Order', 'mosmcp-abilities' ),
-				'description'         => __( 'Creates a new WooCommerce order with one or more line items, and optional billing/shipping, coupons, shipping cost, and fees. Tax and totals are calculated automatically from the line items.', 'mosmcp-abilities' ),
+				'description'         => __( 'Creates a new WooCommerce order with one or more line items, and optional billing/shipping, coupons, shipping cost, and fees. Tax and totals are calculated automatically from the line items. Also known as: manual order, create an order for a customer, phone order.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -852,7 +852,7 @@ class Orders_Abilities {
 			'mosmcp/update-order-status',
 			array(
 				'label'               => __( 'Update Order Status', 'mosmcp-abilities' ),
-				'description'         => __( 'Transitions a WooCommerce order to a new status (e.g. processing to completed, or to cancelled/refunded).', 'mosmcp-abilities' ),
+				'description'         => __( 'Transitions a WooCommerce order to a new status (e.g. processing to completed, or to cancelled/refunded). Also known as: mark as completed, mark as shipped, cancel an order, order processing.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -946,7 +946,7 @@ class Orders_Abilities {
 			'mosmcp/update-order',
 			array(
 				'label'               => __( 'Update Order', 'mosmcp-abilities' ),
-				'description'         => __( "Updates an order's billing/shipping address, customer note, payment details, or status. Provide the order ID and at least one field to change. For status transitions with a note, prefer update-order-status.", 'mosmcp-abilities' ),
+				'description'         => __( "Updates an order's billing/shipping address, customer note, payment details, or status. Provide the order ID and at least one field to change. For status transitions with a note, prefer update-order-status. Also known as: edit an order, change the shipping address on an order.", 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1063,7 +1063,7 @@ class Orders_Abilities {
 			'mosmcp/create-order-note',
 			array(
 				'label'               => __( 'Add Order Note', 'mosmcp-abilities' ),
-				'description'         => __( 'Adds a note to a WooCommerce order, either private (staff-only) or customer-visible.', 'mosmcp-abilities' ),
+				'description'         => __( 'Adds a note to a WooCommerce order, either private (staff-only) or customer-visible. Also known as: add a note to an order, customer note, order comment.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1168,7 +1168,7 @@ class Orders_Abilities {
 			'mosmcp/list-order-notes',
 			array(
 				'label'               => __( 'List Order Notes', 'mosmcp-abilities' ),
-				'description'         => __( 'Lists the notes attached to an order — private (staff-only) and/or customer-visible.', 'mosmcp-abilities' ),
+				'description'         => __( 'Lists the notes attached to an order — private (staff-only) and/or customer-visible. Also known as: order notes, order history notes.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1312,7 +1312,7 @@ class Orders_Abilities {
 			'mosmcp/delete-order',
 			array(
 				'label'               => __( 'Delete Order', 'mosmcp-abilities' ),
-				'description'         => __( 'Deletes a WooCommerce order. By default this moves it to the trash; pass force to delete it permanently, bypassing the trash.', 'mosmcp-abilities' ),
+				'description'         => __( 'Deletes a WooCommerce order. By default this moves it to the trash; pass force to delete it permanently, bypassing the trash. Also known as: remove an order.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1417,7 +1417,7 @@ class Orders_Abilities {
 			'mosmcp/list-order-refunds',
 			array(
 				'label'               => __( 'List Order Refunds', 'mosmcp-abilities' ),
-				'description'         => __( 'Lists the refunds issued for an order, including refunded line items.', 'mosmcp-abilities' ),
+				'description'         => __( 'Lists the refunds issued for an order, including refunded line items. Also known as: refunds on an order, refund history.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1504,7 +1504,7 @@ class Orders_Abilities {
 			'mosmcp/create-order-refund',
 			array(
 				'label'               => __( 'Create Order Refund', 'mosmcp-abilities' ),
-				'description'         => __( "Creates a full or partial refund for an order. Provide 'amount' for a simple refund, or 'line_items' (order line item IDs with a refund_total each) for an itemized refund — at least one is required. Unlike the WooCommerce REST API, api_refund defaults to false here: set it to true explicitly to also call the payment gateway's refund API and actually return funds; otherwise this only records the refund in WooCommerce without moving money. Stock is not automatically restocked.", 'mosmcp-abilities' ),
+				'description'         => __( "Creates a full or partial refund for an order. Provide 'amount' for a simple refund, or 'line_items' (order line item IDs with a refund_total each) for an itemized refund — at least one is required. Unlike the WooCommerce REST API, api_refund defaults to false here: set it to true explicitly to also call the payment gateway's refund API and actually return funds; otherwise this only records the refund in WooCommerce without moving money. Stock is not automatically restocked. Also known as: refund an order, give money back, partial refund.", 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',

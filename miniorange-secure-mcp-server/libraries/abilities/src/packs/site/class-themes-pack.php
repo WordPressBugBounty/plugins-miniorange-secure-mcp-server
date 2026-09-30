@@ -78,7 +78,7 @@ class Themes_Pack extends Ability_Pack {
 			'mosmcp/theme-list',
 			array(
 				'label'         => __( 'List Themes', 'mosmcp-abilities' ),
-				'description'   => __( 'Lists the themes installed on this site, with version, author, parent theme, and whether an update is available. Read-only. For full detail on the theme currently in use, call mosmcp/theme-get-active instead.', 'mosmcp-abilities' ),
+				'description'   => __( 'Lists the themes installed on this site, with version, author, parent theme, and whether an update is available. Read-only. For full detail on the theme currently in use, call mosmcp/theme-get-active instead. Also known as: installed themes, available themes, what themes do I have.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'switch_themes',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -123,7 +123,7 @@ class Themes_Pack extends Ability_Pack {
 			'mosmcp/theme-get-active',
 			array(
 				'label'         => __( 'Get Active Theme', 'mosmcp-abilities' ),
-				'description'   => __( 'Returns full detail about the theme this site is currently running: version, author, parent theme, whether it is a block theme, the page templates it offers, and the features it supports. Read-only. Useful before editing a page, because the available page templates come from the active theme.', 'mosmcp-abilities' ),
+				'description'   => __( 'Returns full detail about the theme this site is currently running: version, author, parent theme, whether it is a block theme, the page templates it offers, and the features it supports. Read-only. Useful before editing a page, because the available page templates come from the active theme. Also known as: current theme, which theme am I using, active design.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_theme_options',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -144,7 +144,7 @@ class Themes_Pack extends Ability_Pack {
 			'mosmcp/theme-get',
 			array(
 				'label'         => __( 'Get Theme by Slug', 'mosmcp-abilities' ),
-				'description'   => __( 'Returns full detail about one installed theme, named by its folder. Read-only. Use mosmcp/theme-list to find the folder names installed on this site.', 'mosmcp-abilities' ),
+				'description'   => __( 'Returns full detail about one installed theme, named by its folder. Read-only. Use mosmcp/theme-list to find the folder names installed on this site. Also known as: theme details, theme version, theme info.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'switch_themes',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),

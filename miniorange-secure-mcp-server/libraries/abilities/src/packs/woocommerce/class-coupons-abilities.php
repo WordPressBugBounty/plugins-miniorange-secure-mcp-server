@@ -306,7 +306,7 @@ class Coupons_Abilities {
 			'mosmcp/list-coupons',
 			array(
 				'label'               => __( 'List Coupons', 'mosmcp-abilities' ),
-				'description'         => __( 'Lists WooCommerce coupons with their discount type and usage stats. Supports an exact code lookup or a partial search.', 'mosmcp-abilities' ),
+				'description'         => __( 'Lists WooCommerce coupons with their discount type and usage stats. Supports an exact code lookup or a partial search. Also known as: discount codes, promo codes, vouchers.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -447,7 +447,7 @@ class Coupons_Abilities {
 			'mosmcp/get-coupon',
 			array(
 				'label'               => __( 'Get Coupon', 'mosmcp-abilities' ),
-				'description'         => __( 'Gets a single WooCommerce coupon by ID, including its restrictions and usage limits.', 'mosmcp-abilities' ),
+				'description'         => __( 'Gets a single WooCommerce coupon by ID, including its restrictions and usage limits. Also known as: coupon details, discount code details.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -529,7 +529,7 @@ class Coupons_Abilities {
 			'mosmcp/create-coupon',
 			array(
 				'label'               => __( 'Create Coupon', 'mosmcp-abilities' ),
-				'description'         => __( 'Creates a WooCommerce discount coupon with a discount type, amount, and optional restrictions and usage limits.', 'mosmcp-abilities' ),
+				'description'         => __( 'Creates a WooCommerce discount coupon with a discount type, amount, and optional restrictions and usage limits. Also known as: create a discount code, promo code, voucher, special offer.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -631,7 +631,7 @@ class Coupons_Abilities {
 			'mosmcp/update-coupon',
 			array(
 				'label'               => __( 'Update Coupon', 'mosmcp-abilities' ),
-				'description'         => __( 'Updates an existing coupon\'s amount, expiry, restrictions, and usage limits. Provide the coupon ID and at least one field to change.', 'mosmcp-abilities' ),
+				'description'         => __( 'Updates an existing coupon\'s amount, expiry, restrictions, and usage limits. Provide the coupon ID and at least one field to change. Also known as: change a discount, extend a coupon expiry.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -730,7 +730,7 @@ class Coupons_Abilities {
 			'mosmcp/delete-coupon',
 			array(
 				'label'               => __( 'Delete Coupon', 'mosmcp-abilities' ),
-				'description'         => __( 'Deletes a WooCommerce coupon. By default this moves it to the trash; pass force to delete it permanently, bypassing the trash.', 'mosmcp-abilities' ),
+				'description'         => __( 'Deletes a WooCommerce coupon. By default this moves it to the trash; pass force to delete it permanently, bypassing the trash. Also known as: remove a discount code.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',

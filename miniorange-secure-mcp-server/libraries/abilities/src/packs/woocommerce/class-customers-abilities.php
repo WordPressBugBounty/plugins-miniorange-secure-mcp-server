@@ -141,7 +141,7 @@ class Customers_Abilities {
 			'mosmcp/list-customers',
 			array(
 				'label'               => __( 'List Customers', 'mosmcp-abilities' ),
-				'description'         => __( 'Lists WooCommerce customers, filterable by search term, email, and role.', 'mosmcp-abilities' ),
+				'description'         => __( 'Lists WooCommerce customers, filterable by search term, email, and role. Also known as: customers, buyers, shoppers, customer list.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -259,7 +259,7 @@ class Customers_Abilities {
 			'mosmcp/get-customer',
 			array(
 				'label'               => __( 'Get Customer', 'mosmcp-abilities' ),
-				'description'         => __( 'Gets a single WooCommerce customer by ID, including billing, shipping, and order stats.', 'mosmcp-abilities' ),
+				'description'         => __( 'Gets a single WooCommerce customer by ID, including billing, shipping, and order stats. Also known as: customer details, customer info, customer address.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -328,7 +328,7 @@ class Customers_Abilities {
 			'mosmcp/create-customer',
 			array(
 				'label'               => __( 'Create Customer', 'mosmcp-abilities' ),
-				'description'         => __( 'Creates a new WooCommerce customer account. Generates a username from the email and a random password when either is omitted.', 'mosmcp-abilities' ),
+				'description'         => __( 'Creates a new WooCommerce customer account. Generates a username from the email and a random password when either is omitted. Also known as: add a customer, new customer account.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -439,7 +439,7 @@ class Customers_Abilities {
 			'mosmcp/update-customer',
 			array(
 				'label'               => __( 'Update Customer', 'mosmcp-abilities' ),
-				'description'         => __( "Updates a customer's email, name, password, billing, or shipping details. Provide the customer ID and at least one field to change. Changing the password signs the customer out of all active sessions. The login username cannot be changed once created — that's a WordPress limitation, not one of this ability.", 'mosmcp-abilities' ),
+				'description'         => __( "Updates a customer's email, name, password, billing, or shipping details. Provide the customer ID and at least one field to change. Changing the password signs the customer out of all active sessions. The login username cannot be changed once created — that's a WordPress limitation, not one of this ability. Also known as: change a customer address, edit a customer.", 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -586,7 +586,7 @@ class Customers_Abilities {
 			'mosmcp/delete-customer',
 			array(
 				'label'               => __( 'Delete Customer', 'mosmcp-abilities' ),
-				'description'         => __( "Deletes a WooCommerce customer's WordPress user account. Unlike products/orders there is no trash — this is immediate and permanent. Optionally reassign their content to another user ID.", 'mosmcp-abilities' ),
+				'description'         => __( "Deletes a WooCommerce customer's WordPress user account. Unlike products/orders there is no trash — this is immediate and permanent. Optionally reassign their content to another user ID. Also known as: remove a customer.", 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -686,7 +686,7 @@ class Customers_Abilities {
 			'mosmcp/get-customer-purchase-history',
 			array(
 				'label'               => __( 'Get Customer Purchase History', 'mosmcp-abilities' ),
-				'description'         => __( "Gets a customer's order history: lifetime order count and spend, plus a paginated list of their orders. For full detail on any one order, pass its ID to get-order.", 'mosmcp-abilities' ),
+				'description'         => __( "Gets a customer's order history: lifetime order count and spend, plus a paginated list of their orders. For full detail on any one order, pass its ID to get-order. Also known as: what has this customer bought, order history, lifetime value.", 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -824,7 +824,7 @@ class Customers_Abilities {
 			'mosmcp/list-customer-segment',
 			array(
 				'label'               => __( 'List Customer Segment', 'mosmcp-abilities' ),
-				'description'         => __( "Lists customers matching spend and/or order-count thresholds, sorted by spend or order count — for targeting or export. Computes stats live per customer rather than via a single indexed query, so it's slower than the other list abilities; narrow with role and thresholds on stores with many customers.", 'mosmcp-abilities' ),
+				'description'         => __( "Lists customers matching spend and/or order-count thresholds, sorted by spend or order count — for targeting or export. Computes stats live per customer rather than via a single indexed query, so it's slower than the other list abilities; narrow with role and thresholds on stores with many customers. Also known as: top customers, repeat customers, customer groups, segments.", 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',

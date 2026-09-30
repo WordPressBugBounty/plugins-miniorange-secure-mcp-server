@@ -717,7 +717,9 @@ class Editing_Provider {
 			$notes[] = __( 'The stored value differs from what was sent, which means something on this site filtered it on the way in. The lengths reported are of what is actually stored now, so read the value back before making another edit against it.', 'mosmcp-abilities' );
 		}
 
-		if ( 'exact' !== $outcome['mode'] && '' !== $outcome['mode'] ) {
+		if ( Content_Matcher::MODE_ACROSS_MARKUP === $outcome['mode'] ) {
+			$notes[] = __( 'The wording ran through formatting such as a link or bold text, so the whole passage, including that formatting, was replaced with the new text. To keep a link, include it in the replacement as HTML.', 'mosmcp-abilities' );
+		} elseif ( 'exact' !== $outcome['mode'] && '' !== $outcome['mode'] ) {
 			$notes[] = __( 'The stored wording differed from the text supplied, and was matched using a tolerant rule. The change was applied to the stored wording, so it is worth checking the result reads as intended.', 'mosmcp-abilities' );
 		}
 

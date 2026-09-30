@@ -113,7 +113,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-get-title',
 			array(
 				'label'         => __( 'Get Site Title', 'mosmcp-abilities' ),
-				'description'   => __( 'Returns the site title, the name shown in the browser tab and usually in the site header. Read-only.', 'mosmcp-abilities' ),
+				'description'   => __( 'Returns the site title, the name shown in the browser tab and usually in the site header. Read-only. Also known as: site name, website name, blog name.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -137,7 +137,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-get-tagline',
 			array(
 				'label'         => __( 'Get Site Tagline', 'mosmcp-abilities' ),
-				'description'   => __( 'Returns the site tagline, the short description shown under the site title by most themes. Read-only.', 'mosmcp-abilities' ),
+				'description'   => __( 'Returns the site tagline, the short description shown under the site title by most themes. Read-only. Also known as: site slogan, site description, strapline.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -164,7 +164,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-get-url',
 			array(
 				'label'         => __( 'Get Site URL', 'mosmcp-abilities' ),
-				'description'   => __( 'Returns the site address visitors use, the WordPress address where the files live, and the admin URL. Read-only. These two addresses differ on a site where WordPress is installed in a subdirectory, which is a common source of confusion when building links.', 'mosmcp-abilities' ),
+				'description'   => __( 'Returns the site address visitors use, the WordPress address where the files live, and the admin URL. Read-only. These two addresses differ on a site where WordPress is installed in a subdirectory, which is a common source of confusion when building links. Also known as: site address, domain, home URL, WordPress address.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -198,7 +198,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-get-timezone',
 			array(
 				'label'         => __( 'Get Site Timezone', 'mosmcp-abilities' ),
-				'description'   => __( 'Returns the timezone the site uses and what its local time is right now. Read-only. Check this before scheduling a post, because a scheduled time is interpreted in the site timezone rather than the reader\'s.', 'mosmcp-abilities' ),
+				'description'   => __( 'Returns the timezone the site uses and what its local time is right now. Read-only. Check this before scheduling a post, because a scheduled time is interpreted in the site timezone rather than the reader\'s. Also known as: time zone, local time, time settings.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -229,7 +229,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-get-language',
 			array(
 				'label'         => __( 'Get Site Language', 'mosmcp-abilities' ),
-				'description'   => __( 'Returns the site language, the languages installed on it, the date and time formats, and which day the week starts on. Read-only. Write content in the site language unless told otherwise, and match these date formats when producing dates for display.', 'mosmcp-abilities' ),
+				'description'   => __( 'Returns the site language, the languages installed on it, the date and time formats, and which day the week starts on. Read-only. Write content in the site language unless told otherwise, and match these date formats when producing dates for display. Also known as: site language, locale, date format, time format.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -260,7 +260,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-get-permalink-structure',
 			array(
 				'label'         => __( 'Get Permalink Structure', 'mosmcp-abilities' ),
-				'description'   => __( 'Returns how the site builds its URLs, plus the category and tag bases. Read-only. Worth checking before changing a slug, because on a site using plain permalinks a slug has no effect on the visible URL at all.', 'mosmcp-abilities' ),
+				'description'   => __( 'Returns how the site builds its URLs, plus the category and tag bases. Read-only. Worth checking before changing a slug, because on a site using plain permalinks a slug has no effect on the visible URL at all. Also known as: URL structure, pretty links, link format, slug format.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -291,7 +291,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-get-posts-per-page',
 			array(
 				'label'         => __( 'Get Posts Per Page', 'mosmcp-abilities' ),
-				'description'   => __( 'Returns how many posts the site shows on a blog or archive page, how many appear in its feeds, and whether feeds carry full text or an excerpt. Read-only.', 'mosmcp-abilities' ),
+				'description'   => __( 'Returns how many posts the site shows on a blog or archive page, how many appear in its feeds, and whether feeds carry full text or an excerpt. Read-only. Also known as: blog pages show at most, number of posts on the blog page, reading settings.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -319,7 +319,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-get-homepage',
 			array(
 				'label'         => __( 'Get Homepage Settings', 'mosmcp-abilities' ),
-				'description'   => __( 'Returns whether the front page shows the latest posts or a fixed page, and which pages are used as the front page and the blog. Read-only.', 'mosmcp-abilities' ),
+				'description'   => __( 'Returns whether the front page shows the latest posts or a fixed page, and which pages are used as the front page and the blog. Read-only. Also known as: front page, home page settings, static front page, latest posts.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -348,7 +348,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-get-privacy-policy-page',
 			array(
 				'label'         => __( 'Get Privacy Policy Page', 'mosmcp-abilities' ),
-				'description'   => __( 'Returns which page is set as the site privacy policy and whether it is published. Read-only.', 'mosmcp-abilities' ),
+				'description'   => __( 'Returns which page is set as the site privacy policy and whether it is published. Read-only. Also known as: privacy page, GDPR page, cookie policy page.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -376,7 +376,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-get-search-visibility',
 			array(
 				'label'         => __( 'Get Search Engine Visibility', 'mosmcp-abilities' ),
-				'description'   => __( 'Returns whether the site asks search engines not to index it. Read-only. Worth checking first whenever someone reports that their site is not appearing in search results, because this one setting explains it more often than anything else.', 'mosmcp-abilities' ),
+				'description'   => __( 'Returns whether the site asks search engines not to index it. Read-only. Worth checking first whenever someone reports that their site is not appearing in search results, because this one setting explains it more often than anything else. Also known as: discourage search engines, noindex, hidden from Google, SEO visibility.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -403,7 +403,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-update-title',
 			array(
 				'label'         => __( 'Update Site Title', 'mosmcp-abilities' ),
-				'description'   => __( 'Changes the site title. Returns the previous and new value so the change can be verified rather than assumed. Reversible by calling again with the old title.', 'mosmcp-abilities' ),
+				'description'   => __( 'Changes the site title. Returns the previous and new value so the change can be verified rather than assumed. Reversible by calling again with the old title. Also known as: rename the site, change site name, change website name.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'manage_options',
 				'annotations'   => Site_Support::annotations( false, false, true, false ),
@@ -435,7 +435,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-update-tagline',
 			array(
 				'label'         => __( 'Update Site Tagline', 'mosmcp-abilities' ),
-				'description'   => __( 'Changes the site tagline. Pass an empty string to clear it. Returns the previous and new value. Reversible by calling again with the old tagline.', 'mosmcp-abilities' ),
+				'description'   => __( 'Changes the site tagline. Pass an empty string to clear it. Returns the previous and new value. Reversible by calling again with the old tagline. Also known as: change slogan, change site description, change strapline.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'manage_options',
 				'annotations'   => Site_Support::annotations( false, false, true, false ),
@@ -464,7 +464,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-update-timezone',
 			array(
 				'label'         => __( 'Update Site Timezone', 'mosmcp-abilities' ),
-				'description'   => __( 'Sets the site timezone. Prefer a named zone such as "Europe/London", which follows daylight saving automatically. A fixed offset such as "+05:30" is accepted but never adjusts for daylight saving. Returns the previous and new value.', 'mosmcp-abilities' ),
+				'description'   => __( 'Sets the site timezone. Prefer a named zone such as "Europe/London", which follows daylight saving automatically. A fixed offset such as "+05:30" is accepted but never adjusts for daylight saving. Returns the previous and new value. Also known as: change time zone, set local time.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'manage_options',
 				'annotations'   => Site_Support::annotations( false, false, true, false ),
@@ -500,7 +500,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-update-posts-per-page',
 			array(
 				'label'         => __( 'Update Posts Per Page', 'mosmcp-abilities' ),
-				'description'   => __( 'Sets how many posts the site shows on a blog or archive page. Returns the previous and new value. Reversible by calling again with the old number.', 'mosmcp-abilities' ),
+				'description'   => __( 'Sets how many posts the site shows on a blog or archive page. Returns the previous and new value. Reversible by calling again with the old number. Also known as: change how many posts show, reading settings.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'manage_options',
 				'annotations'   => Site_Support::annotations( false, false, true, false ),
@@ -540,7 +540,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-set-homepage',
 			array(
 				'label'         => __( 'Set Homepage', 'mosmcp-abilities' ),
-				'description'   => __( 'Chooses what the front page shows: either the latest posts, or a fixed page. When setting a fixed page, pass the ID of an existing page. Use mosmcp/site-set-posts-page to choose where the blog then lives. Returns the previous and new setting.', 'mosmcp-abilities' ),
+				'description'   => __( 'Chooses what the front page shows: either the latest posts, or a fixed page. When setting a fixed page, pass the ID of an existing page. Use mosmcp/site-set-posts-page to choose where the blog then lives. Returns the previous and new setting. Also known as: set front page, make a page the homepage, static homepage.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'manage_options',
 				'annotations'   => Site_Support::annotations( false, false, true, false ),
@@ -573,7 +573,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-set-posts-page',
 			array(
 				'label'         => __( 'Set Posts Page', 'mosmcp-abilities' ),
-				'description'   => __( 'Chooses which page lists the blog posts, for a site whose front page is a fixed page. Pass 0 to clear it. This setting only takes effect while the front page is set to a static page, and the answer says so if it is not. Returns the previous and new setting.', 'mosmcp-abilities' ),
+				'description'   => __( 'Chooses which page lists the blog posts, for a site whose front page is a fixed page. Pass 0 to clear it. This setting only takes effect while the front page is set to a static page, and the answer says so if it is not. Returns the previous and new setting. Also known as: blog page, set the blog page, news page.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'manage_options',
 				'annotations'   => Site_Support::annotations( false, false, true, false ),
@@ -602,7 +602,7 @@ class Site_Settings_Pack extends Ability_Pack {
 			'mosmcp/site-set-privacy-policy-page',
 			array(
 				'label'         => __( 'Set Privacy Policy Page', 'mosmcp-abilities' ),
-				'description'   => __( 'Chooses which page is the site privacy policy. Pass 0 to clear it. Returns the previous and new setting, and warns when the chosen page is not published, because an unpublished policy is not reachable by visitors.', 'mosmcp-abilities' ),
+				'description'   => __( 'Chooses which page is the site privacy policy. Pass 0 to clear it. Returns the previous and new setting, and warns when the chosen page is not published, because an unpublished policy is not reachable by visitors. Also known as: set the privacy page, GDPR page.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'manage_options',
 				'annotations'   => Site_Support::annotations( false, false, true, false ),

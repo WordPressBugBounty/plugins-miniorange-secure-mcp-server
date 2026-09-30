@@ -84,7 +84,7 @@ class Fluent_Forms_Pack extends Ability_Pack {
 				'mosmcp/fluent-list-forms',
 				array(
 					'label'         => __( 'List Fluent Forms', 'mosmcp-abilities' ),
-					'description'   => __( 'Lists the Fluent Forms on this site with how many fields and submissions each has. Read-only. Start here to get the form ID every other Fluent Forms ability needs.', 'mosmcp-abilities' ),
+					'description'   => __( 'Lists the Fluent Forms on this site with how many fields and submissions each has. Read-only. Start here to get the form ID every other Fluent Forms ability needs. Also known as: Fluent Forms, contact forms, my forms, lead forms.', 'mosmcp-abilities' ),
 					'category'      => self::CATEGORY,
 					'capability'    => 'manage_options',
 					'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -123,7 +123,7 @@ class Fluent_Forms_Pack extends Ability_Pack {
 				'mosmcp/fluent-get-form',
 				array(
 					'label'         => __( 'Get Fluent Form', 'mosmcp-abilities' ),
-					'description'   => __( 'Returns one Fluent Form with its status, field count, submission count and how many email notifications it has. Read-only. For the fields themselves use mosmcp/fluent-get-form-fields.', 'mosmcp-abilities' ),
+					'description'   => __( 'Returns one Fluent Form with its status, field count, submission count and how many email notifications it has. Read-only. For the fields themselves use mosmcp/fluent-get-form-fields. Also known as: form details, form setup.', 'mosmcp-abilities' ),
 					'category'      => self::CATEGORY,
 					'capability'    => 'manage_options',
 					'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -139,7 +139,7 @@ class Fluent_Forms_Pack extends Ability_Pack {
 				'mosmcp/fluent-get-form-fields',
 				array(
 					'label'         => __( 'Get Fluent Form Fields', 'mosmcp-abilities' ),
-					'description'   => __( 'Lists the fields on a Fluent Form with each one\'s name, label, type and whether it is required. Read-only. The field names are what appear as keys in a submission, so read this before interpreting entries.', 'mosmcp-abilities' ),
+					'description'   => __( 'Lists the fields on a Fluent Form with each one\'s name, label, type and whether it is required. Read-only. The field names are what appear as keys in a submission, so read this before interpreting entries. Also known as: form fields, form questions, what the form asks.', 'mosmcp-abilities' ),
 					'category'      => self::CATEGORY,
 					'capability'    => 'manage_options',
 					'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -173,7 +173,7 @@ class Fluent_Forms_Pack extends Ability_Pack {
 				'mosmcp/fluent-get-form-settings',
 				array(
 					'label'         => __( 'Get Fluent Form Settings', 'mosmcp-abilities' ),
-					'description'   => __( 'Returns a Fluent Form\'s confirmation settings, which is what a visitor sees after submitting, plus its other stored configuration. Read-only.', 'mosmcp-abilities' ),
+					'description'   => __( 'Returns a Fluent Form\'s confirmation settings, which is what a visitor sees after submitting, plus its other stored configuration. Read-only. Also known as: form settings, thank you message, confirmation settings.', 'mosmcp-abilities' ),
 					'category'      => self::CATEGORY,
 					'capability'    => 'manage_options',
 					'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -203,7 +203,7 @@ class Fluent_Forms_Pack extends Ability_Pack {
 				'mosmcp/fluent-update-confirmation',
 				array(
 					'label'         => __( 'Update Fluent Form Confirmation', 'mosmcp-abilities' ),
-					'description'   => __( 'Changes what a visitor sees after submitting a Fluent Form: either the thank-you message, or the address to send them to. Returns the previous and new settings. Reversible by calling again with the old values.', 'mosmcp-abilities' ),
+					'description'   => __( 'Changes what a visitor sees after submitting a Fluent Form: either the thank-you message, or the address to send them to. Returns the previous and new settings. Reversible by calling again with the old values. Also known as: thank you message, success message, redirect after submit, what happens after the form is sent.', 'mosmcp-abilities' ),
 					'category'      => self::CATEGORY,
 					'capability'    => 'manage_options',
 					'annotations'   => Site_Support::annotations( false, false, true, false ),
@@ -246,7 +246,7 @@ class Fluent_Forms_Pack extends Ability_Pack {
 				'mosmcp/fluent-list-notifications',
 				array(
 					'label'         => __( 'List Fluent Form Notifications', 'mosmcp-abilities' ),
-					'description'   => __( 'Lists the email notifications a Fluent Form sends when it is submitted, with who each goes to, its subject, and whether it is switched on. Read-only. This is where to look when a form is not emailing anyone.', 'mosmcp-abilities' ),
+					'description'   => __( 'Lists the email notifications a Fluent Form sends when it is submitted, with who each goes to, its subject, and whether it is switched on. Read-only. This is where to look when a form is not emailing anyone. Also known as: form emails, email notifications, who gets the form email.', 'mosmcp-abilities' ),
 					'category'      => self::CATEGORY,
 					'capability'    => 'manage_options',
 					'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -271,7 +271,7 @@ class Fluent_Forms_Pack extends Ability_Pack {
 				'mosmcp/fluent-get-notification',
 				array(
 					'label'         => __( 'Get Fluent Form Notification', 'mosmcp-abilities' ),
-					'description'   => __( 'Returns one email notification in full, including its message body. Read-only.', 'mosmcp-abilities' ),
+					'description'   => __( 'Returns one email notification in full, including its message body. Read-only. Also known as: notification email details, form email settings.', 'mosmcp-abilities' ),
 					'category'      => self::CATEGORY,
 					'capability'    => 'manage_options',
 					'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -287,7 +287,7 @@ class Fluent_Forms_Pack extends Ability_Pack {
 				'mosmcp/fluent-create-notification',
 				array(
 					'label'         => __( 'Create Fluent Form Notification', 'mosmcp-abilities' ),
-					'description'   => __( 'Adds a new email notification to a Fluent Form, so submissions are emailed to someone. Placeholders such as {inputs.email} in the recipient, subject or message are filled in from the submission when it sends. New notifications are created switched off, so nothing is emailed until you enable it deliberately.', 'mosmcp-abilities' ),
+					'description'   => __( 'Adds a new email notification to a Fluent Form, so submissions are emailed to someone. Placeholders such as {inputs.email} in the recipient, subject or message are filled in from the submission when it sends. New notifications are created switched off, so nothing is emailed until you enable it deliberately. Also known as: send form submissions to email, add an email notification, notify me by email.', 'mosmcp-abilities' ),
 					'category'      => self::CATEGORY,
 					'capability'    => 'manage_options',
 					'annotations'   => Site_Support::annotations( false, false, false, false ),
@@ -309,7 +309,7 @@ class Fluent_Forms_Pack extends Ability_Pack {
 				'mosmcp/fluent-update-notification',
 				array(
 					'label'         => __( 'Update Fluent Form Notification', 'mosmcp-abilities' ),
-					'description'   => __( 'Changes an existing email notification, including switching it on or off. Only the values you pass are changed; anything omitted keeps its current value. Returns what changed.', 'mosmcp-abilities' ),
+					'description'   => __( 'Changes an existing email notification, including switching it on or off. Only the values you pass are changed; anything omitted keeps its current value. Returns what changed. Also known as: change the notification email, change the recipient, change the email subject.', 'mosmcp-abilities' ),
 					'category'      => self::CATEGORY,
 					'capability'    => 'manage_options',
 					'annotations'   => Site_Support::annotations( false, false, true, false ),
@@ -342,7 +342,7 @@ class Fluent_Forms_Pack extends Ability_Pack {
 				'mosmcp/fluent-delete-notification',
 				array(
 					'label'         => __( 'Delete Fluent Form Notification', 'mosmcp-abilities' ),
-					'description'   => __( 'Permanently removes an email notification from a Fluent Form. This cannot be undone, so it needs confirm set to true. If the intention is only to stop it sending for now, switch it off with mosmcp/fluent-update-notification instead, which is reversible.', 'mosmcp-abilities' ),
+					'description'   => __( 'Permanently removes an email notification from a Fluent Form. This cannot be undone, so it needs confirm set to true. If the intention is only to stop it sending for now, switch it off with mosmcp/fluent-update-notification instead, which is reversible. Also known as: remove an email notification, stop form emails.', 'mosmcp-abilities' ),
 					'category'      => self::CATEGORY,
 					'capability'    => 'manage_options',
 					'annotations'   => Site_Support::annotations( false, true, false, false ),
@@ -375,7 +375,7 @@ class Fluent_Forms_Pack extends Ability_Pack {
 				'mosmcp/fluent-test-notification',
 				array(
 					'label'         => __( 'Send a Test Notification', 'mosmcp-abilities' ),
-					'description'   => __( 'Sends one real email using a notification\'s subject and message, to an address you name, so you can check whether the site can send mail at all. Placeholders are left as written rather than filled in, because there is no submission to fill them from. This sends a genuine email, so it needs confirm set to true.', 'mosmcp-abilities' ),
+					'description'   => __( 'Sends one real email using a notification\'s subject and message, to an address you name, so you can check whether the site can send mail at all. Placeholders are left as written rather than filled in, because there is no submission to fill them from. This sends a genuine email, so it needs confirm set to true. Also known as: send a test email, test the form email.', 'mosmcp-abilities' ),
 					'category'      => self::CATEGORY,
 					'capability'    => 'manage_options',
 					'annotations'   => Site_Support::annotations( false, false, false, true ),
@@ -417,7 +417,7 @@ class Fluent_Forms_Pack extends Ability_Pack {
 				'mosmcp/fluent-list-entries',
 				array(
 					'label'         => __( 'List Fluent Form Entries', 'mosmcp-abilities' ),
-					'description'   => __( 'Lists submissions to a Fluent Form, newest first, with the submitted values. Read-only. Submissions contain whatever personal information a visitor typed, so treat what comes back accordingly and do not repeat it further than the person asking needs.', 'mosmcp-abilities' ),
+					'description'   => __( 'Lists submissions to a Fluent Form, newest first, with the submitted values. Read-only. Submissions contain whatever personal information a visitor typed, so treat what comes back accordingly and do not repeat it further than the person asking needs. Also known as: form submissions, leads, enquiries, messages from the website.', 'mosmcp-abilities' ),
 					'category'      => self::CATEGORY,
 					'capability'    => 'manage_options',
 					'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -468,7 +468,7 @@ class Fluent_Forms_Pack extends Ability_Pack {
 				'mosmcp/fluent-get-entry',
 				array(
 					'label'         => __( 'Get Fluent Form Entry', 'mosmcp-abilities' ),
-					'description'   => __( 'Returns one submission in full, with every submitted value and where it came from. Read-only. Contains personal information.', 'mosmcp-abilities' ),
+					'description'   => __( 'Returns one submission in full, with every submitted value and where it came from. Read-only. Contains personal information. Also known as: a submission, a lead, a form response.', 'mosmcp-abilities' ),
 					'category'      => self::CATEGORY,
 					'capability'    => 'manage_options',
 					'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -486,7 +486,7 @@ class Fluent_Forms_Pack extends Ability_Pack {
 				'mosmcp/fluent-count-entries',
 				array(
 					'label'         => __( 'Count Fluent Form Entries', 'mosmcp-abilities' ),
-					'description'   => __( 'Returns how many submissions a form has, broken down by read, unread and trashed, without returning any of the submitted values. Read-only, and the cheap way to answer "how many enquiries did we get".', 'mosmcp-abilities' ),
+					'description'   => __( 'Returns how many submissions a form has, broken down by read, unread and trashed, without returning any of the submitted values. Read-only, and the cheap way to answer "how many enquiries did we get". Also known as: how many submissions, number of leads, how many enquiries.', 'mosmcp-abilities' ),
 					'category'      => self::CATEGORY,
 					'capability'    => 'manage_options',
 					'annotations'   => Site_Support::annotations( true, false, true, false ),

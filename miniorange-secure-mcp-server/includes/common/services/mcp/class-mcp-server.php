@@ -34,6 +34,11 @@ class MCP_Server {
 	const PROTOCOL_VERSION = '2025-06-18';
 
 	/**
+	 * Longest "Details:" block added to an error result, in bytes of JSON.
+	 */
+	const ERROR_DETAILS_MAX = 4000;
+
+	/**
 	 * Ability names the current NHI client is allowed to use.
 	 * NULL means all abilities are permitted.
 	 *
@@ -339,16 +344,25 @@ class MCP_Server {
 				)
 			);
 
+			$content = array(
+				array(
+					'type' => 'text',
+					'text' => $result->get_error_message(),
+				),
+			);
+			$details = self::error_details( $result );
+			if ( '' !== $details ) {
+				$content[] = array(
+					'type' => 'text',
+					'text' => $details,
+				);
+			}
+
 			return self::success_response(
 				$id,
 				self::maybe_append_deprecation_notice(
 					array(
-						'content' => array(
-							array(
-								'type' => 'text',
-								'text' => $result->get_error_message(),
-							),
-						),
+						'content' => $content,
 						'isError' => true,
 					)
 				)
@@ -491,6 +505,80 @@ class MCP_Server {
 	}
 
 	/**
+	 * The actionable part of an ability error's data — closest matching text,
+	 * conflicts, what to use instead — as a compact text block. Messages often
+	 * refer to these ("the closest passages are given below"), and without them
+	 * the model is left guessing. Transport-only keys are dropped and the block is
+	 * capped so a large payload cannot flood the context.
+	 *
+	 * @param WP_Error $error Error.
+	 * @return string Empty when there is nothing worth adding.
+	 */
+	private static function error_details( $error ) {
+		$data = $error->get_error_data();
+		if ( ! is_array( $data ) ) {
+			return '';
+		}
+		unset( $data['status'], $data['cause'], $data['retryable'] );
+		$data = array_filter(
+			$data,
+			static function ( $value ) {
+				return null !== $value && '' !== $value && array() !== $value;
+			}
+		);
+		if ( empty( $data ) ) {
+			return '';
+		}
+		$json = wp_json_encode( $data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		if ( ! is_string( $json ) ) {
+			return '';
+		}
+		// Too long: shrink the data rather than cut the text, so the block is always
+		// valid JSON — first shorter strings and lists, then just the field names.
+		foreach ( array( array( 300, 5 ), array( 80, 2 ) ) as $limits ) {
+			if ( strlen( $json ) <= self::ERROR_DETAILS_MAX ) {
+				break;
+			}
+			$json = wp_json_encode( array( 'truncated' => true ) + self::shrink_details( $data, $limits[0], $limits[1] ), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		}
+		if ( ! is_string( $json ) || strlen( $json ) > self::ERROR_DETAILS_MAX ) {
+			$json = wp_json_encode(
+				array(
+					'truncated' => true,
+					'fields'    => array_keys( $data ),
+				),
+				JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+			);
+		}
+		return 'Details: ' . $json;
+	}
+
+	/**
+	 * Shortens every string and list in error details, keeping the structure.
+	 *
+	 * @param mixed $value      Value.
+	 * @param int   $max_string Longest string kept, in characters.
+	 * @param int   $max_items  Most list items kept.
+	 * @return mixed
+	 */
+	private static function shrink_details( $value, $max_string, $max_items ) {
+		if ( is_string( $value ) ) {
+			return mb_strlen( $value ) > $max_string ? mb_substr( $value, 0, $max_string ) . '…' : $value;
+		}
+		if ( ! is_array( $value ) ) {
+			return $value;
+		}
+		$is_list = array() === $value || array_keys( $value ) === range( 0, count( $value ) - 1 );
+		if ( $is_list && count( $value ) > $max_items ) {
+			$value = array_slice( $value, 0, $max_items );
+		}
+		foreach ( $value as $key => $item ) {
+			$value[ $key ] = self::shrink_details( $item, $max_string, $max_items );
+		}
+		return $value;
+	}
+
+	/**
 	 * @param array $schema
 	 * @return array<string, mixed>
 	 */
@@ -502,10 +590,21 @@ class MCP_Server {
 			);
 		}
 
+		// A list of required fields stays on the input object, so clients know which
+		// arguments are mandatory before calling; it also makes "input" itself required.
+		// A bare boolean (the older per-property form) is not valid there, so it only
+		// marks "input" as required.
 		$required = false;
 		if ( isset( $schema['required'] ) ) {
-			$required = (bool) $schema['required'];
-			unset( $schema['required'] );
+			if ( is_array( $schema['required'] ) ) {
+				$required = ! empty( $schema['required'] );
+				if ( ! $required ) {
+					unset( $schema['required'] );
+				}
+			} else {
+				$required = (bool) $schema['required'];
+				unset( $schema['required'] );
+			}
 		}
 
 		$wrapper = array(

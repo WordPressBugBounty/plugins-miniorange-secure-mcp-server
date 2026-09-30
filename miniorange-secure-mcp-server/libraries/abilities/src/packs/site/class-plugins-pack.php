@@ -83,7 +83,7 @@ class Plugins_Pack extends Ability_Pack {
 			'mosmcp/plugin-list',
 			array(
 				'label'         => __( 'List Plugins', 'mosmcp-abilities' ),
-				'description'   => __( 'Lists the plugins installed on this site, with version, author, whether each is active, and whether an update is available. Read-only. This is the place to start for any question about what a site is running.', 'mosmcp-abilities' ),
+				'description'   => __( 'Lists the plugins installed on this site, with version, author, whether each is active, and whether an update is available. Read-only. This is the place to start for any question about what a site is running. Also known as: installed plugins, what plugins do I have, active plugins, extensions, add-ons.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'activate_plugins',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -128,7 +128,7 @@ class Plugins_Pack extends Ability_Pack {
 			'mosmcp/plugin-get',
 			array(
 				'label'         => __( 'Get Plugin Details', 'mosmcp-abilities' ),
-				'description'   => __( 'Returns everything known about one installed plugin: name, version, author, description, whether it is active, whether an update is waiting, and the WordPress and PHP versions it needs. Read-only. Name the plugin by its folder, its file, or its display name; all three work.', 'mosmcp-abilities' ),
+				'description'   => __( 'Returns everything known about one installed plugin: name, version, author, description, whether it is active, whether an update is waiting, and the WordPress and PHP versions it needs. Read-only. Name the plugin by its folder, its file, or its display name; all three work. Also known as: plugin version, plugin info, is this plugin active.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'activate_plugins',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -152,7 +152,7 @@ class Plugins_Pack extends Ability_Pack {
 			'mosmcp/plugin-count-by-status',
 			array(
 				'label'         => __( 'Count Plugins by Status', 'mosmcp-abilities' ),
-				'description'   => __( 'Returns how many plugins are installed, active, inactive, and waiting for an update, without listing them. Read-only. Cheaper than mosmcp/plugin-list when only the numbers matter.', 'mosmcp-abilities' ),
+				'description'   => __( 'Returns how many plugins are installed, active, inactive, and waiting for an update, without listing them. Read-only. Cheaper than mosmcp/plugin-list when only the numbers matter. Also known as: how many plugins, number of inactive plugins.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'activate_plugins',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -184,7 +184,7 @@ class Plugins_Pack extends Ability_Pack {
 			'mosmcp/plugin-list-updates',
 			array(
 				'label'         => __( 'List Plugin Updates', 'mosmcp-abilities' ),
-				'description'   => __( 'Lists just the plugins with an update available, with the installed and offered version and whether each is active. Read-only. Use mosmcp/plugin-update to apply one.', 'mosmcp-abilities' ),
+				'description'   => __( 'Lists just the plugins with an update available, with the installed and offered version and whether each is active. Read-only. Use mosmcp/plugin-update to apply one. Also known as: outdated plugins, plugins needing updates, plugin updates available.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'update_plugins',
 				'annotations'   => Site_Support::annotations( true, false, true, true ),
@@ -229,7 +229,7 @@ class Plugins_Pack extends Ability_Pack {
 			'mosmcp/plugin-activate',
 			array(
 				'label'         => __( 'Activate Plugin', 'mosmcp-abilities' ),
-				'description'   => __( 'Switches on a plugin that is already installed. Confirms afterwards that it really is active, because a plugin can fail during activation and WordPress does not always say so. Does nothing and reports no change if it was already active. This cannot install a plugin that is not on the site yet.', 'mosmcp-abilities' ),
+				'description'   => __( 'Switches on a plugin that is already installed. Confirms afterwards that it really is active, because a plugin can fail during activation and WordPress does not always say so. Does nothing and reports no change if it was already active. This cannot install a plugin that is not on the site yet. Also known as: turn on a plugin, enable a plugin, switch a plugin on.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'activate_plugins',
 				'annotations'   => Site_Support::annotations( false, false, true, false ),
@@ -253,7 +253,7 @@ class Plugins_Pack extends Ability_Pack {
 			'mosmcp/plugin-deactivate',
 			array(
 				'label'         => __( 'Deactivate Plugin', 'mosmcp-abilities' ),
-				'description'   => __( 'Switches off a plugin without removing it, so its settings and data are kept and it can be switched back on. Confirms afterwards that it really is inactive. Does nothing and reports no change if it was already off.', 'mosmcp-abilities' ),
+				'description'   => __( 'Switches off a plugin without removing it, so its settings and data are kept and it can be switched back on. Confirms afterwards that it really is inactive. Does nothing and reports no change if it was already off. Also known as: turn off a plugin, disable a plugin, switch a plugin off.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'activate_plugins',
 				'annotations'   => Site_Support::annotations( false, false, true, false ),
@@ -277,7 +277,7 @@ class Plugins_Pack extends Ability_Pack {
 			'mosmcp/plugin-update',
 			array(
 				'label'         => __( 'Update Plugin', 'mosmcp-abilities' ),
-				'description'   => __( 'Updates one installed plugin to the newest version available. Replaces the plugin files, which cannot be undone from here, so it needs confirm set to true. A plugin that was active stays active, and the result is verified by reading the version back from disk rather than assuming the update worked. Check mosmcp/plugin-list-updates first to see what is on offer.', 'mosmcp-abilities' ),
+				'description'   => __( 'Updates one installed plugin to the newest version available. Replaces the plugin files, which cannot be undone from here, so it needs confirm set to true. A plugin that was active stays active, and the result is verified by reading the version back from disk rather than assuming the update worked. Check mosmcp/plugin-list-updates first to see what is on offer. Also known as: upgrade a plugin, update to the latest version.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'update_plugins',
 				'annotations'   => Site_Support::annotations( false, false, false, true ),
@@ -340,7 +340,7 @@ class Plugins_Pack extends Ability_Pack {
 			'mosmcp/plugin-set-auto-updates',
 			array(
 				'label'         => __( 'Set Plugin Auto-Updates', 'mosmcp-abilities' ),
-				'description'   => __( 'Turns WordPress automatic updates on or off for one plugin, so WordPress keeps it current on its own. Reversible at any time by calling again with the opposite value.', 'mosmcp-abilities' ),
+				'description'   => __( 'Turns WordPress automatic updates on or off for one plugin, so WordPress keeps it current on its own. Reversible at any time by calling again with the opposite value. Also known as: automatic updates, auto-update plugins, stop automatic updates.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'update_plugins',
 				'annotations'   => Site_Support::annotations( false, false, true, false ),

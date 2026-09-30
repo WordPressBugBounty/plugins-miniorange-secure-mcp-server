@@ -395,7 +395,7 @@ class ACFA_Helpers {
 			}
 			if ( 2 === (int) $resolve_depth && ! $is_user ) {
 				$acf_fields            = get_fields( $id );
-				$summary['acf_fields'] = $acf_fields ? $acf_fields : new stdClass();
+				$summary['acf_fields'] = $acf_fields ? $acf_fields : new \stdClass();
 			}
 			$resolved[] = $summary;
 		}

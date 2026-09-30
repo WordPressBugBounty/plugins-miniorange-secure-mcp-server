@@ -383,7 +383,7 @@ class Products_Abilities {
 			'mosmcp/list-products',
 			array(
 				'label'               => __( 'List Products', 'mosmcp-abilities' ),
-				'description'         => __( 'Lists WooCommerce products with filtering by search, SKU, status, featured flag, type, category, tag, stock status, price range, sale status, virtual/downloadable flags, slug, IDs, and modified-date range.', 'mosmcp-abilities' ),
+				'description'         => __( 'Lists WooCommerce products with filtering by search, SKU, status, featured flag, type, category, tag, stock status, price range, sale status, virtual/downloadable flags, slug, IDs, and modified-date range. Also known as: products, catalogue, what do I sell, shop items, stock list.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -678,7 +678,7 @@ class Products_Abilities {
 			'mosmcp/get-product',
 			array(
 				'label'               => __( 'Get Product', 'mosmcp-abilities' ),
-				'description'         => __( 'Gets a single WooCommerce product by ID, including price, stock, images, categories/tags, and shipping detail.', 'mosmcp-abilities' ),
+				'description'         => __( 'Gets a single WooCommerce product by ID, including price, stock, images, categories/tags, and shipping detail. Also known as: product details, product price, stock level.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -769,7 +769,7 @@ class Products_Abilities {
 			'mosmcp/create-product',
 			array(
 				'label'               => __( 'Create Product', 'mosmcp-abilities' ),
-				'description'         => __( 'Creates a new simple or external WooCommerce product. Defaults to a draft simple product.', 'mosmcp-abilities' ),
+				'description'         => __( 'Creates a new simple or external WooCommerce product. Defaults to a draft simple product. Also known as: add a product, new product, list an item for sale.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -882,7 +882,7 @@ class Products_Abilities {
 			'mosmcp/update-product',
 			array(
 				'label'               => __( 'Update Product', 'mosmcp-abilities' ),
-				'description'         => __( "Updates an existing product's name, description, pricing, stock, shipping, taxonomy, or status. Provide the product ID and at least one field to change.", 'mosmcp-abilities' ),
+				'description'         => __( "Updates an existing product's name, description, pricing, stock, shipping, taxonomy, or status. Provide the product ID and at least one field to change. Also known as: change price, edit product, update stock, put on sale.", 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1152,7 +1152,7 @@ class Products_Abilities {
 			'mosmcp/delete-product',
 			array(
 				'label'               => __( 'Delete Product', 'mosmcp-abilities' ),
-				'description'         => __( 'Deletes a WooCommerce product. By default this moves it to the trash; pass force to delete it permanently, bypassing the trash.', 'mosmcp-abilities' ),
+				'description'         => __( 'Deletes a WooCommerce product. By default this moves it to the trash; pass force to delete it permanently, bypassing the trash. Also known as: remove a product, take a product down.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1253,7 +1253,7 @@ class Products_Abilities {
 			'mosmcp/list-product-categories',
 			array(
 				'label'               => __( 'List Product Categories', 'mosmcp-abilities' ),
-				'description'         => __( 'Lists WooCommerce product categories with their IDs, slugs, and product counts.', 'mosmcp-abilities' ),
+				'description'         => __( 'Lists WooCommerce product categories with their IDs, slugs, and product counts. Also known as: product categories, shop categories.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1347,7 +1347,7 @@ class Products_Abilities {
 			'mosmcp/create-product-category',
 			array(
 				'label'               => __( 'Create Product Category', 'mosmcp-abilities' ),
-				'description'         => __( 'Creates a new WooCommerce product category, optionally nested under a parent category.', 'mosmcp-abilities' ),
+				'description'         => __( 'Creates a new WooCommerce product category, optionally nested under a parent category. Also known as: add a product category, new shop category.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1473,7 +1473,7 @@ class Products_Abilities {
 			'mosmcp/delete-product-category',
 			array(
 				'label'               => __( 'Delete Product Category', 'mosmcp-abilities' ),
-				'description'         => __( 'Deletes a WooCommerce product category. Any child categories are reparented to top-level, matching how WordPress handles term deletion.', 'mosmcp-abilities' ),
+				'description'         => __( 'Deletes a WooCommerce product category. Any child categories are reparented to top-level, matching how WordPress handles term deletion. Also known as: remove a product category.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1558,7 +1558,7 @@ class Products_Abilities {
 			'mosmcp/list-product-tags',
 			array(
 				'label'               => __( 'List Product Tags', 'mosmcp-abilities' ),
-				'description'         => __( 'Lists WooCommerce product tags with their IDs, slugs, and product counts.', 'mosmcp-abilities' ),
+				'description'         => __( 'Lists WooCommerce product tags with their IDs, slugs, and product counts. Also known as: product tags.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1659,7 +1659,7 @@ class Products_Abilities {
 			'mosmcp/create-product-tag',
 			array(
 				'label'               => __( 'Create Product Tag', 'mosmcp-abilities' ),
-				'description'         => __( 'Creates a new WooCommerce product tag.', 'mosmcp-abilities' ),
+				'description'         => __( 'Creates a new WooCommerce product tag. Also known as: add a product tag.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1794,7 +1794,7 @@ class Products_Abilities {
 			'mosmcp/list-product-attributes',
 			array(
 				'label'               => __( 'List Product Attributes', 'mosmcp-abilities' ),
-				'description'         => __( 'Lists all global WooCommerce product attributes (e.g. Color, Size) with their type and archive settings.', 'mosmcp-abilities' ),
+				'description'         => __( 'Lists all global WooCommerce product attributes (e.g. Color, Size) with their type and archive settings. Also known as: product attributes, sizes, colours, variation options.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1886,7 +1886,7 @@ class Products_Abilities {
 			'mosmcp/get-product-attribute',
 			array(
 				'label'               => __( 'Get Product Attribute', 'mosmcp-abilities' ),
-				'description'         => __( 'Gets a single global WooCommerce product attribute by ID.', 'mosmcp-abilities' ),
+				'description'         => __( 'Gets a single global WooCommerce product attribute by ID. Also known as: attribute details, attribute terms.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1953,7 +1953,7 @@ class Products_Abilities {
 			'mosmcp/set-product-attributes',
 			array(
 				'label'               => __( 'Set Product Attributes', 'mosmcp-abilities' ),
-				'description'         => __( "Replaces a product's attribute list. Each attribute is either global (attribute_id from list/get-product-attribute, with options as existing term IDs in that attribute's own taxonomy) or custom (attribute_id 0, with a free-form name and text options). Pass an empty attributes array to remove all attributes.", 'mosmcp-abilities' ),
+				'description'         => __( "Replaces a product's attribute list. Each attribute is either global (attribute_id from list/get-product-attribute, with options as existing term IDs in that attribute's own taxonomy) or custom (attribute_id 0, with a free-form name and text options). Pass an empty attributes array to remove all attributes. Also known as: set size and colour options, product options.", 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',

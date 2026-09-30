@@ -397,7 +397,7 @@ class ACFA_Read_Abilities {
 		$include_fields = ! isset( $input['include_fields'] ) || filter_var( $input['include_fields'], FILTER_VALIDATE_BOOLEAN );
 		if ( $include_fields ) {
 			$fields          = acf_get_fields( $group );
-			$group['fields'] = $fields ? array_map( array( 'ACFA_Helpers', 'field_definition' ), $fields ) : array();
+			$group['fields'] = $fields ? array_map( array( ACFA_Helpers::class, 'field_definition' ), $fields ) : array();
 		}
 		return $group;
 	}
@@ -425,7 +425,7 @@ class ACFA_Read_Abilities {
 			);
 		}
 
-		$summaries = array_values( array_map( array( 'ACFA_Helpers', 'group_summary' ), $groups ) );
+		$summaries = array_values( array_map( array( ACFA_Helpers::class, 'group_summary' ), $groups ) );
 		return array(
 			'groups' => $summaries,
 			'count'  => count( $summaries ),
@@ -468,7 +468,7 @@ class ACFA_Read_Abilities {
 		}
 		$format = ! isset( $input['format_values'] ) || filter_var( $input['format_values'], FILTER_VALIDATE_BOOLEAN );
 		$fields = get_fields( $post_id, $format );
-		return $fields ? $fields : new stdClass();
+		return $fields ? $fields : new \stdClass();
 	}
 
 	/**
@@ -672,7 +672,7 @@ class ACFA_Read_Abilities {
 		}
 
 		$fields = get_fields( $acf_post_id );
-		return $fields ? $fields : new stdClass();
+		return $fields ? $fields : new \stdClass();
 	}
 
 	/**
@@ -705,6 +705,6 @@ class ACFA_Read_Abilities {
 		}
 
 		$fields = get_fields( $acf_post_id );
-		return $fields ? $fields : new stdClass();
+		return $fields ? $fields : new \stdClass();
 	}
 }

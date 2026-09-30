@@ -38,6 +38,16 @@ class Content_Matcher {
 	const SNIPPET_RADIUS = 120;
 
 	/**
+	 * Match mode reported when a phrase was found through inline formatting tags.
+	 */
+	const MODE_ACROSS_MARKUP = 'across_markup';
+
+	/**
+	 * Inline tags a phrase may run through. Block-level tags are deliberately absent.
+	 */
+	const INLINE_TAGS = 'a|abbr|b|bdi|bdo|cite|code|del|dfn|em|i|ins|kbd|mark|q|s|samp|small|span|strong|sub|sup|time|u|var';
+
+	/**
 	 * Computes the result of replacing one passage inside stored text.
 	 *
 	 * Tries byte-exact first, so an unambiguous exact hit can never be turned into
@@ -47,11 +57,13 @@ class Content_Matcher {
 	 * @param string $stored      The value currently stored.
 	 * @param string $old         Text to find.
 	 * @param string $into        Replacement text.
-	 * @param bool   $replace_all Replace every occurrence instead of requiring exactly one.
-	 * @param bool   $whole_word  Require word boundaries around the match.
+	 * @param bool   $replace_all   Replace every occurrence instead of requiring exactly one.
+	 * @param bool   $whole_word    Require word boundaries around the match.
+	 * @param bool   $across_markup Allow the last-resort rule that reads through inline
+	 *                              formatting tags. Off for source code.
 	 * @return array{ok:bool,code:string,result:string,count:int,mode:string,positions:int[]}
 	 */
-	public static function compute_replacement( $stored, $old, $into, $replace_all = false, $whole_word = false ) {
+	public static function compute_replacement( $stored, $old, $into, $replace_all = false, $whole_word = false, $across_markup = true ) {
 		if ( ! is_string( $stored ) ) {
 			return self::outcome( false, 'not_text' );
 		}
@@ -134,7 +146,120 @@ class Content_Matcher {
 			return self::outcome( true, 'ok', $result, $found, $mode );
 		}
 
+		if ( $across_markup && ! $whole_word ) {
+			$spans = self::markup_spans( $stored, $old );
+			$found = count( $spans );
+			if ( $found > 1 && ! $replace_all ) {
+				return self::outcome( false, 'multiple_matches', '', $found, self::MODE_ACROSS_MARKUP, wp_list_pluck( $spans, 0 ) );
+			}
+			if ( $found > 0 ) {
+				$result = $stored;
+				foreach ( array_reverse( $replace_all ? $spans : array_slice( $spans, 0, 1 ) ) as $span ) {
+					$result = substr_replace( $result, $into, $span[0], $span[1] );
+				}
+				return self::outcome( true, 'ok', $result, $found, self::MODE_ACROSS_MARKUP );
+			}
+		}
+
 		return self::outcome( false, 'no_match' );
+	}
+
+	/**
+	 * Finds a plain-text phrase whose words are separated in the stored markup by
+	 * inline formatting — "Designed with WordPress" stored as
+	 * "Designed with <a href=…>WordPress</a>". Each match is widened to take in the
+	 * tags it opens or closes, and any match whose tags still do not balance is
+	 * dropped, so replacing it can never leave a stray tag behind. Block comments
+	 * and block-level tags are never crossed, so a match stays inside one paragraph.
+	 *
+	 * @param string $haystack Stored markup.
+	 * @param string $needle   Plain text as a person reads it.
+	 * @return array<int, array{0:int,1:int}> Byte offset and length of each match.
+	 */
+	public static function markup_spans( $haystack, $needle ) {
+		$needle = trim( (string) $needle );
+		if ( '' === $needle || false !== strpos( $needle, '<' ) || false === strpos( (string) $haystack, '<' ) ) {
+			return array();
+		}
+		$words = preg_split( '/\s+/u', $needle );
+		if ( ! is_array( $words ) || count( $words ) < 2 ) {
+			return array();
+		}
+
+		$tag     = '<\/?(?:' . self::INLINE_TAGS . ')\b[^<>]*>';
+		$between = '(?:\s|&nbsp;|\x{00A0}|' . $tag . ')+';
+		$inside  = '(?:' . $tag . ')*';
+		$parts   = array();
+		foreach ( $words as $word ) {
+			// Punctuation can sit outside a closing tag: "WordPress</a>.".
+			$chunks = preg_split( '/(?<=\w)(?=\W)|(?<=\W)(?=\w)/u', $word );
+			$quoted = array();
+			foreach ( is_array( $chunks ) ? $chunks : array( $word ) as $chunk ) {
+				$quoted[] = preg_quote( $chunk, '/' );
+			}
+			$parts[] = implode( $inside, $quoted );
+		}
+		$pattern = '/' . implode( $between, $parts ) . '/u';
+
+		if ( ! preg_match_all( $pattern, $haystack, $hits, PREG_OFFSET_CAPTURE ) ) {
+			return array();
+		}
+
+		$spans = array();
+		foreach ( $hits[0] as $hit ) {
+			if ( false === strpos( $hit[0], '<' ) ) {
+				continue;
+			}
+			$span = self::balance_span( (string) $haystack, (int) $hit[1], strlen( $hit[0] ) );
+			if ( null !== $span ) {
+				$spans[] = $span;
+			}
+		}
+		return $spans;
+	}
+
+	/**
+	 * Widens a match over the tags it leaves open or closes early; null when the
+	 * tags cannot be balanced by adjacent markup.
+	 *
+	 * @param string $haystack Markup.
+	 * @param int    $start    Match offset.
+	 * @param int    $length   Match length.
+	 * @return array{0:int,1:int}|null
+	 */
+	private static function balance_span( $haystack, $start, $length ) {
+		for ( $guard = 0; $guard < 12; $guard++ ) {
+			$open   = array();
+			$closed = array();
+			preg_match_all( '/<(\/?)(' . self::INLINE_TAGS . ')\b[^<>]*>/i', substr( $haystack, $start, $length ), $tags, PREG_SET_ORDER );
+			foreach ( $tags as $t ) {
+				$name = strtolower( $t[2] );
+				if ( '' === $t[1] ) {
+					$open[] = $name;
+				} elseif ( ! empty( $open ) && end( $open ) === $name ) {
+					array_pop( $open );
+				} else {
+					$closed[] = $name;
+				}
+			}
+			if ( empty( $open ) && empty( $closed ) ) {
+				return array( $start, $length );
+			}
+			if ( ! empty( $open ) ) {
+				$close = '</' . end( $open ) . '>';
+				if ( 0 !== strcasecmp( substr( $haystack, $start + $length, strlen( $close ) ), $close ) ) {
+					return null;
+				}
+				$length += strlen( $close );
+				continue;
+			}
+			if ( ! preg_match( '/<' . preg_quote( $closed[0], '/' ) . '\b[^<>]*>$/i', substr( $haystack, 0, $start ), $m ) ) {
+				return null;
+			}
+			$start  -= strlen( $m[0] );
+			$length += strlen( $m[0] );
+		}
+		return null;
 	}
 
 	/**
@@ -571,6 +696,26 @@ class Content_Matcher {
 			);
 		}
 
+		$spans = self::markup_spans( $haystack, $needle );
+		if ( ! empty( $spans ) ) {
+			$matches = array();
+			foreach ( array_slice( $spans, 0, $max ) as $span ) {
+				$start     = max( 0, $span[0] - self::SNIPPET_RADIUS );
+				$snippet   = substr( $haystack, $start, $span[1] + ( self::SNIPPET_RADIUS * 2 ) );
+				$matches[] = array(
+					'offset'          => $span[0],
+					'matched_text'    => substr( $haystack, $span[0], $span[1] ),
+					'context'         => (string) $snippet,
+					'context_trimmed' => ( $start > 0 || ( $start + strlen( (string) $snippet ) ) < strlen( $haystack ) ),
+				);
+			}
+			return array(
+				'mode'    => self::MODE_ACROSS_MARKUP,
+				'total'   => count( $spans ),
+				'matches' => $matches,
+			);
+		}
+
 		return array(
 			'mode'    => '',
 			'total'   => 0,
@@ -605,6 +750,15 @@ class Content_Matcher {
 			substr( $needle, -30 ),
 			substr( $needle, -16 ),
 		);
+
+		// Whole-word halves too: a fixed-length slice of "Designed with WordPress"
+		// runs into the link around "WordPress", but "Designed with" does not.
+		$words = preg_split( '/\s+/u', $needle );
+		if ( is_array( $words ) && count( $words ) >= 2 ) {
+			$half      = (int) ceil( count( $words ) / 2 );
+			$anchors[] = implode( ' ', array_slice( $words, 0, $half ) );
+			$anchors[] = implode( ' ', array_slice( $words, -$half ) );
+		}
 
 		$seen = array();
 

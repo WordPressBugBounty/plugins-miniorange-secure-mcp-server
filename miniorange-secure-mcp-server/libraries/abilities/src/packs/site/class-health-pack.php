@@ -77,7 +77,7 @@ class Health_Pack extends Ability_Pack {
 			'mosmcp/site-check-core-updates',
 			array(
 				'label'         => __( 'Check WordPress Core Updates', 'mosmcp-abilities' ),
-				'description'   => __( 'Reports whether a WordPress core update is available, which version, and whether it is a minor security release or a major one. Read-only; it checks but never installs. If another plugin on this site filters core update data, the answer says so rather than presenting it as certain.', 'mosmcp-abilities' ),
+				'description'   => __( 'Reports whether a WordPress core update is available, which version, and whether it is a minor security release or a major one. Read-only; it checks but never installs. If another plugin on this site filters core update data, the answer says so rather than presenting it as certain. Also known as: update WordPress, is WordPress up to date, new WordPress version.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'update_core',
 				'annotations'   => Site_Support::annotations( true, false, true, true ),
@@ -117,7 +117,7 @@ class Health_Pack extends Ability_Pack {
 			'mosmcp/site-check-plugin-updates',
 			array(
 				'label'         => __( 'Check Plugin Updates', 'mosmcp-abilities' ),
-				'description'   => __( 'Lists every installed plugin with an update available, showing the installed and offered version. Read-only; it checks but never installs. Use mosmcp/plugin-update to actually apply one.', 'mosmcp-abilities' ),
+				'description'   => __( 'Lists every installed plugin with an update available, showing the installed and offered version. Read-only; it checks but never installs. Use mosmcp/plugin-update to actually apply one. Also known as: check for plugin updates, are my plugins up to date.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'update_plugins',
 				'annotations'   => Site_Support::annotations( true, false, true, true ),
@@ -164,7 +164,7 @@ class Health_Pack extends Ability_Pack {
 			'mosmcp/site-check-theme-updates',
 			array(
 				'label'         => __( 'Check Theme Updates', 'mosmcp-abilities' ),
-				'description'   => __( 'Lists every installed theme with an update available, showing the installed and offered version. Read-only; it checks but never installs.', 'mosmcp-abilities' ),
+				'description'   => __( 'Lists every installed theme with an update available, showing the installed and offered version. Read-only; it checks but never installs. Also known as: check for theme updates, is my theme up to date.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'update_themes',
 				'annotations'   => Site_Support::annotations( true, false, true, true ),
@@ -209,7 +209,7 @@ class Health_Pack extends Ability_Pack {
 			'mosmcp/site-get-wordpress-version',
 			array(
 				'label'         => __( 'Get WordPress Version', 'mosmcp-abilities' ),
-				'description'   => __( 'Returns the WordPress version this site runs, its database schema version, its locale, and whether it is part of a multisite network. Read-only. Useful for deciding whether a feature or block is available before trying to use it.', 'mosmcp-abilities' ),
+				'description'   => __( 'Returns the WordPress version this site runs, its database schema version, its locale, and whether it is part of a multisite network. Read-only. Useful for deciding whether a feature or block is available before trying to use it. Also known as: which WordPress version, WordPress release.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_posts',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -240,7 +240,7 @@ class Health_Pack extends Ability_Pack {
 			'mosmcp/site-get-server-info',
 			array(
 				'label'         => __( 'Get Server Information', 'mosmcp-abilities' ),
-				'description'   => __( 'Returns the environment this site runs on: PHP and database versions, memory and execution limits, upload limits, HTTPS state, and whether a persistent object cache is in use. Read-only. Returns no file paths, database credentials, or security keys. Useful for diagnosing why an upload, import, or long operation fails.', 'mosmcp-abilities' ),
+				'description'   => __( 'Returns the environment this site runs on: PHP and database versions, memory and execution limits, upload limits, HTTPS state, and whether a persistent object cache is in use. Read-only. Returns no file paths, database credentials, or security keys. Useful for diagnosing why an upload, import, or long operation fails. Also known as: PHP version, hosting info, server limits, memory limit, upload limit, database version.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'manage_options',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),
@@ -306,7 +306,7 @@ class Health_Pack extends Ability_Pack {
 			'mosmcp/site-get-health-status',
 			array(
 				'label'         => __( 'Get Site Health Status', 'mosmcp-abilities' ),
-				'description'   => __( "Runs WordPress's own Site Health checks and returns what passed, what is recommended, and what is critical, with the reason for anything that is not passing. Read-only. Runs only the fast, local tests, so the answer is a subset of the Site Health screen in wp-admin; the slower network tests are skipped to keep the call quick.", 'mosmcp-abilities' ),
+				'description'   => __( "Runs WordPress's own Site Health checks and returns what passed, what is recommended, and what is critical, with the reason for anything that is not passing. Read-only. Runs only the fast, local tests, so the answer is a subset of the Site Health screen in wp-admin; the slower network tests are skipped to keep the call quick. Also known as: site health, is my site healthy, health check, security and performance issues.", 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'view_site_health_checks',
 				'annotations'   => Site_Support::annotations( true, false, true, false ),

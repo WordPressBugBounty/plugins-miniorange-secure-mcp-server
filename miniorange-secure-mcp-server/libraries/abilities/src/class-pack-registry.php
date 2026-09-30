@@ -23,6 +23,9 @@ use MoSMCP\Abilities\Packs\Site\Health_Pack;
 use MoSMCP\Abilities\Packs\Site\Plugins_Pack;
 use MoSMCP\Abilities\Packs\Site\Site_Settings_Pack;
 use MoSMCP\Abilities\Packs\Site\Themes_Pack;
+use MoSMCP\Abilities\Packs\Theming\Block_Theme_Pack;
+use MoSMCP\Abilities\Packs\Theming\Theme_Draft_Pack;
+use MoSMCP\Abilities\Packs\Theming\Theme_Files_Pack;
 use MoSMCP\Abilities\Packs\Users\Users_Pack;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -66,6 +69,9 @@ class Pack_Registry {
 			Maintenance_Pack::class,
 			Editing_Pack::class,
 			Fluent_Forms_Pack::class,
+			Block_Theme_Pack::class,
+			Theme_Files_Pack::class,
+			Theme_Draft_Pack::class,
 		);
 	}
 

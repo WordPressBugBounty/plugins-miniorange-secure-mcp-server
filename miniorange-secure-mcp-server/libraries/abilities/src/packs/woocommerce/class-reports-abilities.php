@@ -172,7 +172,7 @@ class Reports_Abilities {
 			'mosmcp/report-sales',
 			array(
 				'label'               => __( 'Sales Report', 'mosmcp-abilities' ),
-				'description'         => __( 'Gets a sales summary for a date range or period: gross/net sales, order and item counts, tax, shipping, refunds, and discounts. Optionally scoped to a single product or category.', 'mosmcp-abilities' ),
+				'description'         => __( 'Gets a sales summary for a date range or period: gross/net sales, order and item counts, tax, shipping, refunds, and discounts. Optionally scoped to a single product or category. Also known as: sales report, revenue, how are sales doing, takings, income.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -437,7 +437,7 @@ class Reports_Abilities {
 			'mosmcp/report-top-sellers',
 			array(
 				'label'               => __( 'Top Sellers Report', 'mosmcp-abilities' ),
-				'description'         => __( 'Gets the top-selling products by quantity for a date range or period.', 'mosmcp-abilities' ),
+				'description'         => __( 'Gets the top-selling products by quantity for a date range or period. Also known as: best sellers, top products, most popular products.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -575,7 +575,7 @@ class Reports_Abilities {
 			'mosmcp/report-orders',
 			array(
 				'label'               => __( 'Orders Report', 'mosmcp-abilities' ),
-				'description'         => __( 'Gets order counts broken down by status. Defaults to all-time totals, matching the official WooCommerce Orders Totals report; optionally scope to a date range.', 'mosmcp-abilities' ),
+				'description'         => __( 'Gets order counts broken down by status. Defaults to all-time totals, matching the official WooCommerce Orders Totals report; optionally scope to a date range. Also known as: order counts, orders by status.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -698,7 +698,7 @@ class Reports_Abilities {
 			'mosmcp/report-products',
 			array(
 				'label'               => __( 'Products Report', 'mosmcp-abilities' ),
-				'description'         => __( 'Gets product counts broken down by type (simple, variable, grouped, external), matching the official WooCommerce Products Totals report.', 'mosmcp-abilities' ),
+				'description'         => __( 'Gets product counts broken down by type (simple, variable, grouped, external), matching the official WooCommerce Products Totals report. Also known as: product report, product performance.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -792,7 +792,7 @@ class Reports_Abilities {
 			'mosmcp/report-customers',
 			array(
 				'label'               => __( 'Customers Report', 'mosmcp-abilities' ),
-				'description'         => __( "Gets customer counts broken down by WordPress role. The official WooCommerce Customers Totals report's exact 'customer type' grouping isn't fully documented; role is the closest well-defined, verifiable interpretation.", 'mosmcp-abilities' ),
+				'description'         => __( "Gets customer counts broken down by WordPress role. The official WooCommerce Customers Totals report's exact 'customer type' grouping isn't fully documented; role is the closest well-defined, verifiable interpretation. Also known as: customer report, customers by role, customer counts.", 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -880,7 +880,7 @@ class Reports_Abilities {
 			'mosmcp/report-coupon-usage',
 			array(
 				'label'               => __( 'Coupon Usage Report', 'mosmcp-abilities' ),
-				'description'         => __( 'Gets how many times each coupon was used and the total amount discounted, optionally within a date range. This intentionally differs from the official WooCommerce "coupons/totals" report, which only counts coupons per discount type — this reports actual redemption activity instead, matching what "usage statistics" implies.', 'mosmcp-abilities' ),
+				'description'         => __( 'Gets how many times each coupon was used and the total amount discounted, optionally within a date range. This intentionally differs from the official WooCommerce "coupons/totals" report, which only counts coupons per discount type — this reports actual redemption activity instead, matching what "usage statistics" implies. Also known as: coupon report, discount code usage.', 'mosmcp-abilities' ),
 				'category'            => WooCommerce_Abilities_Loader::CATEGORY,
 				'input_schema'        => array(
 					'type'                 => 'object',

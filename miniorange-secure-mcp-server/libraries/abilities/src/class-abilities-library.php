@@ -19,6 +19,7 @@ use MoSMCP\Abilities\Packs\Yoast\YSOA_Helpers;
 use MoSMCP\Abilities\Packs\Forms\Forms_Abilities;
 use MoSMCP\Abilities\Packs\Kadence\Kadence_Helpers;
 use MoSMCP\Abilities\Packs\Rankmath\Rankmath_Loader;
+use MoSMCP\Abilities\Packs\Theming\Theme_Preview;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -81,6 +82,16 @@ class Abilities_Library {
 
 		add_action( 'wp_abilities_api_categories_init', array( __CLASS__, 'register_categories' ) );
 		add_action( 'wp_abilities_api_init', array( __CLASS__, 'register_abilities' ) );
+
+		/*
+		 * The theme-draft preview has to be listening before WordPress resolves the
+		 * theme folder and loads functions.php, which happens right after
+		 * plugins_loaded. Every hook is inert unless the request carries a valid
+		 * preview token.
+		 */
+		if ( self::enabled( 'core' ) ) {
+			Theme_Preview::boot();
+		}
 
 		self::$booted = true;
 	}

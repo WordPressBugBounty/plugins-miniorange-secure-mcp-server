@@ -285,7 +285,7 @@ class Forms_Abilities {
 			'mosmcp/cf7-list-forms',
 			array(
 				'label'               => __( 'List Contact Form 7 Forms', 'mosmcp-abilities' ),
-				'description'         => __( 'Lists all Contact Form 7 forms on the site (ID and title), paginated. Read-only. Requires Contact Form 7 only — not Flamingo.', 'mosmcp-abilities' ),
+				'description'         => __( 'Lists all Contact Form 7 forms on the site (ID and title), paginated. Read-only. Requires Contact Form 7 only — not Flamingo. Also known as: contact forms, my forms, lead forms, enquiry forms.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -331,7 +331,7 @@ class Forms_Abilities {
 			'mosmcp/cf7-get-form-by-id',
 			array(
 				'label'               => __( 'Get Contact Form 7 Form by ID', 'mosmcp-abilities' ),
-				'description'         => __( "Retrieves a single Contact Form 7 form's full configuration (title, form template markup, mail settings, additional settings) by form ID. Read-only.", 'mosmcp-abilities' ),
+				'description'         => __( "Retrieves a single Contact Form 7 form's full configuration (title, form template markup, mail settings, additional settings) by form ID. Read-only. Also known as: form details, form setup, form configuration.", 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Contact Form 7 form ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -364,7 +364,7 @@ class Forms_Abilities {
 			'mosmcp/cf7-get-form-fields',
 			array(
 				'label'               => __( 'Get Contact Form 7 Form Fields', 'mosmcp-abilities' ),
-				'description'         => __( 'Returns the field/tag structure (name, type, required) of a Contact Form 7 form, given its form ID. Read-only.', 'mosmcp-abilities' ),
+				'description'         => __( 'Returns the field/tag structure (name, type, required) of a Contact Form 7 form, given its form ID. Read-only. Also known as: form fields, form questions, what the form asks.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Contact Form 7 form ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -395,7 +395,7 @@ class Forms_Abilities {
 			'mosmcp/cf7-get-mail-settings',
 			array(
 				'label'               => __( 'Get Contact Form 7 Mail Settings', 'mosmcp-abilities' ),
-				'description'         => __( 'Returns the mail configuration (to/from/subject/body) for a Contact Form 7 form, given its form ID. Read-only.', 'mosmcp-abilities' ),
+				'description'         => __( 'Returns the mail configuration (to/from/subject/body) for a Contact Form 7 form, given its form ID. Read-only. Also known as: form email, where submissions are sent, notification email, autoresponder.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Contact Form 7 form ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -437,7 +437,7 @@ class Forms_Abilities {
 			'mosmcp/cf7-flamingo-list-entries',
 			array(
 				'label'               => __( 'List Contact Form 7 Submissions (Flamingo)', 'mosmcp-abilities' ),
-				'description'         => __( 'Lists Contact Form 7 submissions captured by the Flamingo companion plugin, optionally filtered by form_id, paginated. Read-only. Requires Flamingo (CF7 itself does not store submissions).', 'mosmcp-abilities' ),
+				'description'         => __( 'Lists Contact Form 7 submissions captured by the Flamingo companion plugin, optionally filtered by form_id, paginated. Read-only. Requires Flamingo (CF7 itself does not store submissions). Also known as: form submissions, leads, enquiries, messages from the website.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -489,7 +489,7 @@ class Forms_Abilities {
 			'mosmcp/cf7-flamingo-get-entry-by-id',
 			array(
 				'label'               => __( 'Get Contact Form 7 Submission by ID (Flamingo)', 'mosmcp-abilities' ),
-				'description'         => __( 'Retrieves a single Contact Form 7 submission captured by Flamingo, given its Flamingo entry ID. Read-only. Requires Flamingo.', 'mosmcp-abilities' ),
+				'description'         => __( 'Retrieves a single Contact Form 7 submission captured by Flamingo, given its Flamingo entry ID. Read-only. Requires Flamingo. Also known as: a submission, a lead, a form response.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Flamingo submission ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => $flamingo_entry_schema,
@@ -512,7 +512,7 @@ class Forms_Abilities {
 			'mosmcp/cf7-flamingo-count-entries',
 			array(
 				'label'               => __( 'Count Contact Form 7 Submissions (Flamingo)', 'mosmcp-abilities' ),
-				'description'         => __( 'Returns the total count of Flamingo-captured submissions, optionally filtered by form_id. Read-only. Requires Flamingo.', 'mosmcp-abilities' ),
+				'description'         => __( 'Returns the total count of Flamingo-captured submissions, optionally filtered by form_id. Read-only. Requires Flamingo. Also known as: how many submissions, number of leads.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -551,7 +551,7 @@ class Forms_Abilities {
 			'mosmcp/cf7-flamingo-export-entries-csv',
 			array(
 				'label'               => __( 'Export Contact Form 7 Submissions as CSV (Flamingo)', 'mosmcp-abilities' ),
-				'description'         => __( 'Exports Flamingo-captured submissions to CSV text, optionally filtered by form_id. Returns the CSV content inline. Requires Flamingo.', 'mosmcp-abilities' ),
+				'description'         => __( 'Exports Flamingo-captured submissions to CSV text, optionally filtered by form_id. Returns the CSV content inline. Requires Flamingo. Also known as: export leads, download submissions, spreadsheet of entries.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -591,7 +591,7 @@ class Forms_Abilities {
 			'mosmcp/cf7-flamingo-mark-entry-read',
 			array(
 				'label'               => __( 'Mark Contact Form 7 Submission as Read (Flamingo)', 'mosmcp-abilities' ),
-				'description'         => __( 'Marks a Flamingo-captured submission as read, given its entry ID. Requires Flamingo.', 'mosmcp-abilities' ),
+				'description'         => __( 'Marks a Flamingo-captured submission as read, given its entry ID. Requires Flamingo. Also known as: mark as seen, mark a lead as handled.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Flamingo submission ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -622,7 +622,7 @@ class Forms_Abilities {
 			'mosmcp/cf7-flamingo-mark-entry-unread',
 			array(
 				'label'               => __( 'Mark Contact Form 7 Submission as Unread (Flamingo)', 'mosmcp-abilities' ),
-				'description'         => __( 'Marks a Flamingo-captured submission as unread, given its entry ID. Requires Flamingo.', 'mosmcp-abilities' ),
+				'description'         => __( 'Marks a Flamingo-captured submission as unread, given its entry ID. Requires Flamingo. Also known as: mark as new, mark a lead as not handled.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Flamingo submission ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -653,7 +653,7 @@ class Forms_Abilities {
 			'mosmcp/cf7-flamingo-delete-entry',
 			array(
 				'label'               => __( 'Delete Contact Form 7 Submission (Flamingo)', 'mosmcp-abilities' ),
-				'description'         => __( 'Moves a Flamingo-captured submission to trash (recoverable), given its entry ID. For irreversible deletion use cf7-flamingo-permanently-delete-entry. Requires Flamingo.', 'mosmcp-abilities' ),
+				'description'         => __( 'Moves a Flamingo-captured submission to trash (recoverable), given its entry ID. For irreversible deletion use cf7-flamingo-permanently-delete-entry. Requires Flamingo. Also known as: remove a submission, delete a lead.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Flamingo submission ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -684,7 +684,7 @@ class Forms_Abilities {
 			'mosmcp/cf7-flamingo-permanently-delete-entry',
 			array(
 				'label'               => __( 'Permanently Delete Contact Form 7 Submission (Flamingo)', 'mosmcp-abilities' ),
-				'description'         => __( 'Irreversibly deletes a Flamingo-captured submission, given its entry ID, bypassing trash. Destructive — used for removing sensitive lead data entirely. Requires Flamingo.', 'mosmcp-abilities' ),
+				'description'         => __( 'Irreversibly deletes a Flamingo-captured submission, given its entry ID, bypassing trash. Destructive — used for removing sensitive lead data entirely. Requires Flamingo. Also known as: erase a submission, delete a lead for good.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Flamingo submission ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -1072,7 +1072,7 @@ class Forms_Abilities {
 			'mosmcp/wpforms-list-forms',
 			array(
 				'label'               => __( 'List WPForms', 'mosmcp-abilities' ),
-				'description'         => __( 'Lists all WPForms on the site (ID and title), paginated. Read-only.', 'mosmcp-abilities' ),
+				'description'         => __( 'Lists all WPForms on the site (ID and title), paginated. Read-only. Also known as: contact forms, my forms, lead forms, enquiry forms.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1118,7 +1118,7 @@ class Forms_Abilities {
 			'mosmcp/wpforms-get-form-by-id',
 			array(
 				'label'               => __( 'Get WPForms Form by ID', 'mosmcp-abilities' ),
-				'description'         => __( "Retrieves a single WPForms form's full configuration (fields, settings, notifications, confirmations) by form ID. Read-only.", 'mosmcp-abilities' ),
+				'description'         => __( "Retrieves a single WPForms form's full configuration (fields, settings, notifications, confirmations) by form ID. Read-only. Also known as: form details, form setup, form configuration.", 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The WPForms form ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -1152,7 +1152,7 @@ class Forms_Abilities {
 			'mosmcp/wpforms-get-form-fields',
 			array(
 				'label'               => __( 'Get WPForms Form Fields', 'mosmcp-abilities' ),
-				'description'         => __( 'Returns the field structure of a WPForms form, given its form ID. Read-only.', 'mosmcp-abilities' ),
+				'description'         => __( 'Returns the field structure of a WPForms form, given its form ID. Read-only. Also known as: form fields, form questions, what the form asks.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The WPForms form ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -1183,7 +1183,7 @@ class Forms_Abilities {
 			'mosmcp/wpforms-get-form-settings',
 			array(
 				'label'               => __( 'Get WPForms Form Settings', 'mosmcp-abilities' ),
-				'description'         => __( 'Returns the general settings configured for a WPForms form, given its form ID. Read-only.', 'mosmcp-abilities' ),
+				'description'         => __( 'Returns the general settings configured for a WPForms form, given its form ID. Read-only. Also known as: form settings, confirmation message, thank you message.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The WPForms form ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -1214,7 +1214,7 @@ class Forms_Abilities {
 			'mosmcp/wpforms-get-form-notifications',
 			array(
 				'label'               => __( 'Get WPForms Form Notifications', 'mosmcp-abilities' ),
-				'description'         => __( 'Returns the configured email notifications for a WPForms form, given its form ID. Read-only.', 'mosmcp-abilities' ),
+				'description'         => __( 'Returns the configured email notifications for a WPForms form, given its form ID. Read-only. Also known as: form emails, notification email, who gets the form email.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The WPForms form ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -1257,7 +1257,7 @@ class Forms_Abilities {
 			'mosmcp/wpforms-list-entries',
 			array(
 				'label'               => __( 'List WPForms Entries', 'mosmcp-abilities' ),
-				'description'         => __( 'Lists submitted entries for a WPForms form, given its form ID, paginated. Read-only.', 'mosmcp-abilities' ),
+				'description'         => __( 'Lists submitted entries for a WPForms form, given its form ID, paginated. Read-only. Also known as: form submissions, leads, enquiries, messages from the website.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema(
 					__( 'The WPForms form ID (required).', 'mosmcp-abilities' ),
@@ -1304,7 +1304,7 @@ class Forms_Abilities {
 			'mosmcp/wpforms-get-entry-by-id',
 			array(
 				'label'               => __( 'Get WPForms Entry by ID', 'mosmcp-abilities' ),
-				'description'         => __( 'Retrieves a single WPForms entry by ID. Read-only.', 'mosmcp-abilities' ),
+				'description'         => __( 'Retrieves a single WPForms entry by ID. Read-only. Also known as: a submission, a lead, a form response.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The WPForms entry ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => $wpforms_entry_schema,
@@ -1327,7 +1327,7 @@ class Forms_Abilities {
 			'mosmcp/wpforms-count-entries',
 			array(
 				'label'               => __( 'Count WPForms Entries', 'mosmcp-abilities' ),
-				'description'         => __( 'Returns the total entry count for a WPForms form, given its form ID. Read-only.', 'mosmcp-abilities' ),
+				'description'         => __( 'Returns the total entry count for a WPForms form, given its form ID. Read-only. Also known as: how many submissions, number of leads, how many enquiries.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The WPForms form ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -1358,7 +1358,7 @@ class Forms_Abilities {
 			'mosmcp/wpforms-export-entries-csv',
 			array(
 				'label'               => __( 'Export WPForms Entries as CSV', 'mosmcp-abilities' ),
-				'description'         => __( "Exports a WPForms form's entries to CSV text, given its form ID. Returns the CSV content inline.", 'mosmcp-abilities' ),
+				'description'         => __( "Exports a WPForms form's entries to CSV text, given its form ID. Returns the CSV content inline. Also known as: export leads, download submissions, spreadsheet of entries.", 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The WPForms form ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -1389,7 +1389,7 @@ class Forms_Abilities {
 			'mosmcp/wpforms-mark-entry-read',
 			array(
 				'label'               => __( 'Mark WPForms Entry as Read', 'mosmcp-abilities' ),
-				'description'         => __( 'Marks a WPForms entry as read (viewed), given its entry ID.', 'mosmcp-abilities' ),
+				'description'         => __( 'Marks a WPForms entry as read (viewed), given its entry ID. Also known as: mark as seen, mark a lead as handled.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The WPForms entry ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -1420,7 +1420,7 @@ class Forms_Abilities {
 			'mosmcp/wpforms-mark-entry-unread',
 			array(
 				'label'               => __( 'Mark WPForms Entry as Unread', 'mosmcp-abilities' ),
-				'description'         => __( 'Marks a WPForms entry as unread, given its entry ID.', 'mosmcp-abilities' ),
+				'description'         => __( 'Marks a WPForms entry as unread, given its entry ID. Also known as: mark as new, mark a lead as not handled.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The WPForms entry ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -1451,7 +1451,7 @@ class Forms_Abilities {
 			'mosmcp/wpforms-trash-entry',
 			array(
 				'label'               => __( 'Trash WPForms Entry', 'mosmcp-abilities' ),
-				'description'         => __( 'Moves a WPForms entry to trash (recoverable), given its entry ID. To undo, use wpforms-restore-entry.', 'mosmcp-abilities' ),
+				'description'         => __( 'Moves a WPForms entry to trash (recoverable), given its entry ID. To undo, use wpforms-restore-entry. Also known as: remove a submission, delete a lead.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The WPForms entry ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -1482,7 +1482,7 @@ class Forms_Abilities {
 			'mosmcp/wpforms-restore-entry',
 			array(
 				'label'               => __( 'Restore WPForms Entry', 'mosmcp-abilities' ),
-				'description'         => __( 'Restores a WPForms entry from trash, given its entry ID.', 'mosmcp-abilities' ),
+				'description'         => __( 'Restores a WPForms entry from trash, given its entry ID. Also known as: undelete a submission, recover a lead.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The WPForms entry ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -1513,7 +1513,7 @@ class Forms_Abilities {
 			'mosmcp/wpforms-delete-entry-permanently',
 			array(
 				'label'               => __( 'Permanently Delete WPForms Entry', 'mosmcp-abilities' ),
-				'description'         => __( 'Irreversibly deletes a WPForms entry, given its entry ID, bypassing trash. Destructive — used for removing sensitive lead data entirely.', 'mosmcp-abilities' ),
+				'description'         => __( 'Irreversibly deletes a WPForms entry, given its entry ID, bypassing trash. Destructive — used for removing sensitive lead data entirely. Also known as: erase a submission, delete a lead for good.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The WPForms entry ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -1887,7 +1887,7 @@ class Forms_Abilities {
 			'mosmcp/gf-list-forms',
 			array(
 				'label'               => __( 'List Gravity Forms', 'mosmcp-abilities' ),
-				'description'         => __( 'Lists all Gravity Forms on the site, including inactive ones (ID, title, is_active). Read-only. To list only active forms, use gf-list-active-forms.', 'mosmcp-abilities' ),
+				'description'         => __( 'Lists all Gravity Forms on the site, including inactive ones (ID, title, is_active). Read-only. To list only active forms, use gf-list-active-forms. Also known as: contact forms, my forms, lead forms, enquiry forms.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1922,7 +1922,7 @@ class Forms_Abilities {
 			'mosmcp/gf-list-active-forms',
 			array(
 				'label'               => __( 'List Active Gravity Forms', 'mosmcp-abilities' ),
-				'description'         => __( 'Lists only active Gravity Forms (ID, title). Read-only. To include inactive forms too, use gf-list-forms.', 'mosmcp-abilities' ),
+				'description'         => __( 'Lists only active Gravity Forms (ID, title). Read-only. To include inactive forms too, use gf-list-forms. Also known as: active forms, live forms.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => array(
 					'type'                 => 'object',
@@ -1957,7 +1957,7 @@ class Forms_Abilities {
 			'mosmcp/gf-get-form-by-id',
 			array(
 				'label'               => __( 'Get Gravity Form by ID', 'mosmcp-abilities' ),
-				'description'         => __( "Retrieves a single Gravity Form's full configuration by form ID.", 'mosmcp-abilities' ),
+				'description'         => __( "Retrieves a single Gravity Form's full configuration by form ID. Also known as: form details, form setup, form configuration.", 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Gravity Forms form ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -1991,7 +1991,7 @@ class Forms_Abilities {
 			'mosmcp/gf-get-form-fields',
 			array(
 				'label'               => __( 'Get Gravity Form Fields', 'mosmcp-abilities' ),
-				'description'         => __( 'Returns the field structure (ID, label, type, required) of a Gravity Form, given its form ID. Read-only.', 'mosmcp-abilities' ),
+				'description'         => __( 'Returns the field structure (ID, label, type, required) of a Gravity Form, given its form ID. Read-only. Also known as: form fields, form questions, what the form asks.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Gravity Forms form ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -2022,7 +2022,7 @@ class Forms_Abilities {
 			'mosmcp/gf-get-form-settings',
 			array(
 				'label'               => __( 'Get Gravity Form Settings', 'mosmcp-abilities' ),
-				'description'         => __( 'Returns general settings configured for a Gravity Form (notifications, confirmations, entry limits), given its form ID. Read-only.', 'mosmcp-abilities' ),
+				'description'         => __( 'Returns general settings configured for a Gravity Form (notifications, confirmations, entry limits), given its form ID. Read-only. Also known as: form settings, confirmation message, thank you message.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Gravity Forms form ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -2065,7 +2065,7 @@ class Forms_Abilities {
 			'mosmcp/gf-list-entries',
 			array(
 				'label'               => __( 'List Gravity Forms Entries', 'mosmcp-abilities' ),
-				'description'         => __( 'Lists submitted entries for a Gravity Form, given its form ID, paginated. Read-only.', 'mosmcp-abilities' ),
+				'description'         => __( 'Lists submitted entries for a Gravity Form, given its form ID, paginated. Read-only. Also known as: form submissions, leads, enquiries, messages from the website.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema(
 					__( 'The Gravity Forms form ID (required).', 'mosmcp-abilities' ),
@@ -2112,7 +2112,7 @@ class Forms_Abilities {
 			'mosmcp/gf-get-entry-by-id',
 			array(
 				'label'               => __( 'Get Gravity Forms Entry by ID', 'mosmcp-abilities' ),
-				'description'         => __( 'Retrieves a single Gravity Forms entry by ID. Read-only.', 'mosmcp-abilities' ),
+				'description'         => __( 'Retrieves a single Gravity Forms entry by ID. Read-only. Also known as: a submission, a lead, a form response.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Gravity Forms entry ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => $gf_entry_schema,
@@ -2135,7 +2135,7 @@ class Forms_Abilities {
 			'mosmcp/gf-count-entries',
 			array(
 				'label'               => __( 'Count Gravity Forms Entries', 'mosmcp-abilities' ),
-				'description'         => __( 'Returns the total entry count for a Gravity Form, given its form ID. Read-only.', 'mosmcp-abilities' ),
+				'description'         => __( 'Returns the total entry count for a Gravity Form, given its form ID. Read-only. Also known as: how many submissions, number of leads, how many enquiries.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Gravity Forms form ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -2166,7 +2166,7 @@ class Forms_Abilities {
 			'mosmcp/gf-export-entries-csv',
 			array(
 				'label'               => __( 'Export Gravity Forms Entries as CSV', 'mosmcp-abilities' ),
-				'description'         => __( "Exports a Gravity Form's entries to CSV text, given its form ID. Returns the CSV content inline.", 'mosmcp-abilities' ),
+				'description'         => __( "Exports a Gravity Form's entries to CSV text, given its form ID. Returns the CSV content inline. Also known as: export leads, download submissions, spreadsheet of entries.", 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Gravity Forms form ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -2197,7 +2197,7 @@ class Forms_Abilities {
 			'mosmcp/gf-mark-entry-read',
 			array(
 				'label'               => __( 'Mark Gravity Forms Entry as Read', 'mosmcp-abilities' ),
-				'description'         => __( 'Marks a Gravity Forms entry as read, given its entry ID.', 'mosmcp-abilities' ),
+				'description'         => __( 'Marks a Gravity Forms entry as read, given its entry ID. Also known as: mark as seen, mark a lead as handled.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Gravity Forms entry ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -2228,7 +2228,7 @@ class Forms_Abilities {
 			'mosmcp/gf-mark-entry-unread',
 			array(
 				'label'               => __( 'Mark Gravity Forms Entry as Unread', 'mosmcp-abilities' ),
-				'description'         => __( 'Marks a Gravity Forms entry as unread, given its entry ID.', 'mosmcp-abilities' ),
+				'description'         => __( 'Marks a Gravity Forms entry as unread, given its entry ID. Also known as: mark as new, mark a lead as not handled.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Gravity Forms entry ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -2259,7 +2259,7 @@ class Forms_Abilities {
 			'mosmcp/gf-trash-entry',
 			array(
 				'label'               => __( 'Trash Gravity Forms Entry', 'mosmcp-abilities' ),
-				'description'         => __( 'Moves a Gravity Forms entry to trash (recoverable), given its entry ID. To undo, use gf-restore-entry-from-trash.', 'mosmcp-abilities' ),
+				'description'         => __( 'Moves a Gravity Forms entry to trash (recoverable), given its entry ID. To undo, use gf-restore-entry-from-trash. Also known as: remove a submission, delete a lead.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Gravity Forms entry ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -2290,7 +2290,7 @@ class Forms_Abilities {
 			'mosmcp/gf-restore-entry-from-trash',
 			array(
 				'label'               => __( 'Restore Gravity Forms Entry from Trash', 'mosmcp-abilities' ),
-				'description'         => __( 'Restores a Gravity Forms entry from trash, given its entry ID.', 'mosmcp-abilities' ),
+				'description'         => __( 'Restores a Gravity Forms entry from trash, given its entry ID. Also known as: undelete a submission, recover a lead.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Gravity Forms entry ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(
@@ -2321,7 +2321,7 @@ class Forms_Abilities {
 			'mosmcp/gf-permanently-delete-entry',
 			array(
 				'label'               => __( 'Permanently Delete Gravity Forms Entry', 'mosmcp-abilities' ),
-				'description'         => __( 'Irreversibly deletes a Gravity Forms entry, given its entry ID, bypassing trash. Destructive — used for removing sensitive lead data entirely.', 'mosmcp-abilities' ),
+				'description'         => __( 'Irreversibly deletes a Gravity Forms entry, given its entry ID, bypassing trash. Destructive — used for removing sensitive lead data entirely. Also known as: erase a submission, delete a lead for good.', 'mosmcp-abilities' ),
 				'category'            => self::CATEGORY_FORMS,
 				'input_schema'        => self::id_input_schema( __( 'The Gravity Forms entry ID (required).', 'mosmcp-abilities' ) ),
 				'output_schema'       => array(

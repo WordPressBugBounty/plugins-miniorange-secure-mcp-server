@@ -4,7 +4,7 @@ Tags: mcp, ai, mcp-server, chatgpt, claude
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.4.13
+Stable tag: 1.4.14
 License: Expat
 License URI: https://plugins.miniorange.com/mit-license
 
@@ -161,6 +161,17 @@ Every edit rewrites only the block you target and leaves the rest of the page by
 * **Theme Management (3 tools):** List installed themes, get the active theme, and get theme details by slug.
 * **Updates & Site Health (6 tools):** Check core, plugin, and theme updates, and get WordPress version, PHP/MySQL info, and Site Health status.
 
+== WordPress Theme Editing with Preview: 32 MCP Tools ==
+
+Change how the whole site looks without risking the live site. Every theme change goes into one draft first. You get a preview link that shows the site with the draft applied, only to you, while visitors keep seeing the live site. Nothing changes for anyone else until you say publish.
+
+* **Templates & Template Parts (8 tools):** Read and change the templates for posts, pages, archives and 404s, and parts such as the header and footer, or return any of them to the theme's original. Edits go through the Site Editor's own code, so they take effect even on a site already customised in the Site Editor.
+* **Global Styles & Style Variations (6 tools):** Read and change site colours, fonts, spacing and element styles, apply one of the theme's ready-made looks, or go back to the theme's own styles.
+* **Patterns (3 tools):** List the theme's patterns, read any of them, and create or update saved patterns. A synced pattern updates everywhere it is used, so changes to it wait in the draft too.
+* **Find & Replace in Templates (2 tools):** Change one line, such as the footer copyright, without rewriting the rest, even when that line lives in a theme pattern the footer only references or runs through a link.
+* **Theme Files (7 tools):** Read, search and outline theme code, and change it in a private draft copy of the theme. PHP is checked for syntax errors, theme.json for valid JSON and templates for balanced blocks before any change is accepted, and the files a theme cannot work without are protected.
+* **Draft, Preview & Publish (6 tools):** See what is pending, get a preview link, test that the site still loads with the draft, publish, discard, or restore an earlier publish. Publishing refuses to overwrite anything changed on the live site since, and proves the site loads with the draft before touching anything by opening wp-admin, the home page and the newest post and page. It then backs up the live versions, publishes, checks those pages again (signed in and as a visitor), and rolls every change back automatically if one fails or comes back blank.
+
 == Security & Governance: Why This Is the Safest WordPress MCP Server ==
 
 Letting AI touch your WordPress site is a big trust decision, so our secure MCP server plugin is built with 5 protection layers:
@@ -200,6 +211,7 @@ Once you connect Claude or ChatGPT to WordPress with this MCP plugin, just chat:
 * "Approve every pending comment that isn't spam."
 * "Export all Contact Form 7 submissions from the last 30 days as CSV."
 * "Check for plugin updates and show me what's available."
+* "Change the footer copyright to 2026 and make the site background dark navy, then send me a preview link before anything goes live."
 
 == Who Should Use This WordPress MCP Server? ==
 
@@ -225,6 +237,7 @@ Once you connect Claude or ChatGPT to WordPress with this MCP plugin, just chat:
 * **Yoast SEO MCP (15 tools)** — miniOrange: Yes | Others: Limited
 * **Elementor MCP (10 tools)** — miniOrange: Yes, edits the real layout | Others: None
 * **Kadence Blocks MCP (17 tools)** — miniOrange: Yes | Others: None
+* **Theme editing with preview (32 tools)** — miniOrange: Templates, styles and theme files, previewed before publishing, with automatic rollback | Others: File edits only, or none
 * **Custom post types & custom fields (19 tools)** — miniOrange: Any registered type | Others: Rare
 * **Contact Form 7, WPForms, Gravity Forms** — miniOrange: All 3 (40 tools) | Others: Rare
 * **Node.js or external service needed** — miniOrange: Never | Others: Sometimes
@@ -323,6 +336,13 @@ The Abilities API does not record which plugin registered a given ability. The n
 7. A member's "Your AI Access" view — the tools available to their role, with a one-click path to connect an AI client.
 
 == Changelog ==
+
+= 1.4.14 =
+* Added theme editing for block themes: templates, template parts, global styles, style variations and patterns.
+* Added theme file editing: read, search and change theme code in a private draft.
+* Every theme change now waits in a draft you can preview before it goes live. Before publishing, the site is checked with the draft applied, publishing backs up first, and every change is rolled back automatically if the site breaks.
+* Improved: AI assistants are now told which inputs each tool requires and why a change was refused, including the closest matching text when wording is not found.
+* Minor bug fixes.
 
 = 1.4.13 =
 * Added surgical content editing: change part of the text in a post, a custom field or a setting without rewriting the whole thing.
@@ -443,6 +463,9 @@ The Abilities API does not record which plugin registered a given ability. The n
 * Initial release: read-only viewer for abilities registered through the WordPress Abilities API.
 
 == Upgrade Notice ==
+
+= 1.4.14 =
+Adds theme editing: templates, template parts, global styles, style variations, patterns and theme files, all changed in a draft you can preview, checked for errors, and published with an automatic backup and rollback. Also gives AI assistants clearer guidance on every tool. Minor bug fixes.
 
 = 1.4.13 =
 Adds surgical content editing, so your AI can change part of a page without rewriting it, plus 8 maintenance abilities for scheduled events, permalinks, caches and the error log, and 14 Fluent Forms abilities. Minor bug fixes.
