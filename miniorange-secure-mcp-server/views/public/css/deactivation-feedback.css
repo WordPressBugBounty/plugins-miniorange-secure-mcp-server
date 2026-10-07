@@ -271,6 +271,21 @@
 	transition: background 120ms var(--df-ease);
 }
 .mosmcp-df-keep:hover { background: var(--df-brand-hover); }
+.mosmcp-df-test {
+	display: inline-flex;
+	align-items: center;
+	height: 28px;
+	padding: 0 12px;
+	background: transparent;
+	color: var(--df-brand);
+	border: 1px solid var(--df-brand);
+	border-radius: var(--df-radius);
+	font-family: var(--df-font);
+	font-size: 12px;
+	font-weight: 510;
+	cursor: pointer;
+}
+.mosmcp-df-test:hover { background: var(--df-brand); color: #fff; }
 
 /* ── Support deflection ──────────────────────────────────────────────────── */
 .mosmcp-df-support {

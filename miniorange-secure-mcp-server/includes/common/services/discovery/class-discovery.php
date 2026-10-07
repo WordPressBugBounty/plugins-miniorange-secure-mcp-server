@@ -11,6 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use MoSMCP\Common\Services\Logging\Debug_Logger;
 use MoSMCP\Common\Utils\Utils;
 
 /**
@@ -130,11 +131,37 @@ class Discovery {
 			}
 		}
 
+		// Which document a client fetched, and what it was told, is the start of the
+		// connection trail: a client that never reached discovery never got as far as
+		// asking for a token, and one told the wrong resource here will be minted a
+		// token the MCP endpoint later refuses on audience grounds.
 		if ( 'prs' === $which ) {
-			self::send_json( self::protected_resource_metadata() );
+			$document = self::protected_resource_metadata();
+
+			Debug_Logger::debug(
+				Debug_Logger::CHANNEL_OAUTH,
+				'Served the protected-resource discovery document.',
+				array(
+					'wellknown'           => 'oauth-protected-resource',
+					'resource_advertised' => $document['resource'],
+				)
+			);
+
+			self::send_json( $document );
 		}
 		if ( 'as' === $which ) {
-			self::send_json( self::authorization_server_metadata() );
+			$document = self::authorization_server_metadata();
+
+			Debug_Logger::debug(
+				Debug_Logger::CHANNEL_OAUTH,
+				'Served the authorization-server discovery document.',
+				array(
+					'wellknown'         => 'oauth-authorization-server',
+					'issuer_advertised' => $document['issuer'],
+				)
+			);
+
+			self::send_json( $document );
 		}
 	}
 

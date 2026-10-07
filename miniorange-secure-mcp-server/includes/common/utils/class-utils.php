@@ -169,17 +169,19 @@ class Utils {
 	}
 
 	/**
-	 * Extracts the bearer token from a request, working around servers that strip the
-	 * Authorization header from the CGI environment.
+	 * Returns the raw Authorization header, working around servers that strip it
+	 * from the CGI environment.
 	 *
-	 * Shared by {@see \MoSMCP\Common\Controllers\MCP\REST_Controller::authenticate()} (the real
-	 * auth path) and the connectivity-diagnostic header-echo check, so both see identical
-	 * extraction behavior.
+	 * Split out of {@see extract_bearer_token()} so a caller can tell "no
+	 * Authorization header arrived at all" — the signature of a proxy, WAF or CDN
+	 * removing it in transit — apart from "a header arrived but carried no usable
+	 * bearer token". Both end in the same 401 and the same "my AI client has no
+	 * abilities" symptom, so only the log can separate them.
 	 *
 	 * @param WP_REST_Request $request The request.
-	 * @return string The token, or an empty string when absent.
+	 * @return string The raw header value, or an empty string when absent.
 	 */
-	public static function extract_bearer_token( WP_REST_Request $request ) {
+	public static function authorization_header( WP_REST_Request $request ) {
 		$header = (string) $request->get_header( 'authorization' );
 
 		if ( '' === $header && ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
@@ -208,6 +210,36 @@ class Utils {
 					break;
 				}
 			}
+		}
+
+		return $header;
+	}
+
+	/**
+	 * Extracts the bearer token from a request, working around servers that strip the
+	 * Authorization header from the CGI environment.
+	 *
+	 * Shared by {@see \MoSMCP\Common\Controllers\MCP\REST_Controller::authenticate()} (the real
+	 * auth path) and the connectivity-diagnostic header-echo check, so both see identical
+	 * extraction behavior.
+	 *
+	 * Falls back to X-MO-Authorization, which the gateway sends alongside Authorization. That
+	 * fallback lives here rather than in {@see authorization_header()} so the latter still
+	 * reports whether Authorization itself arrived.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return string The token, or an empty string when absent.
+	 */
+	public static function extract_bearer_token( WP_REST_Request $request ) {
+		$header = self::authorization_header( $request );
+
+		// Last resort: the gateway repeats the token here for hosts that strip Authorization but pass custom headers.
+		if ( '' === $header ) {
+			$header = (string) $request->get_header( 'x_mo_authorization' );
+		}
+
+		if ( '' === $header && ! empty( $_SERVER['HTTP_X_MO_AUTHORIZATION'] ) ) {
+			$header = sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_MO_AUTHORIZATION'] ) );
 		}
 
 		if ( preg_match( '/^Bearer\s+(.+)$/i', trim( $header ), $matches ) ) {

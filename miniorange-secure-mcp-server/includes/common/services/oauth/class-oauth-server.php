@@ -135,6 +135,16 @@ class OAuth_Server {
 			return self::registration_error( 'invalid_client_metadata', __( 'The client could not be registered.', 'miniorange-secure-mcp-server' ) );
 		}
 
+		Debug_Logger::info(
+			Debug_Logger::CHANNEL_OAUTH,
+			sprintf( 'Registered OAuth client "%s".', '' !== $client_name ? $client_name : $client_id ),
+			array(
+				'client_id'     => $client_id,
+				'client_name'   => $client_name,
+				'redirect_uris' => implode( ',', $redirect_uris ),
+			)
+		);
+
 		$response = array(
 			'client_id'                  => $client_id,
 			'client_id_issued_at'        => time(),
@@ -202,6 +212,15 @@ class OAuth_Server {
 
 			$decision = isset( $_POST['mosmcp_decision'] ) ? sanitize_text_field( wp_unslash( $_POST['mosmcp_decision'] ) ) : '';
 
+			Debug_Logger::info(
+				Debug_Logger::CHANNEL_OAUTH,
+				sprintf( 'Consent %s.', 'approve' === $decision ? 'approved' : 'denied' ),
+				array(
+					'decision'  => 'approve' === $decision ? 'approve' : 'deny',
+					'client_id' => $params['client_id'],
+				)
+			);
+
 			if ( 'approve' !== $decision ) {
 				self::redirect_error( $params['redirect_uri'], 'access_denied', $params['state'] );
 			}
@@ -212,6 +231,25 @@ class OAuth_Server {
 			$roles   = ( isset( $user->roles ) && is_array( $user->roles ) ) ? array_values( $user->roles ) : array();
 			$allowed = NHI_Store::resolve_for_roles( $roles );
 			if ( null !== $allowed && empty( (array) $allowed ) ) {
+				// Reported to the client as a plain access_denied, which is
+				// indistinguishable from the user pressing Deny. Without this row the
+				// refusal leaves no trace at all, and the admin who has to fix the role
+				// policy has nothing pointing them at it.
+				//
+				// Worded "Authorization refused:" rather than "Refused authorization:"
+				// deliberately. Debug_Logger::redact_message() masks any `<pattern>: value`
+				// fragment, and "authorization" is one of those patterns — the latter
+				// phrasing stores as "Refused authorization=***redacted***".
+				Debug_Logger::warning(
+					Debug_Logger::CHANNEL_OAUTH,
+					'Authorization refused: the user\'s role(s) resolve to no abilities.',
+					array(
+						'client_id'  => $params['client_id'],
+						'user_login' => (string) $user->user_login,
+						'roles'      => ! empty( $roles ) ? implode( ',', $roles ) : '(none)',
+					)
+				);
+
 				self::redirect_error( $params['redirect_uri'], 'access_denied', $params['state'] );
 			}
 
@@ -338,8 +376,11 @@ class OAuth_Server {
 			return self::token_error( 'invalid_grant', __( 'Invalid authorization code.', 'miniorange-secure-mcp-server' ) );
 		}
 
-		// Codes are single-use regardless of outcome.
-		Store::delete_code( $row['code_hash'] );
+		// Codes are single-use regardless of outcome. Claiming is atomic, so if two exchanges
+		// race, only the one that removed the row continues.
+		if ( ! Store::claim_code( $row['code_hash'] ) ) {
+			return self::token_error( 'invalid_grant', __( 'Invalid authorization code.', 'miniorange-secure-mcp-server' ) );
+		}
 
 		if ( (int) $row['expires'] < time() ) {
 			return self::token_error( 'invalid_grant', __( 'The authorization code has expired.', 'miniorange-secure-mcp-server' ) );
@@ -362,7 +403,7 @@ class OAuth_Server {
 			return self::token_error( 'invalid_client', $client_check->get_error_message(), 401 );
 		}
 
-		return self::issue_token_response( $client_id, (int) $row['user_id'], $row['scope'], $row['resource'] );
+		return self::issue_token_response( $client_id, (int) $row['user_id'], $row['scope'], $row['resource'], 'authorization_code' );
 	}
 
 	/**
@@ -400,23 +441,28 @@ class OAuth_Server {
 			return self::token_error( 'invalid_client', $client_check->get_error_message(), 401 );
 		}
 
-		// Rotate: revoke the presented refresh token and any access tokens minted from it.
+		// Rotate: spend the presented refresh token, then revoke any access tokens minted from
+		// it. Claiming is atomic, so if two refreshes race, only the one that removed the row
+		// gets a new pair; the other is told the token is no longer valid.
+		if ( ! Store::claim_token( $hash ) ) {
+			return self::token_error( 'invalid_grant', __( 'Invalid refresh token.', 'miniorange-secure-mcp-server' ) );
+		}
 		Store::delete_tokens_by_parent( $hash );
-		Store::delete_token( $hash );
 
-		return self::issue_token_response( $client_id, (int) $row['user_id'], $row['scope'], $row['resource'] );
+		return self::issue_token_response( $client_id, (int) $row['user_id'], $row['scope'], $row['resource'], 'refresh_token' );
 	}
 
 	/**
 	 * Mints an access/refresh token pair and builds the token response.
 	 *
-	 * @param string $client_id The client identifier.
-	 * @param int    $user_id   The WordPress user the tokens act on behalf of.
-	 * @param string $scope     The granted scope.
-	 * @param string $audience  The bound resource (audience).
+	 * @param string $client_id  The client identifier.
+	 * @param int    $user_id    The WordPress user the tokens act on behalf of.
+	 * @param string $scope      The granted scope.
+	 * @param string $audience   The bound resource (audience).
+	 * @param string $grant_type The grant that produced this pair.
 	 * @return WP_REST_Response The token response.
 	 */
-	private static function issue_token_response( $client_id, $user_id, $scope, $audience ) {
+	private static function issue_token_response( $client_id, $user_id, $scope, $audience, $grant_type = '' ) {
 		$refresh      = Tokens::generate();
 		$refresh_hash = Tokens::hash( $refresh );
 
@@ -445,6 +491,20 @@ class OAuth_Server {
 				'resource'    => $audience,
 				'expires'     => time() + Tokens::ACCESS_TTL,
 				'parent_hash' => $refresh_hash,
+			)
+		);
+
+		Debug_Logger::info(
+			Debug_Logger::CHANNEL_OAUTH,
+			'Issued an access token.',
+			array(
+				'grant_type' => $grant_type,
+				// The audience recorded at mint time. The MCP endpoint logs the same key
+				// at use time, so an audience mismatch reads straight off the two rows
+				// instead of having to be inferred from a rejection on its own.
+				'issued_for' => (string) $audience,
+				'expires_in' => Tokens::ACCESS_TTL,
+				'client_id'  => $client_id,
 			)
 		);
 

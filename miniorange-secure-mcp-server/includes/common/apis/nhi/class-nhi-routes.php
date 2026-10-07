@@ -95,6 +95,17 @@ class NHI_Routes {
 			)
 		);
 
+		// Grantable REST routes, for the admin route-grant picker.
+		register_rest_route(
+			MOSMCP_REST_NAMESPACE,
+			'/rest-routes',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( NHI_Controller::class, 'list_rest_routes' ),
+				'permission_callback' => array( NHI_Controller::class, 'check_permission' ),
+			)
+		);
+
 		// Map of ability => owning NHI, for the exclusivity picker in the admin UI.
 		register_rest_route(
 			MOSMCP_REST_NAMESPACE,

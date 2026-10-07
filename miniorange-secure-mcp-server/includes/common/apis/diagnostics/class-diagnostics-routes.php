@@ -19,6 +19,7 @@ use MoSMCP\Common\Controllers\Diagnostics\Diagnostics_Controller;
  * Registers the "Test Connection" endpoints for the React admin UI:
  * - POST /mosmcp/v1/connectivity-test — runs the check set now.
  * - GET  /mosmcp/v1/connectivity-test — returns the cached result of the last run, if any.
+ * - GET  /mosmcp/v1/connectivity-guide — returns the troubleshooting guide entries.
  */
 class Diagnostics_Routes {
 
@@ -42,6 +43,16 @@ class Diagnostics_Routes {
 					'callback'            => array( Diagnostics_Controller::class, 'last_run' ),
 					'permission_callback' => array( Diagnostics_Controller::class, 'check_permission' ),
 				),
+			)
+		);
+
+		register_rest_route(
+			MOSMCP_REST_NAMESPACE,
+			'/connectivity-guide',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( Diagnostics_Controller::class, 'guide' ),
+				'permission_callback' => array( Diagnostics_Controller::class, 'check_permission' ),
 			)
 		);
 	}

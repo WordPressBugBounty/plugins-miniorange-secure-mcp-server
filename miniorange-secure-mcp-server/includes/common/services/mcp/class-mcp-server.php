@@ -13,6 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use MoSMCP\Common\Repositories\NHI_Store;
 use MoSMCP\Common\Repositories\Store;
+use MoSMCP\Common\Services\Diagnostics\Connectivity_Checker;
 use MoSMCP\Common\Services\Logging\Audit_Logger;
 use MoSMCP\Common\Services\Logging\Debug_Logger;
 use MoSMCP\Common\Views\Admin\Admin_App;
@@ -66,6 +67,38 @@ class MCP_Server {
 	private static $is_direct = false;
 
 	/**
+	 * Role slugs of the authenticated user, kept for diagnostics only.
+	 *
+	 * Ability filtering itself works off the resolved allow-list, not the roles;
+	 * these are recorded so a log reader can see *which* role produced an empty
+	 * tool list without having to look the user up.
+	 *
+	 * @var string[]
+	 */
+	private static $roles = array();
+
+	/**
+	 * Per-request record of how the exposed tool list was narrowed, in order.
+	 *
+	 * Populated by {@see exposed_abilities()}, read by {@see list_tools()}: the
+	 * chain is measured where the narrowing happens but reported once, on the
+	 * call a client's empty tool list actually comes from.
+	 *
+	 * @var array<string, int>|null
+	 */
+	private static $exposure_stats = null;
+
+	/**
+	 * Whether the exposure-narrowed warning has already been emitted this request.
+	 *
+	 * exposed_abilities() also runs on every tools/call, and the condition cannot
+	 * change within a request, so repeating the warning would be pure noise.
+	 *
+	 * @var bool
+	 */
+	private static $exposure_warned = false;
+
+	/**
 	 * Transient key prefix marking a client as already warned about the deprecation.
 	 */
 	const DEPRECATION_NOTICE_PREFIX = 'mosmcp_direct_notice_';
@@ -79,6 +112,66 @@ class MCP_Server {
 	 * client gives the same reach without the noise.
 	 */
 	const DEPRECATION_NOTICE_TTL = DAY_IN_SECONDS;
+
+	/**
+	 * Whether this request carries a connection-test token (read-only methods only).
+	 *
+	 * @var bool
+	 */
+	private static $diagnostic = false;
+
+	/**
+	 * Marks the current request as authenticated by a connection-test token.
+	 *
+	 * @param bool $diagnostic Whether the token is a connection-test token.
+	 * @return void
+	 */
+	public static function set_diagnostic( $diagnostic ) {
+		self::$diagnostic = (bool) $diagnostic;
+	}
+
+	/**
+	 * Whether the current request is authenticated by a connection-test token.
+	 *
+	 * @return bool
+	 */
+	public static function is_diagnostic() {
+		return self::$diagnostic;
+	}
+
+	/**
+	 * Counts the tools a connection signed in as the given user would list.
+	 *
+	 * @param int $user_id The WordPress user id.
+	 * @return int
+	 */
+	public static function count_exposed_for_user( $user_id ) {
+		$user  = get_userdata( (int) $user_id );
+		$roles = ( $user && is_array( $user->roles ) ) ? $user->roles : array();
+		$saved = self::$allowed_abilities;
+
+		self::set_allowed_abilities( NHI_Store::resolve_for_roles( $roles ) );
+
+		try {
+			return count( self::exposed_abilities() );
+		} finally {
+			self::$allowed_abilities = $saved;
+		}
+	}
+
+	/**
+	 * Most granted-but-unregistered ability names listed in one log row. A role
+	 * policy pointing at a whole deactivated pack can produce hundreds; the count
+	 * is what matters, and a sample is enough to identify which pack.
+	 */
+	const MISSING_GRANT_LOG_CAP = 100;
+
+	/**
+	 * How many registered ability names to quote when nothing was exposed. Enough
+	 * to recognise which packs are present, short enough to leave the counts
+	 * beside it readable.
+	 */
+	const REGISTRY_SAMPLE_SIZE = 20;
 
 	/**
 	 * Restricts tool exposure to the given ability list for this request.
@@ -95,7 +188,7 @@ class MCP_Server {
 	 * Stores the authenticated request context so the audit logger can use it.
 	 *
 	 * Accepted keys: user_id (int), client_id (string), client_name (string),
-	 * source (string: 'gateway'|'direct'), ip (string).
+	 * source (string: 'gateway'|'direct'), ip (string), roles (string[]).
 	 *
 	 * @param array<string, mixed> $ctx Context values from the bearer-token auth step.
 	 * @return void
@@ -104,6 +197,8 @@ class MCP_Server {
 		Audit_Logger::set_context( $ctx );
 
 		$client_id = isset( $ctx['client_id'] ) ? (string) $ctx['client_id'] : '';
+
+		self::$roles = ( isset( $ctx['roles'] ) && is_array( $ctx['roles'] ) ) ? array_values( $ctx['roles'] ) : array();
 
 		// Only direct connections carry the deprecation notice; the client id is used
 		// solely to build the per-client throttle key, so it is not kept beyond this.
@@ -191,6 +286,19 @@ class MCP_Server {
 		$is_notification = ! array_key_exists( 'id', $message );
 		$id              = $is_notification ? null : $message['id'];
 
+		if ( Debug_Logger::is_capturing() ) {
+			Debug_Logger::debug(
+				Debug_Logger::CHANNEL_MCP,
+				sprintf( 'Dispatching MCP method "%s".', $method ),
+				array(
+					'method'          => $method,
+					'rpc_id'          => $id,
+					'param_keys'      => array_keys( $params ),
+					'is_notification' => $is_notification,
+				)
+			);
+		}
+
 		// Notifications never receive a response, per JSON-RPC 2.0 — checked before
 		// any other early-return so a notification sent while zero NHIs are enabled
 		// is silently dropped rather than answered with an error object.
@@ -198,7 +306,26 @@ class MCP_Server {
 			return null;
 		}
 
-		if ( NHI_Store::count_enabled() === 0 ) {
+		$enabled_nhis = NHI_Store::count_enabled();
+
+		if ( 0 === $enabled_nhis ) {
+			// A real client got in but nothing is enabled: have the admin UI run the connection test.
+			self::flag_auto_run( 'no_agent' );
+
+			// The -32001 an AI client reports only as a failed connection. Logged as a
+			// warning because it is never a normal state for a site someone is actively
+			// trying to connect to.
+			Debug_Logger::warning(
+				Debug_Logger::CHANNEL_MCP,
+				'Refused MCP request: no NHI is enabled, so no tools can be exposed.',
+				array(
+					'count_enabled' => $enabled_nhis,
+					'method'        => $method,
+					'rpc_id'        => $id,
+					'rpc_error'     => -32001,
+				)
+			);
+
 			return self::error_response(
 				$id,
 				-32001,
@@ -208,7 +335,7 @@ class MCP_Server {
 
 		switch ( $method ) {
 			case 'initialize':
-				return self::success_response( $id, self::initialize_result() );
+				return self::success_response( $id, self::initialize_result( $params ) );
 
 			case 'ping':
 				return self::success_response( $id, new stdClass() );
@@ -220,14 +347,24 @@ class MCP_Server {
 				return self::call_tool( $id, $params );
 
 			default:
+				Debug_Logger::warning(
+					Debug_Logger::CHANNEL_MCP,
+					sprintf( 'Rejected unknown MCP method "%s".', $method ),
+					array(
+						'method' => $method,
+						'rpc_id' => $id,
+					)
+				);
+
 				return self::error_response( $id, -32601, __( 'Method not found.', 'miniorange-secure-mcp-server' ) );
 		}
 	}
 
 	/**
+	 * @param array<string, mixed> $params The `initialize` request params.
 	 * @return array<string, mixed>
 	 */
-	private static function initialize_result() {
+	private static function initialize_result( array $params = array() ) {
 		$result = array(
 			'protocolVersion' => self::PROTOCOL_VERSION,
 			'capabilities'    => array(
@@ -253,6 +390,23 @@ class MCP_Server {
 			);
 		}
 
+		if ( Debug_Logger::is_capturing() ) {
+			$requested = isset( $params['protocolVersion'] ) ? (string) $params['protocolVersion'] : '';
+
+			Debug_Logger::debug(
+				Debug_Logger::CHANNEL_MCP,
+				'MCP session initialized.',
+				array(
+					// The server answers with its own version whatever was asked for, so
+					// both are recorded: a client that wanted a version this server does
+					// not speak shows up here rather than as odd behaviour further down.
+					'client_protocol' => '' !== $requested ? $requested : '(unset)',
+					'server_protocol' => self::PROTOCOL_VERSION,
+					'is_direct'       => self::$is_direct,
+				)
+			);
+		}
+
 		return $result;
 	}
 
@@ -260,13 +414,142 @@ class MCP_Server {
 	 * @return array<string, mixed>
 	 */
 	private static function list_tools() {
-		$tools = array();
+		$tools     = array();
+		$abilities = self::exposed_abilities();
 
-		foreach ( self::exposed_abilities() as $ability ) {
+		foreach ( $abilities as $ability ) {
 			$tools[] = self::ability_to_tool( $ability );
 		}
 
+		if ( empty( $tools ) ) {
+			self::flag_auto_run( 'zero_abilities' );
+		}
+
+		self::log_exposure( $abilities );
+
 		return array( 'tools' => $tools );
+	}
+
+	/**
+	 * Asks the admin UI to run the connection test, unless this is the test's own request.
+	 *
+	 * @param string $reason Why the test is wanted.
+	 * @return void
+	 */
+	private static function flag_auto_run( $reason ) {
+		if ( ! self::$diagnostic ) {
+			Connectivity_Checker::flag_auto_run( $reason );
+		}
+	}
+
+	/**
+	 * Reports how a tools/list call arrived at the tool count it did.
+	 *
+	 * This is the record that separates the ways an AI client ends up reporting
+	 * "no abilities": a short or empty registry, a role policy that matched none
+	 * of it, an install-level trim, or a perfectly healthy list whose fault lies
+	 * downstream. All four are the same symptom to the user and, until now, the
+	 * same silence in the log.
+	 *
+	 * The response envelope is deliberately never recorded — on a large install
+	 * it runs past a hundred kilobytes, almost all of it input schemas that the
+	 * abilities admin screen already shows. Names alone answer the question.
+	 *
+	 * @param \WP_Ability[] $abilities The abilities actually exposed.
+	 * @return void
+	 */
+	private static function log_exposure( array $abilities ) {
+		if ( ! Debug_Logger::is_capturing() ) {
+			return;
+		}
+
+		$names = array_map(
+			static function ( $ability ) {
+				return (string) $ability->get_name();
+			},
+			array_values( $abilities )
+		);
+
+		$exposed_count = count( $names );
+		$registered    = self::registered_names();
+
+		$context = array_merge(
+			is_array( self::$exposure_stats ) ? self::$exposure_stats : array(),
+			array( 'roles' => ! empty( self::$roles ) ? implode( ',', self::$roles ) : '(none)' )
+		);
+
+		if ( 0 === $exposed_count ) {
+			// Name a few things that ARE registered. It is the cheapest way to tell
+			// "the registry is empty or short" apart from "the registry is full and
+			// this role's policy selected none of it".
+			$context['registry_sample'] = ! empty( $registered )
+				? implode( ',', array_slice( $registered, 0, self::REGISTRY_SAMPLE_SIZE ) )
+				: '(registry empty)';
+
+			// Escalated: a connected client being handed zero tools is never a normal
+			// resting state, so it has to surface to someone filtering to warning+.
+			Debug_Logger::warning(
+				Debug_Logger::CHANNEL_MCP,
+				'tools/list exposed no tools.',
+				$context
+			);
+		} else {
+			Debug_Logger::info(
+				Debug_Logger::CHANNEL_MCP,
+				sprintf( 'tools/list exposed %d tool(s).', $exposed_count ),
+				$context
+			);
+		}
+
+		foreach ( Debug_Logger::chunk_list( $names ) as $chunk ) {
+			Debug_Logger::debug(
+				Debug_Logger::CHANNEL_MCP,
+				sprintf( 'tools/list exposed ability names (chunk %s).', $chunk['chunk'] ),
+				$chunk
+			);
+		}
+
+		// Grants naming abilities the registry no longer has: the usual cause is a
+		// pack being deactivated while the role policy kept pointing at it. The
+		// consent screen still prints these by name, so the user is told they have
+		// access to tools that can never appear.
+		if ( null !== self::$allowed_abilities ) {
+			$missing = array_values( array_diff( self::$allowed_abilities, $registered ) );
+
+			if ( ! empty( $missing ) ) {
+				Debug_Logger::warning(
+					Debug_Logger::CHANNEL_MCP,
+					sprintf( '%d granted ability name(s) are absent from the registry.', count( $missing ) ),
+					array(
+						'missing_count' => count( $missing ),
+						'listed_cap'    => self::MISSING_GRANT_LOG_CAP,
+						'missing'       => implode( ',', array_slice( $missing, 0, self::MISSING_GRANT_LOG_CAP ) ),
+					)
+				);
+			}
+		}
+	}
+
+	/**
+	 * Every ability name currently in the registry, unfiltered.
+	 *
+	 * Compared against the role's grants rather than against the exposed list:
+	 * a grant that survives policy but has no registry entry behind it is a
+	 * different fault from one the policy itself removed.
+	 *
+	 * @return string[]
+	 */
+	private static function registered_names() {
+		if ( ! function_exists( 'wp_get_abilities' ) ) {
+			return array();
+		}
+
+		return array_map(
+			static function ( $ability ) {
+				return (string) $ability->get_name();
+			},
+			array_values( wp_get_abilities() )
+		);
 	}
 
 	/**
@@ -414,12 +697,20 @@ class MCP_Server {
 	private static function exposed_abilities() {
 		$abilities = function_exists( 'wp_get_abilities' ) ? wp_get_abilities() : array();
 
+		$registry_total = count( $abilities );
+
 		/** @param \WP_Ability[] $abilities */
 		$abilities = apply_filters( 'mosmcp_exposed_abilities', $abilities );
 
+		// A filter returning a non-array is treated as having removed everything,
+		// rather than returned from early as before, so the stage that emptied the
+		// list is still recorded below. Both later stages are no-ops on an empty
+		// array, so the result is unchanged.
 		if ( ! is_array( $abilities ) ) {
-			return array();
+			$abilities = array();
 		}
+
+		$after_filter = count( $abilities );
 
 		// Filter to the per-NHI allow-list when one is set (null = unrestricted).
 		if ( null !== self::$allowed_abilities ) {
@@ -434,9 +725,66 @@ class MCP_Server {
 			);
 		}
 
+		$allowed_count = count( $abilities );
+
 		$abilities = self::apply_prefix_trim( $abilities );
 
+		$after_prefix_trim = count( $abilities );
+
+		self::$exposure_stats = array(
+			'registry_total'    => $registry_total,
+			'after_filter'      => $after_filter,
+			'allowed_count'     => $allowed_count,
+			'after_prefix_trim' => $after_prefix_trim,
+			'exposed_count'     => $after_prefix_trim,
+		);
+
+		self::maybe_warn_exposure_narrowed( $registry_total, $after_filter, $allowed_count, $after_prefix_trim );
+
 		return $abilities;
+	}
+
+	/**
+	 * Warns when something other than the role policy changed the tool count.
+	 *
+	 * The `mosmcp_exposed_abilities` filter and the MOSMCP_EXPOSED_PREFIXES trim
+	 * are both invisible from the admin screens, so a site whose tool list has
+	 * been reshaped by either one looks, to everyone involved, like a site whose
+	 * role policy is wrong. Silent while neither changed anything, which is the
+	 * default install.
+	 *
+	 * @param int $registry_total    Abilities in the registry.
+	 * @param int $after_filter      Abilities after the mosmcp_exposed_abilities filter.
+	 * @param int $allowed_count     Abilities after the role allow-list.
+	 * @param int $after_prefix_trim Abilities after the prefix trim.
+	 * @return void
+	 */
+	private static function maybe_warn_exposure_narrowed( $registry_total, $after_filter, $allowed_count, $after_prefix_trim ) {
+		if ( self::$exposure_warned ) {
+			return;
+		}
+
+		$filter_delta = $after_filter - $registry_total;
+		$trim_delta   = $after_prefix_trim - $allowed_count;
+
+		if ( 0 === $filter_delta && 0 === $trim_delta ) {
+			return;
+		}
+
+		self::$exposure_warned = true;
+
+		Debug_Logger::warning(
+			Debug_Logger::CHANNEL_MCP,
+			'Tool exposure was changed outside the role policy.',
+			array(
+				// Negative removed, positive added.
+				'filter_delta'   => $filter_delta,
+				'trim_delta'     => $trim_delta,
+				'prefixes'       => defined( 'MOSMCP_EXPOSED_PREFIXES' ) ? (string) MOSMCP_EXPOSED_PREFIXES : '(unset)',
+				'registry_total' => $registry_total,
+				'exposed_count'  => $after_prefix_trim,
+			)
+		);
 	}
 
 	/**

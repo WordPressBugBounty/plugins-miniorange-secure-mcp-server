@@ -19,6 +19,8 @@ use MoSMCP\Common\Repositories\Audit_Store;
 use MoSMCP\Common\Repositories\Debug_Store;
 use MoSMCP\Common\Services\Discovery\Discovery;
 use MoSMCP\Common\Services\OAuth\OAuth_Server;
+use MoSMCP\Common\Services\Rest\Rest_Abilities;
+use MoSMCP\Common\Services\Rest\Route_Registry;
 use MoSMCP\Common\Utils\Utils;
 use MoSMCP\Common\Views\Admin\Admin_App;
 use MoSMCP\Common\Views\Admin\Deactivation_Feedback;
@@ -94,6 +96,13 @@ class Hooks {
 		add_filter( 'query_vars', array( Discovery::class, 'add_query_var' ) );
 		add_action( 'parse_request', array( Discovery::class, 'maybe_serve_wellknown' ) );
 
+		// The REST route table changes with any plugin, theme or core update, so drop the
+		// cache on those events rather than letting the bridge advertise stale routes.
+		add_action( 'activated_plugin', array( Route_Registry::class, 'flush' ) );
+		add_action( 'deactivated_plugin', array( Route_Registry::class, 'flush' ) );
+		add_action( 'switch_theme', array( Route_Registry::class, 'flush' ) );
+		add_action( 'upgrader_process_complete', array( Route_Registry::class, 'flush' ) );
+
 		// Deactivation feedback modal (plugins.php only).
 		add_action( 'admin_footer', array( Deactivation_Feedback::class, 'maybe_render' ) );
 
@@ -124,6 +133,11 @@ class Hooks {
 				'text_domain' => 'miniorange-secure-mcp-server',
 			)
 		);
+
+		// The REST bridge abilities live plugin-side rather than in the portable library,
+		// because they read this plugin's NHI route grants; they still register through the
+		// library's registrar, so they are governed and audited like every other ability.
+		Rest_Abilities::init();
 	}
 
 	/**

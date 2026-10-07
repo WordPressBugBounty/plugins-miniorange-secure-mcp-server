@@ -297,6 +297,47 @@ class Store {
 	}
 
 	/**
+	 * Returns each client's newest refresh-token expiry, for token-age diagnostics.
+	 *
+	 * @param string $exclude_prefix Client-id prefix to leave out (the connection test's own client).
+	 * @return list<array{client_name:string, last_issued:int|null, refresh_expires:int|null}>
+	 */
+	public static function linked_client_tokens( $exclude_prefix ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT c.client_name, MAX(t.expires) AS refresh_expires
+				 FROM %i AS c
+				 LEFT JOIN %i AS t ON t.client_id = c.client_id AND t.type = %s
+				 WHERE c.client_id NOT LIKE %s
+				 GROUP BY c.client_id
+				 ORDER BY c.created DESC
+				 LIMIT 20',
+				self::table( 'clients' ),
+				self::table( 'tokens' ),
+				Tokens::TYPE_REFRESH,
+				$wpdb->esc_like( $exclude_prefix ) . '%'
+			),
+			ARRAY_A
+		);
+
+		$out = array();
+		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+			$expires = (int) $row['refresh_expires'];
+			$out[]   = array(
+				'client_name'     => (string) $row['client_name'],
+				// Refresh tokens rotate on use, so expiry minus the fixed lifetime is when the newest one was issued.
+				'last_issued'     => $expires > 0 ? $expires - Tokens::REFRESH_TTL : null,
+				'refresh_expires' => $expires > 0 ? $expires : null,
+			);
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Updates allowed fields on a client row.
 	 *
 	 * @param string               $client_id The client identifier.
@@ -434,16 +475,22 @@ class Store {
 	}
 
 	/**
-	 * Deletes an authorization code (codes are single-use).
+	 * Spends an authorization code (codes are single-use).
+	 *
+	 * The delete is the check: only the request whose DELETE actually removed the row may
+	 * exchange the code. Two concurrent exchanges can both read the row first, so the
+	 * earlier read alone cannot stop a code being spent twice.
 	 *
 	 * @param string $code_hash The hashed code.
-	 * @return void
+	 * @return bool True when this call removed the code, false if it was already spent.
 	 */
-	public static function delete_code( $code_hash ) {
+	public static function claim_code( $code_hash ) {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->delete( self::table( 'codes' ), array( 'code_hash' => $code_hash ) );
+		$deleted = $wpdb->delete( self::table( 'codes' ), array( 'code_hash' => $code_hash ) );
+
+		return false !== $deleted && $deleted > 0;
 	}
 
 	/*
@@ -492,6 +539,25 @@ class Store {
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->delete( self::table( 'tokens' ), array( 'token_hash' => $token_hash ) );
+	}
+
+	/**
+	 * Spends a refresh token (refresh tokens are single-use and rotate).
+	 *
+	 * The delete is the check: only the request whose DELETE actually removed the row may
+	 * issue a new pair. Two concurrent refreshes can both read the row first, so the earlier
+	 * read alone cannot stop a refresh token being spent twice.
+	 *
+	 * @param string $token_hash The hashed refresh token.
+	 * @return bool True when this call removed the token, false if it was already spent.
+	 */
+	public static function claim_token( $token_hash ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$deleted = $wpdb->delete( self::table( 'tokens' ), array( 'token_hash' => $token_hash ) );
+
+		return false !== $deleted && $deleted > 0;
 	}
 
 	/**

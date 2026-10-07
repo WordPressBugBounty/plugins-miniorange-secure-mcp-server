@@ -4,7 +4,7 @@ Tags: mcp, ai, mcp-server, chatgpt, claude
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.4.14
+Stable tag: 1.5.0
 License: Expat
 License URI: https://plugins.miniorange.com/mit-license
 
@@ -179,6 +179,7 @@ Letting AI touch your WordPress site is a big trust decision, so our secure MCP 
 * **Self-Hosted OAuth 2.1 Authorization Server:** Your site is its own OAuth server, so AI never sees your password and only gets a scoped access token.
 * **NHI Registry, Role-Based AI Permissions:** Each AI is a first-class identity, and two users connecting the same AI get different permissions based on their role.
 * **Per-Tool On/Off Control:** Disable any of the 300+ MCP tools with one click, globally, regardless of role or AI.
+* **Governed REST API Access:** AI can discover and call your site's REST API routes too, but only the specific routes and methods you grant per AI, beyond a sensible read-only default — and a site-wide switch can pause all create, update or delete requests at once.
 * **Real WordPress User Enforcement:** Every MCP request runs as a genuine WordPress user account, so all core capability checks apply.
 * **Full Audit Trail:** Every MCP tool call, OAuth grant, and ability change is logged and searchable.
 
@@ -313,6 +314,10 @@ With this MCP plugin, absolutely. AI never sees your WordPress password (OAuth 2
 
 Yes. Every MCP tool has a global on/off toggle. Turn off dangerous actions like "delete permanently" while keeping safe ones enabled. One-click safety.
 
+= Can AI call my site's REST API directly? =
+
+Only the routes and methods you explicitly grant, per AI, with one exception: a new AI starts with read-only access to core WordPress content so it's useful right away, and nothing more. Any write access, and anything outside WordPress's own endpoints, still needs an explicit grant — and granting a route is separate from granting the ability to use the REST bridge in the first place, so both are required. A site-wide switch can also pause all create, update, or delete requests through the REST bridge at once, independent of any individual AI's grants.
+
 = How do I revoke AI access? =
 
 Open the NHI Registry and click Revoke. The AI immediately loses access. You can also disable specific NHIs (preserving their config) or turn off individual tools instantly.
@@ -336,6 +341,12 @@ The Abilities API does not record which plugin registered a given ability. The n
 7. A member's "Your AI Access" view — the tools available to their role, with a one-click path to connect an AI client.
 
 == Changelog ==
+
+= 1.5.0 =
+* Added support for REST APIs.
+* Added a Troubleshooting page.
+* Improved MCP connection reliability with AI providers.
+* Minor bug fixes.
 
 = 1.4.14 =
 * Added theme editing for block themes: templates, template parts, global styles, style variations and patterns.
@@ -463,6 +474,9 @@ The Abilities API does not record which plugin registered a given ability. The n
 * Initial release: read-only viewer for abilities registered through the WordPress Abilities API.
 
 == Upgrade Notice ==
+
+= 1.5.0 =
+Adds support for REST APIs and a Troubleshooting page, and improves MCP connection reliability with AI providers. Minor bug fixes.
 
 = 1.4.14 =
 Adds theme editing: templates, template parts, global styles, style variations, patterns and theme files, all changed in a draft you can preview, checked for errors, and published with an automatic backup and rollback. Also gives AI assistants clearer guidance on every tool. Minor bug fixes.

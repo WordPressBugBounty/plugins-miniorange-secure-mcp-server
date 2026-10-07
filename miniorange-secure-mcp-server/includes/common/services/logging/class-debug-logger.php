@@ -68,9 +68,36 @@ class Debug_Logger {
 	const MAX_CONTEXT_LENGTH = 8000;
 
 	/**
+	 * Per-field budget, in bytes, for a raw wire payload logged as a single
+	 * context value ({@see payload()}). Deliberately well under
+	 * MAX_CONTEXT_LENGTH: that cap lands wherever it lands, so an oversized body
+	 * in the first field can push every later field out of the row. The counts
+	 * and flags beside a payload are usually what identify the fault, and they
+	 * are worthless if the payload crowds them out.
+	 */
+	const MAX_PAYLOAD_LENGTH = 2000;
+
+	/**
+	 * Default number of entries per chunk row ({@see chunk_list()}). Sized so a
+	 * full chunk of the longest ability names in use still encodes inside
+	 * MAX_CONTEXT_LENGTH, with headroom for the packs that keep being added.
+	 */
+	const LIST_CHUNK_SIZE = 150;
+
+	/**
 	 * Context object keys masked before storage, regardless of channel —
 	 * defense in depth against a call site accidentally logging a secret.
 	 * Matched case-insensitively as a substring of the key.
+	 *
+	 * WARNING to call-site authors: the match is a SUBSTRING, not a whole-key
+	 * comparison, and it recurses into nested arrays and objects. A harmless key
+	 * that merely contains one of these words — `token_resource`, `api_key_count`,
+	 * `salt_index` — stores as ***redacted***, silently destroying the very value
+	 * the log line exists to report, with nothing in the row to say it happened.
+	 * Name such fields around the collision instead (`issued_for`,
+	 * `bearer_prefix`). {@see redact_message()} applies the same list to
+	 * `key: value` fragments inside the free-text message, so message wording is
+	 * subject to it too.
 	 *
 	 * @var string[]
 	 */
@@ -279,6 +306,22 @@ class Debug_Logger {
 	}
 
 	/**
+	 * Whether capture is currently switched on.
+	 *
+	 * Exposed for call sites on a hot path that must not pay to build their
+	 * context — an ability-name list, a registry scan, a JSON-encoded payload —
+	 * before knowing whether anything will store it. The logging methods are
+	 * cheap no-ops while capture is off, but their *arguments* are evaluated
+	 * either way, so an expensive context has to be guarded by this rather than
+	 * by the call itself.
+	 *
+	 * @return bool
+	 */
+	public static function is_capturing() {
+		return self::is_enabled();
+	}
+
+	/**
 	 * Whether capture is currently switched on, cached for the request.
 	 *
 	 * @return bool
@@ -355,6 +398,64 @@ class Debug_Logger {
 		$pattern = '/\b(' . implode( '|', self::REDACTED_KEY_PATTERNS ) . ')\w*\s*[:=]\s*\S+/i';
 
 		return (string) preg_replace( $pattern, '$1=***redacted***', $message );
+	}
+
+	/**
+	 * Trims one raw wire payload to its own budget, marking what was dropped.
+	 *
+	 * The reported size is the true one, which is itself diagnostic: a tools/list
+	 * envelope announcing six figures says the registry is large, not empty.
+	 *
+	 * @param string $raw    The raw payload.
+	 * @param int    $budget Maximum bytes kept.
+	 * @return string The payload, truncated with a marker when over budget.
+	 */
+	public static function payload( $raw, $budget = self::MAX_PAYLOAD_LENGTH ) {
+		$raw   = (string) $raw;
+		$bytes = strlen( $raw );
+
+		if ( $bytes <= $budget ) {
+			return $raw;
+		}
+
+		// Cut on a character boundary: a bare byte-offset cut can split a multibyte
+		// sequence, and the resulting invalid UTF-8 makes wp_json_encode() return
+		// false for the entire context — losing every field in the row, not just
+		// this one.
+		if ( function_exists( 'mb_strcut' ) ) {
+			$cut = mb_strcut( $raw, 0, $budget, 'UTF-8' );
+		} else {
+			$cut = (string) preg_replace( '/(?:[\xC0-\xFF][\x80-\xBF]*)$/', '', substr( $raw, 0, $budget ) );
+		}
+
+		return $cut . sprintf( '… [truncated, %d bytes total]', $bytes );
+	}
+
+	/**
+	 * Splits a long list of short strings into per-row chunks.
+	 *
+	 * A few hundred ability names JSON-encode past MAX_CONTEXT_LENGTH on their
+	 * own, so the list cannot travel as one context value; chunking spreads it
+	 * over a few rows that share the request's correlation id. Each chunk carries
+	 * an explicit "k/n" so a reader can tell a complete set from a clipped one.
+	 *
+	 * @param string[] $items     The list.
+	 * @param int      $per_chunk Entries per chunk.
+	 * @return list<array{chunk: string, names: string}> One entry per row to log; empty for an empty list.
+	 */
+	public static function chunk_list( array $items, $per_chunk = self::LIST_CHUNK_SIZE ) {
+		$chunks = array_chunk( array_values( $items ), max( 1, (int) $per_chunk ) );
+		$total  = count( $chunks );
+		$rows   = array();
+
+		foreach ( $chunks as $index => $chunk ) {
+			$rows[] = array(
+				'chunk' => sprintf( '%d/%d', $index + 1, $total ),
+				'names' => implode( ',', $chunk ),
+			);
+		}
+
+		return $rows;
 	}
 
 	/**

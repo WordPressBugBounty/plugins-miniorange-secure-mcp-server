@@ -1,6 +1,6 @@
 <?php
 /**
- * Runs the "Test Connection" probe set from two vantage points.
+ * Orchestrates the "Test Connection" run: local checks, the gateway probe, and the result.
  *
  * @package Miniorange_Secure_MCP_Server
  */
@@ -16,128 +16,125 @@ use MoSMCP\Common\Utils\Utils;
 /**
  * Class Connectivity_Checker
  *
- * Answers "will an AI client be able to connect to this site?" by running the same set of
- * checks from two vantage points:
+ * Answers "why can't an AI client connect, or why does it see 0 abilities?" from two vantage
+ * points: this server's own loopback ({@see Local_Checks}) and the miniOrange gateway acting as
+ * a real external caller ({@see Gateway_Probe}). The gateway view is what catches CDN, firewall
+ * and DNS problems, which a loopback routinely bypasses.
  *
- * - This WordPress server's own loopback (`wp_remote_*` to its own endpoints).
- * - The miniOrange gateway, acting as a genuine external caller.
- *
- * A server-only loopback routinely bypasses the Cloudflare/WAF edge, which would give a false
- * "all clear" on exactly the firewall/`.htaccess` issues this feature exists to catch — so the
- * overall pass/fail verdict is driven ONLY by the internet (gateway) results. The server results
- * are kept only as corroborating detail (surfaced via Advanced Details on the frontend): when a
- * check passes from the server but fails from the internet, that disagreement is itself the most
- * common signature of a direct-connection failure.
- *
- * Every probe authenticates with a deliberately invalid/synthetic credential, so this can be run
- * repeatedly with no side effects (no client registered, no token issued) — see the inline notes
- * on {@see registration_check()} and {@see token_check()} for the exact code paths verified.
+ * Every probe uses a dummy credential except the discovery test, which uses a two-minute
+ * read-only token ({@see Test_Token}) revoked as soon as the gateway answers.
  */
 class Connectivity_Checker {
 
 	/**
-	 * Canonical check order, shared with the gateway's `/diagnostics` probe set so both sides
-	 * report the identical set of checks.
-	 */
-	const CHECK_KEYS = array(
-		'mcp_health',
-		'wellknown_protected_resource',
-		'wellknown_authorization_server',
-		'scheme_host_consistency',
-		'mcp_json_passthrough',
-		'www_authenticate_present',
-		'auth_header_passthrough',
-		'oauth_registration_endpoint',
-		'oauth_token_endpoint',
-		'oauth_authorization_endpoint',
-	);
-
-	/**
-	 * Human-readable label per check, kept in sync with the gateway's copy of the same map.
-	 */
-	const LABELS = array(
-		'mcp_health'                     => 'Site reachable',
-		'wellknown_protected_resource'   => 'OAuth protected resource metadata',
-		'wellknown_authorization_server' => 'OAuth authorization server metadata',
-		'scheme_host_consistency'        => 'Advertised URLs match the address used to reach the site',
-		'mcp_json_passthrough'           => 'MCP endpoint returns a valid response',
-		'www_authenticate_present'       => 'Authentication challenge header present',
-		'auth_header_passthrough'        => 'Authorization header reaches WordPress',
-		'oauth_registration_endpoint'    => 'Client registration endpoint reachable',
-		'oauth_token_endpoint'           => 'Token endpoint reachable',
-		'oauth_authorization_endpoint'   => 'Authorization endpoint reachable',
-	);
-
-	/**
-	 * The gateway's external-prober endpoint (same base as the "Connect via Gateway" URL
-	 * already shown on the Connect page).
-	 */
-	const GATEWAY_DIAGNOSTICS_URL = 'https://gateway.miniorange.ai/diagnostics';
-
-	/**
-	 * Per-check timeout for the server-side loopback probes, in seconds.
-	 */
-	const CHECK_TIMEOUT = 8;
-
-	/**
-	 * Timeout for the single call to the gateway, which itself runs the full probe set
-	 * sequentially — generous headroom over the sum of its own per-probe timeouts.
-	 */
-	const GATEWAY_TIMEOUT = 45;
-
-	/**
-	 * WordPress option that caches the last run so the admin page can show a result on load.
+	 * Option caching the last run so the admin page can show a result on load.
 	 */
 	const LAST_RUN_OPTION = 'mosmcp_connectivity_last_run';
 
 	/**
-	 * Runs the full check set from both vantage points and caches the result.
-	 *
-	 * @return array{status:string, failed_checks:string[], checks:array, env:array, retry_after:int|null} The result.
+	 * Option set when something suggests the admin should run the test (a client saw 0 abilities).
 	 */
-	public static function run() {
-		$server_checks = self::run_server_checks();
-		list( $internet_checks, $internet_state, $retry_after ) = self::run_internet_checks();
+	const AUTO_RUN_OPTION = 'mosmcp_connectivity_autorun';
 
-		$server_by_key   = self::index_by_key( $server_checks );
-		$internet_by_key = self::index_by_key( $internet_checks );
+	/**
+	 * Transient that blocks a flood of auto-run requests.
+	 */
+	const AUTO_RUN_COOLDOWN = 'mosmcp_connectivity_autorun_cooldown';
 
-		$checks              = array();
-		$failed_checks       = array();
-		$internet_available  = 'ok' === $internet_state;
+	/**
+	 * Transient holding the time before which the next run is refused.
+	 */
+	const LOCK_TRANSIENT = 'mosmcp_connectivity_lock';
 
-		foreach ( self::CHECK_KEYS as $key ) {
-			$server   = isset( $server_by_key[ $key ] ) ? $server_by_key[ $key ] : null;
-			$internet = isset( $internet_by_key[ $key ] ) ? $internet_by_key[ $key ] : null;
+	/**
+	 * Minimum seconds between runs. Protects the gateway and this server from a held-down button.
+	 */
+	const MIN_INTERVAL = 15;
 
-			$checks[] = array(
-				'check_key' => $key,
-				'label'     => self::LABELS[ $key ],
-				'server'    => $server,
-				'internet'  => $internet,
-			);
-
-			if ( $internet_available && $internet && 'pass' !== $internet['status'] ) {
-				$failed_checks[] = $key;
+	/**
+	 * Runs the full test and caches the result.
+	 *
+	 * @param Gateway_Probe|null $probe Gateway client; defaults to the real one. Tests inject a fake.
+	 * @return array The result; carries `throttled` and `throttle_retry_after` when a recent run was reused.
+	 */
+	public static function run( ?Gateway_Probe $probe = null ) {
+		$wait = self::throttle_remaining();
+		// A pending auto-run means something changed since the last run, so a cached result may be stale.
+		if ( $wait > 0 && null === self::pending_auto_run() ) {
+			$cached = self::last_run();
+			if ( null !== $cached ) {
+				$cached['throttled']            = true;
+				$cached['throttle_retry_after'] = $wait;
+				return $cached;
 			}
 		}
 
-		if ( 'rate_limited' === $internet_state ) {
-			$status = 'rate_limited';
-		} elseif ( ! $internet_available ) {
-			$status = 'unavailable';
-		} elseif ( empty( $failed_checks ) ) {
-			$status = 'ok';
-		} else {
-			$status = 'issue';
+		set_transient( self::LOCK_TRANSIENT, time() + self::MIN_INTERVAL, self::MIN_INTERVAL );
+		delete_option( self::AUTO_RUN_OPTION );
+
+		$probe = $probe ? $probe : new Gateway_Http_Probe();
+		$local = self::without_public_base_override( array( Local_Checks::class, 'run' ) );
+
+		$handle  = null;
+		$secrets = array();
+		$gateway = array(
+			'state'       => Result_Builder::GATEWAY_UNREACHABLE,
+			'retry_after' => null,
+			'report'      => array(),
+		);
+
+		try {
+			if ( $local['facts']['tables_ok'] && $local['facts']['agent_ok'] ) {
+				$handle = Test_Token::mint( get_current_user_id() );
+			}
+
+			$request = array( 'site_url' => home_url() );
+			if ( $handle ) {
+				$secrets[]                       = $handle['token'];
+				$request['test_token']           = $handle['token'];
+				$request['expected_ability_count'] = (int) $local['facts']['expected_count'];
+			}
+
+			$gateway = $probe->probe( $request );
+		} finally {
+			if ( $handle ) {
+				Test_Token::revoke( $handle );
+			}
 		}
 
-		$result = array(
-			'status'        => $status,
-			'failed_checks' => $failed_checks,
-			'checks'        => $checks,
-			'env'           => self::env_snapshot(),
-			'retry_after'   => $retry_after,
+		$rows          = $local['rows'];
+		$allowlist     = array();
+		$stray         = array();
+		$gateway_state = $gateway['state'];
+
+		if ( Result_Builder::GATEWAY_OK === $gateway_state ) {
+			$evaluated = Gateway_Result_Evaluator::evaluate(
+				$gateway['report'],
+				array(
+					'expected_count'      => (int) $local['facts']['expected_count'],
+					'discovery_requested' => null !== $handle,
+					'now'                 => time(),
+				)
+			);
+			$rows      = array_merge( $rows, $evaluated['rows'] );
+			$allowlist = $evaluated['allowlist_ips'];
+			$stray     = $evaluated['stray_ips'];
+		}
+
+		$result = Result_Builder::build(
+			$rows,
+			array(
+				'gateway_state'  => $gateway_state,
+				'retry_after'    => $gateway['retry_after'],
+				'gateway_reason' => isset( $gateway['reason'] ) ? $gateway['reason'] : '',
+				'allowlist_ips'  => $allowlist,
+				'stray_ips'      => $stray,
+				'env'            => $local['env'],
+				'site_url'       => home_url(),
+				'expected_count' => (int) $local['facts']['expected_count'],
+				'ran_at'         => time(),
+				'secrets'        => $secrets,
+			)
 		);
 
 		update_option( self::LAST_RUN_OPTION, $result, false );
@@ -146,76 +143,66 @@ class Connectivity_Checker {
 	}
 
 	/**
-	 * Returns the cached result of the last run, if any.
+	 * Returns the cached result of the last run.
 	 *
-	 * @return array|null The cached result, or null if a check has never been run.
+	 * @return array|null Null when never run, or when the cache predates the current result shape.
 	 */
 	public static function last_run() {
 		$cached = get_option( self::LAST_RUN_OPTION, null );
 
-		return is_array( $cached ) ? $cached : null;
+		return ( is_array( $cached ) && isset( $cached['schema'] ) && Result_Builder::SCHEMA === $cached['schema'] ) ? $cached : null;
 	}
 
 	/**
-	 * Indexes a list of check rows by their check_key.
+	 * Asks the admin UI to run the test next time it loads. At most once an hour.
 	 *
-	 * @param array $checks The check rows.
-	 * @return array<string, array>
+	 * @param string $reason Why (for the UI to explain).
+	 * @return void
 	 */
-	private static function index_by_key( array $checks ) {
-		$by_key = array();
-		foreach ( $checks as $check ) {
-			$by_key[ $check['check_key'] ] = $check;
+	public static function flag_auto_run( $reason ) {
+		if ( get_transient( self::AUTO_RUN_COOLDOWN ) ) {
+			return;
 		}
 
-		return $by_key;
-	}
-
-	/**
-	 * Runs the full probe set from this server's own loopback.
-	 *
-	 * @return array The check rows.
-	 */
-	private static function run_server_checks() {
-		return self::without_public_base_override(
-			function () {
-				list( $health_check )    = self::health_check();
-				list( $prm_check )       = self::fetch_json( home_url( '/.well-known/oauth-protected-resource' ), 'wellknown_protected_resource' );
-				list( $asm_check )       = self::fetch_json( home_url( '/.well-known/oauth-authorization-server' ), 'wellknown_authorization_server' );
-
-				list( $mcp_json_check, $www_auth_check, $auth_header_check ) = self::mcp_challenge_checks( Utils::resource_url() );
-
-				return array(
-					$health_check,
-					$prm_check,
-					$asm_check,
-					// Comparing "what the site advertises" against "the address used to reach it" is
-					// only meaningful from a genuinely external caller — the server comparing its own
-					// config against itself would trivially always agree. See the internet-side check.
-					self::make_check( 'scheme_host_consistency', 'unavailable', null, 0, 'only meaningful when checked from the internet' ),
-					$mcp_json_check,
-					$www_auth_check,
-					$auth_header_check,
-					self::registration_check( rest_url( MOSMCP_REST_NAMESPACE . '/register' ) ),
-					self::token_check( rest_url( MOSMCP_REST_NAMESPACE . '/token' ) ),
-					self::authorize_check( admin_url( 'admin-post.php?action=mosmcp_authorize' ) ),
-				);
-			}
+		set_transient( self::AUTO_RUN_COOLDOWN, 1, HOUR_IN_SECONDS );
+		update_option(
+			self::AUTO_RUN_OPTION,
+			array(
+				'reason' => (string) $reason,
+				'at'     => time(),
+			),
+			false
 		);
 	}
 
 	/**
-	 * Runs a callback with the plugin's `MOSMCP_PUBLIC_BASE` URL rewrite (see
-	 * {@see Utils::rewrite_url()}) temporarily disabled, so `home_url()`/`site_url()`/
-	 * `rest_url()`/`admin_url()` resolve to this server's real local address instead of the
-	 * public tunnel URL used to advertise the site to external MCP clients.
+	 * The pending auto-run request, if any.
 	 *
-	 * Without this, the "server" vantage — meant to be a same-machine loopback — would instead
-	 * route back out through the public tunnel and back in, which is both slow and, on a
-	 * resource-constrained server, can self-deadlock (the request ties up the one Apache worker
-	 * it's waiting on to also serve the incoming tunnel request).
+	 * @return array{reason:string, at:int}|null
+	 */
+	public static function pending_auto_run() {
+		$pending = get_option( self::AUTO_RUN_OPTION, null );
+
+		return ( is_array( $pending ) && isset( $pending['reason'] ) ) ? $pending : null;
+	}
+
+	/**
+	 * Seconds until another run is allowed, 0 when one is.
 	 *
-	 * @param callable $fn The callback to run with local, unrewritten URLs.
+	 * @return int
+	 */
+	private static function throttle_remaining() {
+		$until = (int) get_transient( self::LOCK_TRANSIENT );
+
+		return max( 0, $until - time() );
+	}
+
+	/**
+	 * Runs a callback with the plugin's `MOSMCP_PUBLIC_BASE` URL rewrite disabled, so the loopback
+	 * checks reach this server directly instead of looping out through a public tunnel (which is slow
+	 * and can deadlock a single-worker server).
+	 *
+	 * @param callable $fn The callback.
 	 * @return mixed The callback's return value.
 	 */
 	private static function without_public_base_override( callable $fn ) {
@@ -483,7 +470,7 @@ class Connectivity_Checker {
 	 * Verified against `grant_authorization_code()` (`class-oauth-server.php:316-326`): omitting
 	 * `code_verifier` returns `invalid_request` before `Store::get_code()` runs; even with a
 	 * `code_verifier` present, an unmatched code returns `invalid_grant` and the only prior DB
-	 * touch is the read at line 320 — `Store::delete_code()` never fires for a code that was
+	 * touch is the read at line 320 — `Store::claim_code()` never fires for a code that was
 	 * never found. No token is issued, no rows are touched, either way.
 	 *
 	 * @param string $token_endpoint The token endpoint URL.

@@ -39,6 +39,29 @@ class Audit_Logger {
 	);
 
 	/**
+	 * Extra detail about the resource the current tool call touched.
+	 *
+	 * Generic tools resolve their real target at call time, so tool_name alone does not
+	 * say what happened; the REST bridge records the route and method here.
+	 *
+	 * @var array<string, mixed>
+	 */
+	private static $meta = array();
+
+	/**
+	 * Records extra detail for the tool call currently being dispatched.
+	 *
+	 * Merges into whatever is already set, and is cleared by record_tool_call() so it
+	 * can never leak onto the next call in the same request.
+	 *
+	 * @param array<string, mixed> $meta Detail to record.
+	 * @return void
+	 */
+	public static function set_meta( array $meta ) {
+		self::$meta = array_merge( self::$meta, $meta );
+	}
+
+	/**
 	 * Stores the authenticated request context so record_tool_call() can use it.
 	 *
 	 * Accepted keys: user_id (int), client_id (string), client_name (string), ip (string).
@@ -106,6 +129,12 @@ class Audit_Logger {
 			'ip_address'    => '' !== self::$context['ip'] ? (string) self::$context['ip'] : null,
 			'request_id'    => null !== $request_id ? (string) $request_id : null,
 		);
+
+		if ( ! empty( self::$meta ) ) {
+			$row['meta'] = wp_json_encode( self::$meta );
+		}
+
+		self::$meta = array();
 
 		Audit_Store::insert( $row );
 	}

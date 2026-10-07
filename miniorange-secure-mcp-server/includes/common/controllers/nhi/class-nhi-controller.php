@@ -13,6 +13,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use MoSMCP\Common\Controllers\Abstract_Admin_Controller;
 use MoSMCP\Common\Repositories\NHI_Store;
+use MoSMCP\Common\Services\Rest\Rest_Bridge;
+use MoSMCP\Common\Services\Rest\Route_Registry;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -73,10 +75,19 @@ class NHI_Controller extends Abstract_Admin_Controller {
 			return self::conflict_error( $conflicts );
 		}
 
+		// A new NHI defaults to read-only access to core WordPress content — writes and
+		// anything outside wp/v2 still need an explicit grant — rather than nothing at
+		// all, so the bridge is useful the moment an NHI exists. A caller that wants a
+		// genuinely empty policy can still send role_route_map explicitly as {}.
+		$route_map = isset( $body['role_route_map'] )
+			? self::sanitize_role_route_map( $body['role_route_map'] )
+			: array( '*' => array( 'GET /wp/v2/*' ) );
+
 		$result = NHI_Store::create(
 			array(
 				'name'             => $name,
 				'role_ability_map' => $map,
+				'role_route_map'   => $route_map,
 			)
 		);
 
@@ -94,7 +105,7 @@ class NHI_Controller extends Abstract_Admin_Controller {
 	}
 
 	/**
-	 * Updates `is_enabled`, `name`, and/or `role_ability_map` for one NHI.
+	 * Updates `is_enabled`, `name`, `role_ability_map` and/or `role_route_map` for one NHI.
 	 *
 	 * @param WP_REST_Request $request REST request.
 	 * @return WP_REST_Response|WP_Error
@@ -124,6 +135,10 @@ class NHI_Controller extends Abstract_Admin_Controller {
 
 		if ( array_key_exists( 'role_ability_map', $body ) ) {
 			$updates['role_ability_map'] = self::sanitize_role_ability_map( $body['role_ability_map'] );
+		}
+
+		if ( array_key_exists( 'role_route_map', $body ) ) {
+			$updates['role_route_map'] = self::sanitize_role_route_map( $body['role_route_map'] );
 		}
 
 		if ( empty( $updates ) ) {
@@ -256,6 +271,66 @@ class NHI_Controller extends Abstract_Admin_Controller {
 	 */
 	public static function ability_owners() {
 		return new WP_REST_Response( NHI_Store::all_ability_owners(), 200 );
+	}
+
+	/**
+	 * Returns the site's grantable REST routes, grouped by namespace.
+	 *
+	 * Routes on the hard blocklist never appear, so the picker cannot offer a grant
+	 * the bridge would refuse at call time.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function list_rest_routes() {
+		$grouped = array();
+
+		foreach ( Route_Registry::routes() as $entry ) {
+			$namespace = '' !== $entry['namespace'] ? $entry['namespace'] : 'other';
+
+			$grouped[ $namespace ][] = array(
+				'route'     => $entry['template'],
+				'methods'   => $entry['methods'],
+				'sensitive' => Route_Registry::sensitive( $entry['template'] ),
+			);
+		}
+
+		ksort( $grouped );
+
+		$namespaces = array();
+		foreach ( $grouped as $namespace => $routes ) {
+			$namespaces[] = array(
+				'namespace' => $namespace,
+				'routes'    => $routes,
+			);
+		}
+
+		return new WP_REST_Response( array( 'namespaces' => $namespaces ), 200 );
+	}
+
+	/**
+	 * Sanitizes a raw role => REST route grants map from a request body.
+	 *
+	 * @param mixed $raw The raw value from the request.
+	 * @return array<string, string[]>
+	 */
+	private static function sanitize_role_route_map( $raw ) {
+		$map = self::sanitize_role_ability_map( $raw );
+
+		foreach ( $map as $role => $grants ) {
+			$clean = array();
+
+			foreach ( $grants as $grant ) {
+				$normalized = Rest_Bridge::normalize_grant( $grant );
+
+				if ( '' !== $normalized ) {
+					$clean[] = $normalized;
+				}
+			}
+
+			$map[ $role ] = array_values( array_unique( $clean ) );
+		}
+
+		return $map;
 	}
 
 	/**

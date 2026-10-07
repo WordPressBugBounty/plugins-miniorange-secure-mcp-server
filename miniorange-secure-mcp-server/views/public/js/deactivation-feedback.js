@@ -27,6 +27,7 @@
 	var RESPONSES = {
 		not_working: {
 			message: 'Sorry that happened — most issues are quick to sort out.',
+			test:    'Run a connection test before you go',
 			keep:    'Keep it & get help',
 			links:   [ { label: 'Setup guide', href: DOCS_URL } ],
 		},
@@ -143,10 +144,14 @@
 		// Content is static and developer-controlled.
 		var html    = '<span>' + config.message + '</span>';
 		var hasKeep = config.keep && adminUrl;
+		var hasTest = config.test && adminUrl;
 		var links   = config.links || [];
 
-		if ( hasKeep || links.length ) {
+		if ( hasTest || hasKeep || links.length ) {
 			html += '<div class="mosmcp-df-response__actions">';
+			if ( hasTest ) {
+				html += '<button type="button" class="mosmcp-df-test">' + config.test + '</button>';
+			}
 			if ( hasKeep ) {
 				html += '<button type="button" class="mosmcp-df-keep">' + config.keep + '</button>';
 			}
@@ -157,6 +162,14 @@
 		}
 		box.innerHTML = html;
 		box.removeAttribute( 'hidden' );
+
+		if ( hasTest ) {
+			box.querySelector( '.mosmcp-df-test' ).addEventListener( 'click', function () {
+				// Leave the deactivation, open the plugin and run the connection test there.
+				var sep = adminUrl.indexOf( '?' ) >= 0 ? '&' : '?';
+				window.location.href = adminUrl + sep + 'mosmcp_test=1';
+			} );
+		}
 
 		if ( hasKeep ) {
 			box.querySelector( '.mosmcp-df-keep' ).addEventListener( 'click', function () {

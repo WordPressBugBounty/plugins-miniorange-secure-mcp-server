@@ -12,6 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use MoSMCP\Common\Repositories\NHI_Store;
+use MoSMCP\Common\Services\Logging\Debug_Logger;
 
 /**
  * Class Consent_View
@@ -58,6 +59,7 @@ class Consent_View {
 		$nhi_enabled  = NHI_Store::count_enabled();
 
 		$ability_labels = array();
+		$unregistered   = 0;
 		if ( function_exists( 'wp_get_abilities' ) ) {
 			$label_map = array();
 			foreach ( wp_get_abilities() as $ab ) {
@@ -67,13 +69,36 @@ class Consent_View {
 				$ability_labels = array_values( $label_map );
 			} else {
 				foreach ( (array) $allowed as $name ) {
-					$ability_labels[] = isset( $label_map[ $name ] ) ? $label_map[ $name ] : $name;
+					if ( isset( $label_map[ $name ] ) ) {
+						$ability_labels[] = $label_map[ $name ];
+						continue;
+					}
+
+					// No registry entry behind this grant, so the raw name stands in as the
+					// label. The row renders identically to a real one, which is how this
+					// screen can show a full, reassuring list of tools that tools/list will
+					// never carry. Counted so the divergence is visible in the log.
+					$ability_labels[] = $name;
+					++$unregistered;
 				}
 			}
 		}
 
 		$has_abilities = $unrestricted || ! empty( $allowed );
 		$ability_count = count( $ability_labels );
+
+		Debug_Logger::info(
+			Debug_Logger::CHANNEL_OAUTH,
+			'Consent screen shown.',
+			array(
+				'client_id'           => $params['client_id'],
+				'user_login'          => (string) $user->user_login,
+				'roles'               => ! empty( $roles ) ? implode( ',', $roles ) : '(none)',
+				'allowed_count'       => $unrestricted ? 'unrestricted' : count( (array) $allowed ),
+				'listed_count'        => $ability_count,
+				'unregistered_listed' => $unregistered,
+			)
+		);
 
 		$consent_css = MOSMCP_PLUGIN_DIR . 'views/public/css/consent.css';
 		$consent_ver = file_exists( $consent_css ) ? (string) filemtime( $consent_css ) : MOSMCP_VERSION;

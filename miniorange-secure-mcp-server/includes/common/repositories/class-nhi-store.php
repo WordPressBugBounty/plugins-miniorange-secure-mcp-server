@@ -29,6 +29,12 @@ class NHI_Store {
 	const RESOURCE_TYPE_ABILITY = 'ability';
 
 	/**
+	 * Grant resource_type value for a REST route grant, stored as "METHOD /template"
+	 * (for example "GET /wp/v2/posts") with '/*' accepted as a trailing path wildcard.
+	 */
+	const RESOURCE_TYPE_REST_ROUTE = 'rest_route';
+
+	/**
 	 * Returns the prefixed NHI table name.
 	 *
 	 * @return string Fully prefixed table name.
@@ -68,12 +74,18 @@ class NHI_Store {
 			return array();
 		}
 
-		$grants_by_nhi = self::grants_map_for( wp_list_pluck( $rows, 'id' ) );
+		$ids           = wp_list_pluck( $rows, 'id' );
+		$grants_by_nhi = self::grants_map_for( $ids );
+		$routes_by_nhi = self::grants_map_for( $ids, self::RESOURCE_TYPE_REST_ROUTE );
 
 		$out = array();
 		foreach ( $rows as $row ) {
 			$id    = (int) $row['id'];
-			$out[] = self::shape( $row, isset( $grants_by_nhi[ $id ] ) ? $grants_by_nhi[ $id ] : array() );
+			$out[] = self::shape(
+				$row,
+				isset( $grants_by_nhi[ $id ] ) ? $grants_by_nhi[ $id ] : array(),
+				isset( $routes_by_nhi[ $id ] ) ? $routes_by_nhi[ $id ] : array()
+			);
 		}
 
 		return $out;
@@ -98,15 +110,21 @@ class NHI_Store {
 			return null;
 		}
 
-		$grants_by_nhi = self::grants_map_for( array( (int) $row['id'] ) );
+		$id            = (int) $row['id'];
+		$grants_by_nhi = self::grants_map_for( array( $id ) );
+		$routes_by_nhi = self::grants_map_for( array( $id ), self::RESOURCE_TYPE_REST_ROUTE );
 
-		return self::shape( $row, isset( $grants_by_nhi[ (int) $row['id'] ] ) ? $grants_by_nhi[ (int) $row['id'] ] : array() );
+		return self::shape(
+			$row,
+			isset( $grants_by_nhi[ $id ] ) ? $grants_by_nhi[ $id ] : array(),
+			isset( $routes_by_nhi[ $id ] ) ? $routes_by_nhi[ $id ] : array()
+		);
 	}
 
 	/**
 	 * Inserts a new NHI and its per-role grants.
 	 *
-	 * @param array{name:string, role_ability_map?:array<string,string[]>} $data NHI fields.
+	 * @param array{name:string, role_ability_map?:array<string,string[]>, role_route_map?:array<string,string[]>} $data NHI fields.
 	 * @return array{id:int,uuid:string}|false Inserted id + uuid, or false on failure.
 	 */
 	public static function create( array $data ) {
@@ -160,6 +178,25 @@ class NHI_Store {
 			}
 		}
 
+		if ( isset( $data['role_route_map'] ) && is_array( $data['role_route_map'] ) ) {
+			if ( ! self::replace_grants( $id, $data['role_route_map'], self::RESOURCE_TYPE_REST_ROUTE ) ) {
+				// Same reasoning as the ability grants above: a half-written policy is worse
+				// than no NHI at all, so roll back and let the caller retry.
+				self::delete( $id );
+
+				Debug_Logger::error(
+					Debug_Logger::CHANNEL_NHI,
+					'Rolled back new NHI because its REST route grants could not be written.',
+					array(
+						'nhi_id' => $id,
+						'uuid'   => $uuid,
+					)
+				);
+
+				return false;
+			}
+		}
+
 		return array(
 			'id'   => $id,
 			'uuid' => $uuid,
@@ -168,7 +205,8 @@ class NHI_Store {
 
 	/**
 	 * Updates an NHI. Recognized keys: name, is_enabled (entity columns) and
-	 * role_ability_map (replaces the NHI's grants wholesale).
+	 * role_ability_map / role_route_map, each of which replaces the NHI's grants of
+	 * that type wholesale while leaving the other type untouched.
 	 *
 	 * @param int                  $id   The NHI id.
 	 * @param array<string, mixed> $data Fields to update.
@@ -209,6 +247,10 @@ class NHI_Store {
 			$ok = self::replace_grants( (int) $id, $data['role_ability_map'] ) && $ok;
 		}
 
+		if ( array_key_exists( 'role_route_map', $data ) && is_array( $data['role_route_map'] ) ) {
+			$ok = self::replace_grants( (int) $id, $data['role_route_map'], self::RESOURCE_TYPE_REST_ROUTE ) && $ok;
+		}
+
 		return $ok;
 	}
 
@@ -247,6 +289,42 @@ class NHI_Store {
 	}
 
 	/**
+	 * Deletes every grant for one ability, across every NHI and role.
+	 *
+	 * Used when an ability itself stops existing (a promoted route is revoked), so a
+	 * grant naming it can't survive and silently reactivate if the same name is ever
+	 * registered again — e.g. a different route promoted under the same slug.
+	 *
+	 * @param string $ability_name Full ability name, e.g. "mosmcp/rest-reader".
+	 * @return bool True when the delete query itself succeeded (zero rows is normal).
+	 */
+	public static function delete_ability_grants( $ability_name ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$result = $wpdb->delete(
+			self::grants_table(),
+			array(
+				'resource_type' => self::RESOURCE_TYPE_ABILITY,
+				'resource'      => (string) $ability_name,
+			)
+		);
+
+		if ( false === $result ) {
+			Debug_Logger::error(
+				Debug_Logger::CHANNEL_NHI,
+				'Failed to delete grants for a retired ability.',
+				array(
+					'ability' => (string) $ability_name,
+					'error'   => $wpdb->last_error,
+				)
+			);
+		}
+
+		return false !== $result;
+	}
+
+	/**
 	 * Returns the total number of NHIs.
 	 *
 	 * @return int NHI count.
@@ -273,6 +351,25 @@ class NHI_Store {
 	}
 
 	/**
+	 * Returns the number of ability grants held by enabled NHIs.
+	 *
+	 * @return int Grant row count.
+	 */
+	public static function count_ability_grants() {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i g INNER JOIN %i n ON n.id = g.nhi_id WHERE n.is_enabled = 1 AND g.resource_type = %s',
+				self::grants_table(),
+				self::table(),
+				self::RESOURCE_TYPE_ABILITY
+			)
+		);
+	}
+
+	/**
 	 * Ability allow-list for a request: the union, across enabled NHIs, of abilities
 	 * granted to the user's role(s) or to '*'. Returns null (unrestricted) if a
 	 * migrated '*' ability grant applies.
@@ -281,6 +378,30 @@ class NHI_Store {
 	 * @return string[]|null Ability names, or null for unrestricted.
 	 */
 	public static function resolve_for_roles( array $roles ) {
+		return self::resolve_resources( self::RESOURCE_TYPE_ABILITY, $roles );
+	}
+
+	/**
+	 * REST route allow-list for a request, in the same shape as resolve_for_roles().
+	 *
+	 * Deny by default: a new NHI holds no route grants, so an empty array is the
+	 * normal state and means the REST bridge exposes nothing to this user's role(s).
+	 *
+	 * @param string[] $roles The user's role slugs.
+	 * @return string[]|null Grant strings ("METHOD /template"), or null for unrestricted.
+	 */
+	public static function resolve_routes_for_roles( array $roles ) {
+		return self::resolve_resources( self::RESOURCE_TYPE_REST_ROUTE, $roles );
+	}
+
+	/**
+	 * Shared grant lookup behind resolve_for_roles() and resolve_routes_for_roles().
+	 *
+	 * @param string   $type  A RESOURCE_TYPE_* constant.
+	 * @param string[] $roles The user's role slugs.
+	 * @return string[]|null Resource identifiers, or null for unrestricted.
+	 */
+	private static function resolve_resources( $type, array $roles ) {
 		global $wpdb;
 
 		list( $role_args, $role_ph ) = self::role_args_and_placeholders( $roles );
@@ -290,21 +411,21 @@ class NHI_Store {
 			INNER JOIN %i n ON n.id = g.nhi_id
 			WHERE n.is_enabled = 1 AND g.resource_type = %s AND g.role IN ( {$role_ph} )";
 
-		$args = array_merge( array( self::grants_table(), self::table(), self::RESOURCE_TYPE_ABILITY ), $role_args );
+		$args = array_merge( array( self::grants_table(), self::table(), $type ), $role_args );
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$abilities = $wpdb->get_col( $wpdb->prepare( $sql, $args ) );
+		$resources = $wpdb->get_col( $wpdb->prepare( $sql, $args ) );
 
-		if ( ! is_array( $abilities ) ) {
+		if ( ! is_array( $resources ) ) {
 			return array();
 		}
 
-		// '*' ability (migrated "no restriction" NHI) = unrestricted.
-		if ( in_array( '*', $abilities, true ) ) {
+		// '*' resource (an "all of this type" grant) = unrestricted.
+		if ( in_array( '*', $resources, true ) ) {
 			return null;
 		}
 
-		return array_values( $abilities );
+		return array_values( $resources );
 	}
 
 	/**
@@ -712,15 +833,24 @@ class NHI_Store {
 	/**
 	 * Replaces all grants for one NHI with the given role => abilities map.
 	 *
-	 * @param int                     $nhi_id The NHI id.
-	 * @param array<string, string[]> $map    Role slug => list of ability names.
+	 * @param int                     $nhi_id        The NHI id.
+	 * @param array<string, string[]> $map           Role slug => list of resource identifiers.
+	 * @param string                  $resource_type A RESOURCE_TYPE_* constant.
 	 * @return bool True when the old grants were cleared and every new grant written.
 	 */
-	private static function replace_grants( $nhi_id, array $map ) {
+	private static function replace_grants( $nhi_id, array $map, $resource_type = self::RESOURCE_TYPE_ABILITY ) {
 		global $wpdb;
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$cleared = $wpdb->delete( self::grants_table(), array( 'nhi_id' => (int) $nhi_id ) );
+		// Scoped to one resource type so saving an ability policy leaves the NHI's REST
+		// route grants (and any future grant type) untouched.
+		$cleared = $wpdb->delete(
+			self::grants_table(),
+			array(
+				'nhi_id'        => (int) $nhi_id,
+				'resource_type' => (string) $resource_type,
+			)
+		);
 
 		// Zero rows deleted is normal for an NHI that had no grants yet; only false is a
 		// failure. Bail early — writing new grants on top of a failed clear would leave a
@@ -728,7 +858,7 @@ class NHI_Store {
 		if ( false === $cleared ) {
 			Debug_Logger::error(
 				Debug_Logger::CHANNEL_NHI,
-				'Failed to clear existing grants; ability policy not written.',
+				'Failed to clear existing grants; policy not written.',
 				array(
 					'nhi_id' => (int) $nhi_id,
 					'table'  => self::grants_table(),
@@ -748,7 +878,7 @@ class NHI_Store {
 			foreach ( $abilities as $ability ) {
 				++$attempted;
 				// Written first so one failure does not abandon the remaining grants.
-				if ( ! self::add_grant( (int) $nhi_id, (string) $role, (string) $ability ) ) {
+				if ( ! self::add_grant( (int) $nhi_id, (string) $role, (string) $ability, $resource_type ) ) {
 					++$failed;
 				}
 			}
@@ -759,7 +889,7 @@ class NHI_Store {
 		if ( $failed > 0 ) {
 			Debug_Logger::error(
 				Debug_Logger::CHANNEL_NHI,
-				'One or more ability grants could not be written.',
+				'One or more grants could not be written.',
 				array(
 					'nhi_id'    => (int) $nhi_id,
 					'attempted' => $attempted,
@@ -774,7 +904,7 @@ class NHI_Store {
 
 		Debug_Logger::debug(
 			Debug_Logger::CHANNEL_NHI,
-			'Ability policy written.',
+			'Policy written.',
 			array(
 				'nhi_id' => (int) $nhi_id,
 				'grants' => $attempted,
@@ -788,10 +918,11 @@ class NHI_Store {
 	/**
 	 * Loads grants for the given NHI ids, grouped as [ nhi_id => [ role => [abilities] ] ].
 	 *
-	 * @param array<int|string> $ids NHI ids.
+	 * @param array<int|string> $ids           NHI ids.
+	 * @param string            $resource_type A RESOURCE_TYPE_* constant.
 	 * @return array<int, array<string, string[]>>
 	 */
-	private static function grants_map_for( array $ids ) {
+	private static function grants_map_for( array $ids, $resource_type = self::RESOURCE_TYPE_ABILITY ) {
 		global $wpdb;
 
 		$ids = array_values( array_filter( array_map( 'intval', $ids ) ) );
@@ -801,7 +932,7 @@ class NHI_Store {
 
 		$id_ph = self::placeholders( count( $ids ), '%d' );
 		$sql   = "SELECT nhi_id, role, resource FROM %i WHERE resource_type = %s AND nhi_id IN ( {$id_ph} )";
-		$args  = array_merge( array( self::grants_table(), self::RESOURCE_TYPE_ABILITY ), $ids );
+		$args  = array_merge( array( self::grants_table(), (string) $resource_type ), $ids );
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A );
@@ -823,19 +954,21 @@ class NHI_Store {
 	}
 
 	/**
-	 * Shapes a row for the API: drops the internal `id`, adds `role_ability_map`.
+	 * Shapes a row for the API: drops the internal `id`, adds the grant maps.
 	 *
 	 * @param array<string, mixed>    $row              Raw DB row.
-	 * @param array<string, string[]> $role_ability_map Role => abilities.
+	 * @param array<string, string[]> $role_ability_map Role => ability names.
+	 * @param array<string, string[]> $role_route_map   Role => REST route grants.
 	 * @return array<string, mixed> Shaped row.
 	 */
-	private static function shape( array $row, array $role_ability_map = array() ) {
+	private static function shape( array $row, array $role_ability_map = array(), array $role_route_map = array() ) {
 		return array(
 			'uuid'             => (string) $row['uuid'],
 			'name'             => (string) $row['name'],
 			'is_enabled'       => (int) $row['is_enabled'],
 			'created'          => (int) $row['created'],
 			'role_ability_map' => $role_ability_map,
+			'role_route_map'   => $role_route_map,
 		);
 	}
 

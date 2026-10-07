@@ -13,10 +13,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use MoSMCP\Common\Repositories\NHI_Store;
 use MoSMCP\Common\Repositories\Store;
+use MoSMCP\Common\Services\Diagnostics\Test_Token;
 use MoSMCP\Common\Services\Discovery\Discovery;
 use MoSMCP\Common\Services\Logging\Debug_Logger;
 use MoSMCP\Common\Services\MCP\MCP_Server;
 use MoSMCP\Common\Services\OAuth\Tokens;
+use MoSMCP\Common\Services\Rest\Rest_Bridge;
 use MoSMCP\Common\Utils\Utils;
 use WP_Error;
 use WP_REST_Request;
@@ -84,6 +86,8 @@ class REST_Controller {
 	 * @return true|WP_Error True when authenticated, WP_Error (401) otherwise.
 	 */
 	public static function authenticate( WP_REST_Request $request ) {
+		self::log_request_entry( $request );
+
 		$token = Utils::extract_bearer_token( $request );
 		if ( '' === $token ) {
 			return self::unauthorized( 'missing_token' );
@@ -109,11 +113,14 @@ class REST_Controller {
 			return preg_replace( '#^https?://#i', '', untrailingslashit( (string) $u ) );
 		};
 		if ( $strip_scheme( $row['resource'] ) !== $strip_scheme( Utils::resource_url() ) ) {
+			// `issued_for`, not `token_resource`: Debug_Logger redacts any context key
+			// containing "token", which would mask the one value this rejection exists
+			// to report. The same trap `bearer_prefix` above was named to dodge.
 			return self::unauthorized(
 				'audience_mismatch',
 				array(
 					'client_id'         => $row['client_id'],
-					'token_resource'    => $row['resource'],
+					'issued_for'        => $row['resource'],
 					'expected_resource' => Utils::resource_url(),
 				)
 			);
@@ -133,31 +140,37 @@ class REST_Controller {
 		// are exposed to this user's role(s).
 		wp_set_current_user( (int) $row['user_id'] );
 
+		// A connection-test token may only read; handle() enforces that.
+		MCP_Server::set_diagnostic( Test_Token::SCOPE === $row['scope'] );
+
 		$roles   = array();
 		$current = wp_get_current_user();
 		if ( $current && isset( $current->roles ) && is_array( $current->roles ) ) {
 			$roles = $current->roles;
 		}
 
-		MCP_Server::set_allowed_abilities( NHI_Store::resolve_for_roles( $roles ) );
+		$allowed = NHI_Store::resolve_for_roles( $roles );
+		MCP_Server::set_allowed_abilities( $allowed );
+
+		// REST routes are granted separately from abilities and deny by default: no grants (or a
+		// failed lookup) is an empty list that reaches nothing; null is the '*' wildcard, unrestricted.
+		Rest_Bridge::set_allowed_routes( NHI_Store::resolve_routes_for_roles( $roles ) );
 
 		// Capture per-request context for the audit logger.
-		$ip = '';
-		if ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
-			$raw_ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
-			$ip     = filter_var( $raw_ip, FILTER_VALIDATE_IP ) ? $raw_ip : '';
-		}
+		$ip = self::client_ip();
 
 		// Resolve the primary NHI for this user's roles so denied/unknown-tool events
 		// can still be attributed to an agent even when the tool isn't in any grant.
 		$primary_nhi = NHI_Store::primary_for_roles( $roles );
+		$source      = Store::client_connection_source( $client );
 
 		MCP_Server::set_request_context(
 			array(
 				'user_id'     => (int) $row['user_id'],
 				'client_id'   => (string) $row['client_id'],
 				'client_name' => isset( $client['client_name'] ) ? (string) $client['client_name'] : '',
-				'source'      => Store::client_connection_source( $client ),
+				'source'      => $source,
+				'roles'       => $roles,
 				'ip'          => $ip,
 				'nhi_id'      => $primary_nhi ? (int) $primary_nhi['id'] : null,
 				'nhi_uuid'    => $primary_nhi ? (string) $primary_nhi['uuid'] : '',
@@ -169,11 +182,18 @@ class REST_Controller {
 			Debug_Logger::CHANNEL_MCP,
 			sprintf( 'Authenticated MCP request from client "%s".', isset( $client['client_name'] ) ? (string) $client['client_name'] : (string) $row['client_id'] ),
 			array(
-				'client_id'   => $row['client_id'],
-				'client_name' => isset( $client['client_name'] ) ? (string) $client['client_name'] : '',
-				'user_id'     => (int) $row['user_id'],
-				'nhi_name'    => $primary_nhi ? (string) $primary_nhi['name'] : '',
-				'ip'          => $ip,
+				'client_id'     => $row['client_id'],
+				'client_name'   => isset( $client['client_name'] ) ? (string) $client['client_name'] : '',
+				'user_id'       => (int) $row['user_id'],
+				'user_login'    => $current ? (string) $current->user_login : '',
+				// The two fields that decide whether this connection can see anything at
+				// all. An authenticated request whose role resolves to zero abilities is
+				// indistinguishable, from the client's side, from a broken server.
+				'roles'         => ! empty( $roles ) ? implode( ',', $roles ) : '(none)',
+				'allowed_count' => null === $allowed ? 'unrestricted' : count( (array) $allowed ),
+				'source'        => $source,
+				'nhi_name'      => $primary_nhi ? (string) $primary_nhi['name'] : '',
+				'ip'            => $ip,
 			)
 		);
 
@@ -187,10 +207,22 @@ class REST_Controller {
 	 * @return WP_REST_Response The JSON-RPC response.
 	 */
 	public static function handle( WP_REST_Request $request ) {
-		$decoded = json_decode( $request->get_body(), true );
+		$body    = $request->get_body();
+		$decoded = json_decode( $body, true );
 
 		if ( null === $decoded && JSON_ERROR_NONE !== json_last_error() ) {
-			return new WP_REST_Response(
+			if ( Debug_Logger::is_capturing() ) {
+				Debug_Logger::warning(
+					Debug_Logger::CHANNEL_MCP,
+					'Rejected MCP request: the body is not valid JSON.',
+					array(
+						'json_error' => json_last_error_msg(),
+						'body'       => Debug_Logger::payload( $body ),
+					)
+				);
+			}
+
+			return self::finish(
 				array(
 					'jsonrpc' => '2.0',
 					'id'      => null,
@@ -205,7 +237,18 @@ class REST_Controller {
 
 		// JSON-RPC batching was removed in MCP 2025-06-18; reject arrays of messages.
 		if ( is_array( $decoded ) && isset( $decoded[0] ) ) {
-			return new WP_REST_Response(
+			if ( Debug_Logger::is_capturing() ) {
+				Debug_Logger::warning(
+					Debug_Logger::CHANNEL_MCP,
+					'Rejected MCP request: JSON-RPC batching is not supported.',
+					array(
+						'messages' => count( $decoded ),
+						'body'     => Debug_Logger::payload( $body ),
+					)
+				);
+			}
+
+			return self::finish(
 				array(
 					'jsonrpc' => '2.0',
 					'id'      => null,
@@ -218,14 +261,116 @@ class REST_Controller {
 			);
 		}
 
+		if ( MCP_Server::is_diagnostic() && ! in_array( is_array( $decoded ) && isset( $decoded['method'] ) ? $decoded['method'] : '', Test_Token::ALLOWED_METHODS, true ) ) {
+			return new WP_REST_Response(
+				array(
+					'jsonrpc' => '2.0',
+					'id'      => is_array( $decoded ) && isset( $decoded['id'] ) ? $decoded['id'] : null,
+					'error'   => array(
+						'code'    => -32001,
+						'message' => __( 'This token is only valid for the connection test.', 'miniorange-secure-mcp-server' ),
+					),
+				),
+				403
+			);
+		}
+
 		$response = MCP_Server::dispatch( $decoded );
 
 		if ( null === $response ) {
 			// Notification: acknowledge with no content.
-			return new WP_REST_Response( null, 202 );
+			return self::finish( null, 202 );
 		}
 
-		return new WP_REST_Response( $response, 200 );
+		return self::finish( $response, 200 );
+	}
+
+	/**
+	 * Logs the outcome of an MCP request and returns the response.
+	 *
+	 * Every exit from {@see handle()} runs through here, so a request that got
+	 * past authentication always has a closing row. A correlation id that opens
+	 * with an entry row and never reaches one of these died inside an ability or
+	 * in PHP itself, not in transport — which is the distinction between "the
+	 * MCP layer is fine, look downstream" and "the MCP layer rejected you".
+	 * Rejected requests never get here: `authenticate()` fails first, and its own
+	 * warning row is the closing row for those.
+	 *
+	 * The envelope is held to the standard payload budget rather than logged
+	 * whole. A tools/list response on a large install runs to six figures and
+	 * would evict every other field in this row, and the input schemas that make
+	 * up its bulk are already visible in the abilities admin screen. The byte
+	 * count survives truncation and is the part worth having.
+	 *
+	 * @param mixed $data   The response body.
+	 * @param int   $status The HTTP status.
+	 * @return WP_REST_Response The response.
+	 */
+	private static function finish( $data, $status ) {
+		if ( Debug_Logger::is_capturing() ) {
+			Debug_Logger::debug(
+				Debug_Logger::CHANNEL_MCP,
+				sprintf( 'MCP request completed with HTTP %d.', $status ),
+				array(
+					'http_status' => $status,
+					'response'    => Debug_Logger::payload( (string) wp_json_encode( $data ) ),
+				)
+			);
+		}
+
+		return new WP_REST_Response( $data, $status );
+	}
+
+	/**
+	 * Records the arrival of an MCP request, before authentication runs.
+	 *
+	 * This is the row whose *absence* carries the information: if a customer
+	 * reports a failing client and no entry row exists for that window, the
+	 * request never reached PHP — a WAF, CDN or redirect ate it, and nothing in
+	 * this plugin can account for it. `has_auth_header` splits the next case out,
+	 * since a proxy that forwards the request but strips the Authorization header
+	 * looks, from the client's side, exactly like a rejected token.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return void
+	 */
+	private static function log_request_entry( WP_REST_Request $request ) {
+		if ( ! Debug_Logger::is_capturing() ) {
+			return;
+		}
+
+		Debug_Logger::debug(
+			Debug_Logger::CHANNEL_MCP,
+			'MCP request received.',
+			array(
+				'route'             => $request->get_route(),
+				'http_method'       => $request->get_method(),
+				// Upper-case "NO" on purpose: it makes the pathological case greppable
+				// without also matching the healthy one.
+				'has_auth_header'   => '' !== Utils::authorization_header( $request ) ? 'yes' : 'NO',
+				'content_type'      => (string) $request->get_header( 'content-type' ),
+				'content_length'    => (string) $request->get_header( 'content-length' ),
+				'user_agent'        => (string) $request->get_header( 'user-agent' ),
+				'ip'                => self::client_ip(),
+				'expected_resource' => Utils::resource_url(),
+				'body'              => Debug_Logger::payload( $request->get_body() ),
+			)
+		);
+	}
+
+	/**
+	 * The validated client IP for this request, or an empty string.
+	 *
+	 * @return string
+	 */
+	private static function client_ip() {
+		if ( empty( $_SERVER['REMOTE_ADDR'] ) ) {
+			return '';
+		}
+
+		$raw = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+
+		return filter_var( $raw, FILTER_VALIDATE_IP ) ? $raw : '';
 	}
 
 	/**
@@ -294,19 +439,13 @@ class REST_Controller {
 	 * @return WP_Error The unauthorized error.
 	 */
 	private static function unauthorized( $reason = 'unknown', array $context = array() ) {
-		$ip = '';
-		if ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
-			$raw_ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
-			$ip     = filter_var( $raw_ip, FILTER_VALIDATE_IP ) ? $raw_ip : '';
-		}
-
 		Debug_Logger::warning(
 			Debug_Logger::CHANNEL_MCP,
 			sprintf( 'Rejected MCP request: %s.', $reason ),
 			array_merge(
 				array(
 					'reason' => $reason,
-					'ip'     => $ip,
+					'ip'     => self::client_ip(),
 				),
 				$context
 			)

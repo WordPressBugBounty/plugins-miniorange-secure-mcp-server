@@ -18,6 +18,7 @@ use MoSMCP\Common\Apis\Diagnostics\Diagnostics_Routes;
 use MoSMCP\Common\Apis\MCP\MCP_Routes;
 use MoSMCP\Common\Apis\NHI\NHI_Routes;
 use MoSMCP\Common\Apis\OAuth\OAuth_Routes;
+use MoSMCP\Common\Apis\Rest\Rest_Bridge_Routes;
 use MoSMCP\Common\Apis\Stats\Stats_Routes;
 
 /**
@@ -46,5 +47,6 @@ class Rest_Routes {
 		Audit_Routes::register();
 		Debug_Routes::register();
 		Diagnostics_Routes::register();
+		Rest_Bridge_Routes::register();
 	}
 }

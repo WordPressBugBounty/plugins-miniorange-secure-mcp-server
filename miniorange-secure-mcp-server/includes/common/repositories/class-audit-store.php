@@ -134,7 +134,7 @@ class Audit_Store {
 		$select_sql    = "SELECT event_id, created, user_id, user_login,
 		                         nhi_uuid, nhi_name, client_id, client_name,
 		                         tool_name, status, error_code, error_message,
-		                         latency_ms, ip_address
+		                         latency_ms, ip_address, meta
 		                  FROM %i {$where_sql}
 		                  ORDER BY created DESC, id DESC
 		                  LIMIT %d OFFSET %d";
@@ -282,6 +282,23 @@ class Audit_Store {
 			'error_message' => null !== $row['error_message'] ? (string) $row['error_message'] : null,
 			'latency_ms'    => null !== $row['latency_ms'] ? (int) $row['latency_ms'] : null,
 			'ip_address'    => null !== $row['ip_address'] ? (string) $row['ip_address'] : null,
+			'meta'          => self::decode_meta( isset( $row['meta'] ) ? $row['meta'] : null ),
 		);
+	}
+
+	/**
+	 * Decodes the stored meta JSON into an array for the API.
+	 *
+	 * @param mixed $raw Raw column value.
+	 * @return array<string, mixed>|null Decoded meta, or null when absent or unreadable.
+	 */
+	private static function decode_meta( $raw ) {
+		if ( ! is_string( $raw ) || '' === $raw ) {
+			return null;
+		}
+
+		$decoded = json_decode( $raw, true );
+
+		return is_array( $decoded ) ? $decoded : null;
 	}
 }
