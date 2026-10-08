@@ -27,7 +27,7 @@
 	var RESPONSES = {
 		not_working: {
 			message: 'Sorry that happened — most issues are quick to sort out.',
-			test:    'Run a connection test before you go',
+			test:    'Open troubleshooting before you go',
 			keep:    'Keep it & get help',
 			links:   [ { label: 'Setup guide', href: DOCS_URL } ],
 		},
@@ -165,9 +165,8 @@
 
 		if ( hasTest ) {
 			box.querySelector( '.mosmcp-df-test' ).addEventListener( 'click', function () {
-				// Leave the deactivation, open the plugin and run the connection test there.
-				var sep = adminUrl.indexOf( '?' ) >= 0 ? '&' : '?';
-				window.location.href = adminUrl + sep + 'mosmcp_test=1';
+				// Leave the deactivation and open the plugin's Troubleshooting page. Nothing runs on arrival.
+				window.location.href = adminUrl + '#/troubleshooting';
 			} );
 		}
 

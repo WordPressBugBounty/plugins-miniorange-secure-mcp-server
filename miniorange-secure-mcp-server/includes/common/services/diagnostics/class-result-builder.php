@@ -60,7 +60,8 @@ class Result_Builder {
 			$rows[] = $state_row;
 		}
 
-		$rows = self::plain_labels( $rows );
+		$rows    = Customer_View::apply( self::plain_labels( $rows ) );
+		$visible = Customer_View::visible( $rows );
 
 		$summary = array(
 			'pass'    => 0,
@@ -68,7 +69,7 @@ class Result_Builder {
 			'fail'    => 0,
 			'skipped' => 0,
 		);
-		foreach ( $rows as $row ) {
+		foreach ( $visible as $row ) {
 			if ( isset( $summary[ $row['status'] ] ) ) {
 				++$summary[ $row['status'] ];
 			}
@@ -76,7 +77,7 @@ class Result_Builder {
 
 		$env   = $meta['env'];
 		$fixes = Fix_Catalog::for_rows(
-			$rows,
+			$visible,
 			array(
 				'auth_fix'          => isset( $env['auth_fix'] ) ? $env['auth_fix'] : 'host_only',
 				'server'            => isset( $env['server'] ) ? $env['server'] : 'unknown',
@@ -98,7 +99,7 @@ class Result_Builder {
 				'retry_after' => $meta['retry_after'],
 			),
 			'checks'         => $rows,
-			'failed_checks'  => self::failed_ids( $rows ),
+			'failed_checks'  => self::failed_ids( $visible ),
 			'fixes'          => $fixes,
 			'allowlist_ips'  => $meta['allowlist_ips'],
 			'expected_count' => (int) $meta['expected_count'],
@@ -133,6 +134,8 @@ class Result_Builder {
 				'http_status' => $row['http_status'],
 				'duration_ms' => $row['duration_ms'],
 				'meta'        => $row['meta'],
+				// Whether the customer saw this row; support sees all of them.
+				'shown_to_customer' => ! empty( $row['shown'] ),
 			);
 		}
 
@@ -172,11 +175,8 @@ class Result_Builder {
 			'site_hosts'                     => __( 'Your site address is consistent', 'miniorange-secure-mcp-server' ),
 			'site_certificate'               => __( 'Your security certificate is valid', 'miniorange-secure-mcp-server' ),
 			'mcp_health'                     => __( 'Your site\'s AI address can be reached', 'miniorange-secure-mcp-server' ),
-			'wellknown_protected_resource'   => __( 'AI can read your site\'s connection info', 'miniorange-secure-mcp-server' ),
-			'wellknown_authorization_server' => __( 'AI can read your site\'s sign-in info', 'miniorange-secure-mcp-server' ),
 			'scheme_host_consistency'        => __( 'Your site\'s addresses all match', 'miniorange-secure-mcp-server' ),
 			'mcp_json_passthrough'           => __( 'Your site answers AI requests', 'miniorange-secure-mcp-server' ),
-			'www_authenticate_present'       => __( 'Your site tells the AI how to sign in', 'miniorange-secure-mcp-server' ),
 			'auth_header_passthrough'        => __( 'The AI\'s sign-in reaches WordPress', 'miniorange-secure-mcp-server' ),
 			'oauth_registration_endpoint'    => __( 'AI apps can register with your site', 'miniorange-secure-mcp-server' ),
 			'oauth_token_endpoint'           => __( 'AI apps can get access', 'miniorange-secure-mcp-server' ),
@@ -262,7 +262,7 @@ class Result_Builder {
 	}
 
 	/**
-	 * Overall verdict. A failure always wins; an unreachable gateway only matters when nothing else failed.
+	 * Overall verdict from what the customer sees: a problem wins, and the outside test not running is only a note.
 	 *
 	 * @param array  $summary       Counts per status.
 	 * @param string $gateway_state Gateway state.
@@ -272,14 +272,14 @@ class Result_Builder {
 		if ( $summary['fail'] > 0 ) {
 			return 'issue';
 		}
+		if ( $summary['warn'] > 0 ) {
+			return 'warn';
+		}
 		if ( self::GATEWAY_RATE_LIMITED === $gateway_state ) {
 			return 'rate_limited';
 		}
-		if ( self::GATEWAY_UNREACHABLE === $gateway_state ) {
-			return 'unavailable';
-		}
 
-		return $summary['warn'] > 0 ? 'warn' : 'ok';
+		return self::GATEWAY_UNREACHABLE === $gateway_state ? 'unavailable' : 'ok';
 	}
 
 	/**

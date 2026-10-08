@@ -36,6 +36,7 @@ class ComposerStaticInit08a96392d045503f5e6cf47ea33148dd
         'MoSMCP\\Common\\Repositories\\NHI_Store' => __DIR__ . '/../..' . '/includes/common/repositories/class-nhi-store.php',
         'MoSMCP\\Common\\Repositories\\Store' => __DIR__ . '/../..' . '/includes/common/repositories/class-store.php',
         'MoSMCP\\Common\\Services\\Diagnostics\\Connectivity_Checker' => __DIR__ . '/../..' . '/includes/common/services/diagnostics/class-connectivity-checker.php',
+        'MoSMCP\\Common\\Services\\Diagnostics\\Customer_View' => __DIR__ . '/../..' . '/includes/common/services/diagnostics/class-customer-view.php',
         'MoSMCP\\Common\\Services\\Diagnostics\\Environment_Detector' => __DIR__ . '/../..' . '/includes/common/services/diagnostics/class-environment-detector.php',
         'MoSMCP\\Common\\Services\\Diagnostics\\Fix_Catalog' => __DIR__ . '/../..' . '/includes/common/services/diagnostics/class-fix-catalog.php',
         'MoSMCP\\Common\\Services\\Diagnostics\\Gateway_Http_Probe' => __DIR__ . '/../..' . '/includes/common/services/diagnostics/class-gateway-http-probe.php',

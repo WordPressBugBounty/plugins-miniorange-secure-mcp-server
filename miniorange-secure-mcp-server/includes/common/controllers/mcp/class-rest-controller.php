@@ -421,8 +421,13 @@ class REST_Controller {
 			);
 
 			if ( '1' === $request->get_header( 'x-mosmcp-diagnostic-probe' ) ) {
-				$seen = '' !== Utils::extract_bearer_token( $request );
-				$result->header( 'X-MOSMCP-Auth-Header-Seen', $seen ? '1' : '0' );
+				// "fallback": only the gateway's X-MO-Authorization arrived, which still signs the request in.
+				if ( '' !== Utils::authorization_header( $request ) ) {
+					$seen = '1';
+				} else {
+					$seen = '' !== Utils::extract_bearer_token( $request ) ? 'fallback' : '0';
+				}
+				$result->header( 'X-MOSMCP-Auth-Header-Seen', $seen );
 			}
 		}
 

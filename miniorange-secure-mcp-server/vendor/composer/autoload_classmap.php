@@ -35,6 +35,7 @@ return array(
     'MoSMCP\\Common\\Repositories\\NHI_Store' => $baseDir . '/includes/common/repositories/class-nhi-store.php',
     'MoSMCP\\Common\\Repositories\\Store' => $baseDir . '/includes/common/repositories/class-store.php',
     'MoSMCP\\Common\\Services\\Diagnostics\\Connectivity_Checker' => $baseDir . '/includes/common/services/diagnostics/class-connectivity-checker.php',
+    'MoSMCP\\Common\\Services\\Diagnostics\\Customer_View' => $baseDir . '/includes/common/services/diagnostics/class-customer-view.php',
     'MoSMCP\\Common\\Services\\Diagnostics\\Environment_Detector' => $baseDir . '/includes/common/services/diagnostics/class-environment-detector.php',
     'MoSMCP\\Common\\Services\\Diagnostics\\Fix_Catalog' => $baseDir . '/includes/common/services/diagnostics/class-fix-catalog.php',
     'MoSMCP\\Common\\Services\\Diagnostics\\Gateway_Http_Probe' => $baseDir . '/includes/common/services/diagnostics/class-gateway-http-probe.php',

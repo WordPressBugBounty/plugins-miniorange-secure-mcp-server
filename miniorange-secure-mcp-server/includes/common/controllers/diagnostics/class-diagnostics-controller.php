@@ -43,7 +43,7 @@ class Diagnostics_Controller extends Abstract_Admin_Controller {
 	}
 
 	/**
-	 * Returns the cached result of the last run and any pending auto-run request.
+	 * Returns the cached result of the last run.
 	 *
 	 * @return WP_REST_Response
 	 */
@@ -51,7 +51,6 @@ class Diagnostics_Controller extends Abstract_Admin_Controller {
 		return new WP_REST_Response(
 			array(
 				'last_run' => Connectivity_Checker::last_run(),
-				'auto_run' => Connectivity_Checker::pending_auto_run(),
 			),
 			200
 		);

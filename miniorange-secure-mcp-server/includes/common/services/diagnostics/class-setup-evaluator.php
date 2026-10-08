@@ -217,9 +217,14 @@ class Setup_Evaluator {
 		if ( 0 === (int) $seen ) {
 			return Response_Classifier::verdict( Response_Classifier::FAIL, 'zero_abilities', __( 'The gateway connected and authenticated but discovered 0 abilities.', 'miniorange-secure-mcp-server' ) );
 		}
-		if ( (int) $seen !== (int) $expected ) {
+		if ( (int) $seen < (int) $expected ) {
 			/* translators: 1: abilities the gateway discovered, 2: abilities this site expects. */
 			return Response_Classifier::verdict( Response_Classifier::FAIL, 'count_mismatch', sprintf( __( 'The gateway discovered %1$d abilities but this dashboard expects %2$d.', 'miniorange-secure-mcp-server' ), $seen, $expected ) );
+		}
+		// More than expected is not a customer problem, but say so rather than claim an exact match.
+		if ( (int) $seen > (int) $expected ) {
+			/* translators: 1: abilities the gateway discovered, 2: abilities this site expects. */
+			return Response_Classifier::verdict( Response_Classifier::PASS, 'ok', sprintf( __( 'The gateway discovered %1$d abilities, more than the %2$d this dashboard expects.', 'miniorange-secure-mcp-server' ), $seen, $expected ) );
 		}
 
 		/* translators: %d: ability count. */

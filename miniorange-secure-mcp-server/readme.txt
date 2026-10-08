@@ -1,282 +1,239 @@
-=== Secure MCP Server for Claude, ChatGPT, Gemini and other AI providers ===
+=== Secure MCP Server for Claude, ChatGPT, Gemini and other AI Agents===
 Contributors: cyberlord92
 Tags: mcp, ai, mcp-server, chatgpt, claude
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.5.0
+Stable tag: 1.5.1
 License: Expat
 License URI: https://plugins.miniorange.com/mit-license
 
-The #1 secure WordPress MCP server for connecting Claude, ChatGPT, & AI agents (MCP Clients) with 300+ tools for WooCommerce, Elementor, audit logs etc.
+The #1 secure WordPress MCP server for connecting Claude, ChatGPT, & AI agents (MCP Clients) with 400+ tools for WooCommerce, SEO, Elementor, audit logs etc.
 
 == Description ==
 
-miniOrange Secure MCP Server is a complete WordPress MCP server plugin that turns your WordPress site into a fully working Model Context Protocol (MCP) server. Once installed, you can connect Claude to WordPress, connect ChatGPT to WordPress, or link any MCP-compatible AI in just 2 minutes.
+**<a href="https://plugins.miniorange.com/mcp-server-ai-policy-enforcement-wordpress" target="_blank">miniOrange Secure MCP Server </a>** is a complete WordPress MCP server plugin that turns your WordPress site into a fully working Model Context Protocol (MCP) server. Once installed, you can connect Claude to WordPress, connect ChatGPT to WordPress, or link any MCP-compatible AI in just 2 minutes.
 
-Ask AI to write blog posts, edit Elementor and Kadence page layouts, manage custom post types and their custom fields, upload media, update WooCommerce products, manage Yoast SEO, moderate comments, handle contact form submissions, and much more, all through simple chat.
+Ask AI to write blog posts, edit Elementor and Kadence page layouts, manage custom post types and their custom fields, upload media, update WooCommerce products, manage Yoast SEO, moderate comments, handle contact form submissions, and much more, all through simple chat. With Governed REST API Access, AI can even use REST endpoints from your other plugins, under the same permissions.
 
 Unlike other WordPress MCP server plugins that give AI full admin access, we put you in complete control. Role-based AI permissions, Turn each tool on or off, self-hosted OAuth 2.1 login, and full activity logs are all included, with no restrictions.
 
-Video: Connect ChatGPT to WordPress Using Secure MCP Server 
-
-[youtube https://www.youtube.com/watch?v=yFzNXnguK00]
-
-
-== Core WordPress MCP Server Features ==
-The most complete WordPress MCP server on the WordPress marketplace:
-
-* **300+ MCP Tools Included:** Full coverage across content, commerce, users, forms, and SEO.
-* **Secure MCP Server with OAuth 2.1:** Self-hosted authorization server where AI never sees your WordPress password.
-* **Role-Based AI Access (NHI Registry):** Assign different MCP tools to each role so every AI client gets its own powers.
-* **Tool Controls:** Turn any MCP tool on or off with one click. 
-* **Works with Every AI:** Connect Claude, ChatGPT, Cursor, Gemini, Windsurf, and any MCP-compatible AI.
-* **One-Click OAuth Connect:** Paste your MCP server URL and approve access, with no API keys to copy.
-* **Full Activity Log:** Every AI action recorded and reviewable.
-* **WordPress Abilities API Native:** Built on WordPress 6.9's official standard for a future-proof design.
-* **Unlimited Usage:** No caps on MCP calls, connected AI clients, or users.
-* **Role-Based Access:** Give each user or AI only the access their role allows.
-* **Agent Reputation Scoring:** Rates each AI on past behavior to spot trusted or risky agents.
-* **Individual Credentials for Users:** Every user connects with their own login, not a shared one.
-* **Dynamic OAuth & API Key Support:** Connect using OAuth or an API key, whichever you prefer.
-* **Audit Log:** See every AI action, including who did it and when.
-* **Policy Forming:** Build your own rules for what AI is allowed to do.
-* **Abilities Restriction:** Turn specific AI abilities on or off to limit what AI can touch.
-* **Human-in-the-Loop Approvals:** Send risky actions to a real person to approve first.
-* **Data Rules + DLP:** Hide emails, phone numbers, and secrets so AI never sees them.
-* **Prompt-Injection Detection:** Catch hidden or harmful instructions before they reach the AI.
-* **Behavioral Anomaly Detection:** Watches AI activity and flags anything unusual.
-* **Rate Limits & Quotas:** Cap how many requests each AI can make to stop overuse.
-* **Multisite Policy:** Apply the same AI rules across all your WordPress sites.
-* **Pre-Built Policy Templates:** Ready-made rule sets so you can set up safe AI access fast.
-
 == Quick Links ==
-<a href="https://plugins.miniorange.com/mcp-server-ai-policy-enforcement-wordpress" target="_blank">Official Website</a> | <a href="https://plugins.miniorange.com/setup-chatgpt-to-wordpress-abilities-api-using-mcp" target="_blank">ChatGpt Setup Guide</a> | <a href="https://plugins.miniorange.com/connect-wordpress-with-claude-mcp-guide" target="_blank">Claude Setup Guide
+<a href="https://plugins.miniorange.com/mcp-server-ai-policy-enforcement-wordpress" target="_blank">Official Website</a> | <a href="https://plugins.miniorange.com/setup-chatgpt-to-wordpress-abilities-api-using-mcp" target="_blank">ChatGpt Setup Guide</a> | <a href="https://plugins.miniorange.com/connect-wordpress-with-claude-mcp-guide" target="_blank">Claude Setup Guide</a> | <a href="https://plugins.miniorange.com/mcp-server-documentation" target="_blank">Documentation</a> | <a href="https://plugins.miniorange.com/mcp-server-ai-policy-enforcement-wordpress#demo-form" target="_blank">Book a Demo</a>
 
-== What Is a WordPress MCP Server? ==
+==Key Features of the Secure WordPress MCP Server==
 
-A WordPress MCP server is a plugin that lets AI tools like Claude by Anthropic and ChatGPT by OpenAI connect to your WordPress site through the Model Context Protocol (MCP), an open standard AI clients use to talk to external apps.
+Built security-first, so you can let AI work on a live site with confidence:
 
-Think of MCP as USB-C for AI. One protocol. Every AI client. Every app. Install this WordPress MCP plugin, and your site instantly becomes an AI-ready backend at:
+* **426 MCP tools in 26 categories** – WordPress core, WooCommerce, Yoast SEO, Rank Math, Advanced Custom Fields, Elementor, Kadence, Contact Form 7, WPForms, Gravity Forms, Fluent Forms and more.
+* **Governed REST API access** – AI can use any WordPress REST endpoint, including those from your other plugins, with route-by-route, role-based permissions.
+* **Agent Registry** – decide, per WordPress role, exactly which tools an AI agent can use.
+* **Self-hosted OAuth 2.1 with PKCE** – the AI never sees your WordPress password.
+* **Every call checked against WordPress capabilities** – an AI can never do more than its user can do in wp-admin.
+* **Full audit log** – every call, allowed or refused, is recorded.
+* **Safe theme and code editing** – changes go to a draft, are syntax-checked and previewed, and publish with automatic backup and rollback.
+* **Built-in troubleshooting** – a Troubleshooting page finds out why an AI client can't connect and tells you what to fix.
 
-`https://YOUR-SITE/wp-json/mosmcp/v1/mcp`
+Everything runs on your own server. No third-party relay sits between your AI client and your site.
 
-Any AI that speaks MCP can now connect and manage your WordPress site through chat.
 
-== WordPress Core Content Tools: 105 MCP Abilities ==
-
-Full AI control over your WordPress content: posts, pages, media, categories, tags, and revisions.
-
-* **Post Management (31 tools):** Find, create, update, publish, schedule, categorize, tag, trash, restore, or delete posts for full editorial automation. Edit the URL slug, set the featured image, choose the page template, and duplicate an existing post to reuse it as a template.
-* **Page Management (25 tools):** Create drafts under parent pages, update any page you can edit, publish, schedule, make private, manage review, trash, restore, or delete pages. Edit slugs, set featured images, choose page templates, and duplicate a page with its layout and settings intact.
-* **Media Library Management (19 tools):** Upload files straight into the library from a public URL or from supplied file contents, list or filter by type, get counts, find by title, update titles, alt text, captions, and descriptions, or delete files.
-* **Category Management (11 tools):** List, create, rename, and update categories or slugs, find empty ones, and delete safely with reassignment to default.
-* **Tag Management (10 tools):** List, create, rename, and update tags, find unused tags for cleanup, and delete safely without breaking posts.
-* **Revisions & History (9 tools):** List, count, and retrieve revisions or autosaves, and restore any post to a specific revision or delete one.
-
-== WooCommerce MCP Integration: 45 AI Tools ==
-
-The most complete WooCommerce MCP server available. Let AI run your entire online store.
-
-* **Product Management (16 tools):** Create and update simple, variable, grouped, or external products, manage stock, SKUs, attributes, and variations, and bulk update.
-* **Order Management (11 tools):** List, create, and update orders, change status, edit billing and shipping, add notes, and create full or partial refunds.
-* **Customer Management (7 tools):** List, create, update, and delete customers, view purchase history, and segment by spend, order count, or activity.
-* **WooCommerce Reports (6 tools):** Sales reports by date range, top-selling products, order and inventory reports, customer acquisition, and coupon usage.
-
- == Yoast SEO MCP Integration: 15 AI Tools ==
-
-The only WordPress MCP server with dedicated Yoast SEO support. Every field an AI client can write, it can also read back.
-
-* **Read Yoast SEO Data (3 tools):** Get focus keyword, SEO analysis, and the full meta fields bundle in one call — including the SEO title with its template variables already resolved, so you see what search engines will see.
-* **Titles & Indexing (5 tools):** Update the SEO title, breadcrumb title, canonical URL, robots meta, and the advanced robots directives (no-image-index, no-archive, no-snippet).
-* **Content & Social (5 tools):** Update the meta description, focus keyphrase, Open Graph tags, X/Twitter card, and cornerstone content flag.
-* **Structured Data (1 tool):** Set the schema page type and article type used for rich results.
-* **Sitemap Management (1 tool):** Add or remove specific posts and pages from the Yoast XML sitemap.
-
-Every Yoast tool works on posts, pages, and any custom post type, so a single call pattern covers your whole site.
-
-== User Management, Roles & Comments: 60 MCP Tools ==
-
-The most complete user and moderation toolkit of any WordPress MCP plugin.
-
-* **User Administration (22 tools):** List, get, search, count, create, and update users, and manage custom user metadata.
-* **User Deletion & Validation (5 tools):** Delete with content reassignment, check username and email availability, and get or update user locale.
-* **Native Credentials (3 tools):** Reset passwords, invalidate sessions, and validate password reset tokens.
-* **Content Association (2 tools):** List posts and comments authored by a specific user.
-* **Roles & Permissions (8 tools):** List roles and capabilities, get editable roles, assign or remove roles, and view MCP policy assignments.
-* **Comment Moderation, Read (8 tools):** List pending, approved, spam, or trashed comments, search, and get counts by status.
-* **Comment Moderation, Status Changes (6 tools):** Approve, unapprove, spam, restore, trash, or permanently delete comments.
-* **Comment Content & Metadata (6 tools):** Reply as admin, get and update metadata, and get counts by post, status, or user.
-
-== Contact Form 7, WPForms & Gravity Forms: 40 MCP Tools ==
-
-The only WordPress MCP server with support for the top 3 form plugins.
-
-* **Contact Form 7 (12 tools):** List forms, fields, and mail settings, list and export submissions via Flamingo, mark read/unread, trash, and delete for GDPR.
-* **WPForms (14 tools):** List forms, fields, settings, and notifications, list, count, and export entries, mark read/unread, trash, restore, and delete.
-* **Gravity Forms (14 tools):** List all or active forms, get fields and settings, list, count, and export entries, mark read/unread, trash, restore, and delete.
-
-== Elementor Page Builder: 10 MCP Tools ==
-
-Elementor keeps its layout in its own data, not in the WordPress editor, which is why asking AI to "update the page content" normally changes nothing a visitor sees. These tools work on the real Elementor layout, so a design you built in Elementor survives the edit.
-
-* **Read Elementor Layouts (3 tools):** List the elements on a page with their text, images, and links, filter by widget type or by the text they contain, and read any widget's full settings schema before writing to it. Reading a layout also reports which text widget holds the article body, so AI editing an article never confuses the caption for the prose.
-* **Edit Content Without Touching Design (1 tool):** Change the text, image, or link of a single element. It can only reach content settings, so colours, fonts, and spacing cannot be altered by accident.
-* **Edit Styling Deliberately (1 tool):** Set text and background colour, font size, weight and family, line height, letter spacing, letter casing, alignment, padding, and margin — with separate values for tablet and mobile. Restricted to that list on purpose, so the rest of your design is untouchable.
-* **Restructure Layouts (4 tools):** Duplicate, move, or delete an element, or replace a whole layout when you are building from scratch.
-* **Check Before You Trust It (1 tool):** Render the page, or a single element, to the markup a visitor would receive — so a change can be verified rather than assumed.
-* **Duplicate and Rewrite (workflow):** Build one article in Elementor, then have AI duplicate it and replace the copy's text, featured image, categories, and SEO. The copy keeps the original's fonts, colours, spacing, and layout exactly.
-
-Every write is checked after saving and rolled back if it did not persist, and an optional page lock refuses the edit if someone changed the page since AI last read it. Works on posts, pages, and custom post types.
-
-== Custom Post Types & Custom Fields: 19 MCP Tools ==
-
-Works with any custom post type registered on your site, whatever created it — CPT UI, JetEngine, ACF, Toolset, or your own code. Nothing needs configuring first.
-
-* **Discover What Exists (3 tools):** List the custom post types on the site with their taxonomies, supported features, and whether the connected account may edit them; describe one type in detail; and list its items.
-* **Read & Edit Items (4 tools):** Read an item with all of its custom fields, update the title, content, excerpt, and slug, create new items, and set the parent for hierarchical types.
-* **Custom Fields (2 tools):** Read and write custom field values, including repeatable fields. A field managed by another plugin is reported as read-only instead of being corrupted, and a read tells you exactly why a field cannot be written — so AI never plans an edit that will be refused.
-* **Taxonomies & Featured Image (3 tools):** Assign or remove terms in any taxonomy attached to the type, and set the featured image.
-* **Publishing & Lifecycle (5 tools):** Change status, trash, restore, duplicate an item as a template, and permanently delete.
-* **Page Templates (2 tools):** Read and set the template a single item uses.
-
-Yoast SEO and Elementor tools work on custom post types too, so an events listing or a services directory can be managed end to end.
-
-== Kadence Blocks & Kadence Theme: 17 MCP Tools ==
-
-The first WordPress MCP server that can safely edit a page builder. AI reads and rewrites the actual Kadence block tree, so your layout, styling, and responsive settings survive the edit.
-
-* **Read Kadence Pages (4 tools):** Read a page's full nested block structure by ID or title, get one block's complete settings, search blocks by type or by the text they contain, and list the Kadence block types registered on your site.
-* **Edit Kadence Blocks (4 tools):** Update text in 16 separate fields across 9 block types (headings, buttons, info boxes, testimonials, icon lists, image captions, accordion titles), update styling and responsive attributes across all 59 Kadence block types, and duplicate or delete any block.
-* **Build Kadence Layouts (7 tools):** Insert rows, columns, headings, images, and buttons, create a new draft page pre-built with a row and columns, or build a nested row-and-column layout in a single request.
-* **Kadence Theme Layout (2 tools):** Read and set Kadence's per-page layout options.
-
-Every edit rewrites only the block you target and leaves the rest of the page byte-for-byte identical, and responsive desktop, tablet, and mobile values can be set directly. Kadence tools appear once you grant them to a role in the AI Agent Registry.
-
-== WordPress Site Administration: 34 MCP Tools ==
-
-* **Site Settings, Read (10 tools):** Get title, tagline, URL, timezone, language, permalinks, posts-per-page, homepage, privacy policy page, and search visibility.
-* **Site Settings, Write (7 tools):** Update title, tagline, timezone, and posts-per-page, and set homepage, posts page, and privacy policy page.
-* **Plugin Management (8 tools):** List plugins, get full details for one (name, version, author, update status), count them by status, list the ones with updates waiting, activate, deactivate, update, and turn automatic updates on or off. Name a plugin however you like: its folder, its file, or its display name all work. Installing and deleting plugins are intentionally not offered yet, because both are irreversible and belong behind a human approval step rather than a flag your AI can set for itself.
-* **Theme Management (3 tools):** List installed themes, get the active theme, and get theme details by slug.
-* **Updates & Site Health (6 tools):** Check core, plugin, and theme updates, and get WordPress version, PHP/MySQL info, and Site Health status.
-
-== WordPress Theme Editing with Preview: 32 MCP Tools ==
-
-Change how the whole site looks without risking the live site. Every theme change goes into one draft first. You get a preview link that shows the site with the draft applied, only to you, while visitors keep seeing the live site. Nothing changes for anyone else until you say publish.
-
-* **Templates & Template Parts (8 tools):** Read and change the templates for posts, pages, archives and 404s, and parts such as the header and footer, or return any of them to the theme's original. Edits go through the Site Editor's own code, so they take effect even on a site already customised in the Site Editor.
-* **Global Styles & Style Variations (6 tools):** Read and change site colours, fonts, spacing and element styles, apply one of the theme's ready-made looks, or go back to the theme's own styles.
-* **Patterns (3 tools):** List the theme's patterns, read any of them, and create or update saved patterns. A synced pattern updates everywhere it is used, so changes to it wait in the draft too.
-* **Find & Replace in Templates (2 tools):** Change one line, such as the footer copyright, without rewriting the rest, even when that line lives in a theme pattern the footer only references or runs through a link.
-* **Theme Files (7 tools):** Read, search and outline theme code, and change it in a private draft copy of the theme. PHP is checked for syntax errors, theme.json for valid JSON and templates for balanced blocks before any change is accepted, and the files a theme cannot work without are protected.
-* **Draft, Preview & Publish (6 tools):** See what is pending, get a preview link, test that the site still loads with the draft, publish, discard, or restore an earlier publish. Publishing refuses to overwrite anything changed on the live site since, and proves the site loads with the draft before touching anything by opening wp-admin, the home page and the newest post and page. It then backs up the live versions, publishes, checks those pages again (signed in and as a visitor), and rolls every change back automatically if one fails or comes back blank.
-
-== Security & Governance: Why This Is the Safest WordPress MCP Server ==
-
-Letting AI touch your WordPress site is a big trust decision, so our secure MCP server plugin is built with 5 protection layers:
-
-* **Self-Hosted OAuth 2.1 Authorization Server:** Your site is its own OAuth server, so AI never sees your password and only gets a scoped access token.
-* **NHI Registry, Role-Based AI Permissions:** Each AI is a first-class identity, and two users connecting the same AI get different permissions based on their role.
-* **Per-Tool On/Off Control:** Disable any of the 300+ MCP tools with one click, globally, regardless of role or AI.
-* **Governed REST API Access:** AI can discover and call your site's REST API routes too, but only the specific routes and methods you grant per AI, beyond a sensible read-only default — and a site-wide switch can pause all create, update or delete requests at once.
-* **Real WordPress User Enforcement:** Every MCP request runs as a genuine WordPress user account, so all core capability checks apply.
-* **Full Audit Trail:** Every MCP tool call, OAuth grant, and ability change is logged and searchable.
-
-Plus: PKCE (S256) anti-hijack protection, RFC 7591 Dynamic Client Registration for one-click AI setup, Streamable HTTP transport and JSON-RPC 2.0 for reliable connections, Bearer token support for automation, and a clean uninstall.
-
-== Compatible AI Clients ==
-
-This WordPress MCP server works with every major MCP-compatible AI:
-
-* **Claude by Anthropic** (Claude.ai, Claude Desktop, Claude Code): connect in one click via OAuth.
-* **ChatGPT by OpenAI:** connect as a custom MCP server.
-* **Cursor:** AI code editor with MCP support.
-* **Windsurf:** AI-powered IDE.
-* **Gemini AI by Google** (Gemini CLI, Google Antigravity).
-* **n8n:** automation platform with MCP nodes.
-* **Any MCP-compatible client**
-
-== Example Chat Prompts ==
-
-Once you connect Claude or ChatGPT to WordPress with this MCP plugin, just chat:
-
-* "Write a 700-word blog post about summer travel tips and save it as a draft."
-* "Update my About page to make the intro shorter and friendlier."
-* "Duplicate my best-performing Elementor article, then rewrite it for the UK market and keep the design."
-* "The heading on that landing page is too small on mobile — bump it to 34px on mobile only."
-* "Add the date and time to the Fred and Friends event, and set its featured image from this URL."
-* "Increase prices on all products in 'Winter Collection' by 15%."
-* "Which products sold the most this month?"
-* "Update the Yoast meta description on my homepage, keep it under 155 characters."
-* "Approve every pending comment that isn't spam."
-* "Export all Contact Form 7 submissions from the last 30 days as CSV."
-* "Check for plugin updates and show me what's available."
-* "Change the footer copyright to 2026 and make the site background dark navy, then send me a preview link before anything goes live."
-
-== Who Should Use This WordPress MCP Server? ==
-
-* Bloggers using AI to write and publish faster
-* WooCommerce store owners automating products, orders, and reports
-* SEO agencies delegating Yoast optimization to AI
-* Content teams scaling production with AI assistance
-* Developers building AI agent workflows on WordPress
-* Digital agencies managing multiple client WordPress sites
-* Enterprise sites needing secure, role-based AI governance
-* Small businesses running lean with AI automation
-
-== Best WordPress MCP Server Comparison ==
-
-**miniOrange Secure MCP vs. Other WordPress MCP Servers**
-
-* **300+ MCP tools included** — miniOrange: Yes | Others: Fewer
-* **Role-based AI permissions** — miniOrange: Yes (NHI Registry) | Others: No
-* **Per-tool on/off toggle** — miniOrange: Yes | Others: Rare
-* **Self-hosted OAuth 2.1** — miniOrange: Full support | Others: Partial
-* **WordPress Abilities API** — miniOrange: Native | Others: Some
-* **WooCommerce MCP (45 tools)** — miniOrange: Yes | Others: Limited
-* **Yoast SEO MCP (15 tools)** — miniOrange: Yes | Others: Limited
-* **Elementor MCP (10 tools)** — miniOrange: Yes, edits the real layout | Others: None
-* **Kadence Blocks MCP (17 tools)** — miniOrange: Yes | Others: None
-* **Theme editing with preview (32 tools)** — miniOrange: Templates, styles and theme files, previewed before publishing, with automatic rollback | Others: File edits only, or none
-* **Custom post types & custom fields (19 tools)** — miniOrange: Any registered type | Others: Rare
-* **Contact Form 7, WPForms, Gravity Forms** — miniOrange: All 3 (40 tools) | Others: Rare
-* **Node.js or external service needed** — miniOrange: Never | Others: Sometimes
-* **Full audit log** — miniOrange: Yes | Others: Sometimes
-* **Unlimited usage, no caps** — miniOrange: Yes | Others: Some restrict
-
-== Installation ==
-
-= How to Install the WordPress MCP Server (2 Minutes) =
+==How to Install the WordPress MCP Server (2 Minutes)==
 
 1. Log in to your WordPress admin dashboard.
-2. Go to Plugins &rarr; Add New.
-3. Search "Secure MCP Server" 
-4. Click Install Now, then Activate.
-5. Done — the plugin is now active.
+2. Go to **Plugins → Add New**.
+3. Search for **Secure MCP Server**.
+4. Click **Install Now**, then **Activate**.
 
-= How to Connect Claude to WordPress =
 
-1. Open Tools Secure MCP Server.
-2. Go to the "Connect to AI" tab.
-3. Copy your MCP server URL: `https://YOUR-SITE/wp-json/mosmcp/v1/mcp`
-4. Open Claude Desktop > Settings > Connector> Add custom connector.
-5. Paste the URL.
-6. Sign in to WordPress.
-7. Approve MCP tool access.
-8. Start chatting with your site through Claude.
+= Create Your First AI Agent =
+
+1. Open **Secure MCP Server** from the WordPress admin sidebar.
+2. Click **Register your first agent**.
+3. Enter an agent name and click **Next**.
+4. Choose which abilities each user role can use, then click **Create & Continue**.
+5. Click **Continue**. You'll see **Connect your AI client**.
 
 = How to Connect ChatGPT to WordPress =
 
-1. Open Tools Secure MCP Server.
-2. Go to the "Connect to AI" tab.
-3. Copy your MCP server URL: `https://YOUR-SITE/wp-json/mosmcp/v1/mcp`
-4. Open Claude Desktop > Settings > Plugins>Browse Plugins> Add New Plugin.
-5. Paste the URL.
-6. Sign in to WordPress.
-7. Approve MCP tool access.
-8. Start chatting with your site through Chagpt.
+1. Under **Connect your AI client**, select **ChatGPT**. A setup panel opens.
+2. Copy **Your Site URL** from the panel.
+3. Click the **MCP Server for WordPress** link in the panel. It opens the app in ChatGPT.
+4. Click **Install Plugin**.
+5. Enter your WordPress Site URL and click **Continue**.
+6. Click **Allow Access**. Now start chatting with your site through ChatGPT.
 
+Full guide: [Set up ChatGPT with WordPress using MCP](https://plugins.miniorange.com/setup-chatgpt-to-wordpress-abilities-api-using-mcp)
+
+= How to Connect Claude to WordPress =
+
+1. Under **Connect your AI client**, select **Claude**. A setup panel opens.
+2. Open the connector page **miniOrange MCP for WordPress** and click **Connect**.
+3. Enter your site’s address. You’ll land on the sign-in gateway — paste your site’s URL there.
+4.  Log in with your WordPress account and click **Allow access**. Your approved tools now appear in Claude – start chatting with your site.
+
+Full guide: [Connect WordPress with Claude using MCP](https://plugins.miniorange.com/connect-wordpress-with-claude-mcp-guide)
+
+**Video: Connect Claude to WordPress Using Secure MCP Server**
+
+[youtube https://www.youtube.com/watch?v=MUtolq0HRhM]
+
+
+= Connect Gemini, Cursor, Windsurf & Any MCP Client =
+
+The plugin follows the open Model Context Protocol standard, so it works with Gemini, Cursor, Windsurf, and any MCP-compatible client. Connect several AI clients at once, each with its own permissions and audit trail.
+
+Your MCP server endpoint:
+**https://gateway.miniorange.ai/v2/mcp**
+
+==What Your AI Agent Can Do==
+
+426 tools in 26 categories. Integration tools appear only when the related plugin is active.
+
+**WordPress Content**
+
+* **Posts & Pages (56 tools)** – Create, publish, schedule, duplicate, set templates and featured images, trash and restore.
+* **Categories, Tags & Media (40 tools)** – Manage taxonomies, upload media from a URL or file, update alt text and captions.
+* **Revisions (9 tools)** – List, compare and restore revisions and autosaves.
+* **Comments (21 tools)** – Moderate, reply, search, mark spam and view counts.
+* **Custom Post Types & Fields (19 tools)** – Discover any custom post type and edit its items, terms and fields.
+* **Content Find & Replace (6 tools)** – Change part of a post, custom field or setting without rewriting it.
+
+**Users & Site Management**
+
+* **Users & Roles (38 tools)** – Create users, assign roles, update profiles, send password reset links.
+* **Settings, Plugins, Themes & Updates (34 tools)** – Site title, tagline, homepage, timezone, plugin activation and updates, auto-updates, site health.
+* **Maintenance (8 tools)** – Clear caches, refresh permalinks, run cron events, read the error log.
+* **Theme Editing (32 tools)** – Block templates, global styles, patterns and theme files, with draft, preview, publish and restore.
+
+**Plugin Integrations**
+
+* **WooCommerce (41 tools)** – Products, orders, refunds, customers, coupons and sales reports.
+* **Advanced Custom Fields (25 tools)** – Field groups, repeaters, flexible content, relationships, options pages.
+* **Yoast SEO & Rank Math (15 tools)** – SEO titles, meta descriptions, focus keywords, canonicals, schema, Open Graph.
+* **Forms & Leads (54 tools)** – Contact Form 7 (Flamingo), WPForms, Gravity Forms and Fluent Forms entries, with CSV export.
+* **Elementor (10 tools)** – Read, edit, style, move and duplicate Elementor elements
+* **Divi 4 & Divi 5** – Read and edit Divi Builder layouts, modules, text, images and styling.
+* **Kadence Blocks (18 tools)** – Build Kadence pages, insert rows, columns, headings, buttons and images.
+
+**Governed REST API Access: Go Beyond Built-in Tools**
+
+AI can use any WordPress REST API endpoint – core, WooCommerce, Yoast or any other plugin – with no plugin update needed.
+
+* **Read-only by default** – a new AI agent can read posts, pages and media; any write needs your approval.
+* **Granular control** – allow each route and method (read or write) per user role, all logged.
+* **Site-wide write switches** – turn all create, update or delete REST calls off for the whole site in one click.
+* **Dangerous routes stay blocked** – plugin and theme installs, activations, batch and blueprint-import routes can never be granted.
+
+**WooCommerce MCP Server**
+
+Run your store through chat. Create and update products, attributes, categories and tags. Look up, create and update orders, change order status, add order notes and issue refunds. Manage customers, view purchase history and customer segments, and create or update coupons. Get sales, orders, products, customers, coupon usage and top-seller reports.
+
+**SEO MCP: Yoast SEO & Rank Math**
+
+Bulk-update SEO titles and meta descriptions, set focus keywords, mark cornerstone content, and control robots meta, advanced robots directives, canonical URLs, breadcrumb titles and sitemap inclusion. Manage Open Graph, Twitter/X cards and schema types. Rank Math SEO metadata is supported too.
+
+**Advanced Custom Fields (ACF) MCP**
+
+Read and update any ACF field value, in bulk or one at a time. Work with repeater rows, flexible content layouts, relationship fields and options pages. Create field groups, add fields, update location rules, check conditional logic, and validate a value before it is saved. You can also search posts by ACF field value.
+
+**Page Builder MCP: Elementor, Divi & Kadence**
+
+**Elementor:** read a page layout, change element text, images, links and styling without breaking the design, move, duplicate or delete elements, look up widget schemas and preview the rendered result.
+
+
+
+**Divi 4 & Divi 5:** read Divi Builder layouts and update modules, text, images, links and styling through chat, without opening the visual builder.
+
+**Kadence Blocks:** build new Kadence layout pages, insert rows, columns, headings, buttons, icons and images, update block text and styling, and set page layout options.
+
+= Forms & Leads MCP =
+
+Work with **Contact Form 7** (via Flamingo), **WPForms**, **Gravity Forms** and **Fluent Forms**. List forms and fields, read and count entries, mark them read or unread, trash, restore or delete them, and **export entries as CSV**. Inspect form settings and notifications, and for Fluent Forms you can create, update and test notifications and confirmations.
+
+
+
+**Safe Theme & Code Editing**
+
+AI can now edit your theme safely:
+
+* Edit block templates, template parts, global styles, style variations and patterns.
+* Read, search and edit theme files – PHP, CSS, JavaScript and theme.json.
+* **Nothing touches the live site directly.** Every change goes into one private draft.
+* PHP is checked for syntax errors, JSON for validity, and templates for broken blocks before a change is accepted.
+* Preview the draft, and test that the site still loads before it goes live.
+* Publishing takes an **automatic backup**. If the site fails, **everything rolls back automatically**.
+* Undo any publish later with one restore.
+
+**Site Management & Maintenance**
+
+Update site title, tagline, homepage, posts page, timezone and privacy page. List, activate, deactivate and update plugins and set auto-updates. Check WordPress core, plugin and theme updates, site health and server information. Clear caches, refresh permalinks, inspect and run scheduled (cron) events, and read the site error log to troubleshoot problems.
+
+= Smart Content Editing =
+
+
+
+* **Find & replace** inside posts, custom fields and settings – change one sentence without rewriting the whole page.
+* **Page lock** – edits are refused if the page changed after the AI read it.
+* **Revision restore** – roll back any post to an earlier version.
+
+**Agent Registry: Role-Based Access for Every AI Agent**
+
+The **Agent Registry** controls what each AI agent may do.
+
+* Create named agent policies that map WordPress roles to allowed tools.
+* Tools outside a role's grant are hidden from the AI client and cannot be called.
+* Turn an agent on or off without losing its configuration.
+* Revoke an AI client's access instantly.
+* Use the role/ability matrix editor to manage everything in one place.
+
+So an editor's AI can write content but cannot install plugins, and a shop manager's AI can update orders but cannot touch site settings.
+
+**Troubleshooting: Find Out Why an AI Client Can't Connect**
+
+If an AI client can't reach your site or sees no tools, open the **Troubleshooting** tab. The plugin checks your site and the connection from outside, and shows only the problems that are likely to be real.
+
+* Each problem is explained in plain language, with who can fix it and the exact change to make.
+* Detects firewall, CDN, caching and reverse-proxy issues, and servers that strip the Authorization header.
+* Copy-paste Apache and Nginx fixes for the most common causes.
+* **Copy for support** gives you a redacted report to send to our team.
+
+==Three Layers of Security on Every Call==
+
+1. **The connection is a real WordPress user.** OAuth 2.1 (PKCE) tokens are bound to the user who approved the connection and to your site. Expired, revoked or wrong-site tokens are refused.
+2. **Role-scoped AI grants.** Only the tools allowed for that role through the agent Registry are visible and callable.
+3. **WordPress capability checks.** Each call is checked exactly like wp-admin, down to the individual post, page, comment
+
+
+
+Plus:
+
+* **Per-tool on/off toggles** for every tool.
+* **Prompt-injection detection** and **behavioral anomaly detection**.
+* **Rate limits and quotas** per AI client.
+* **Data rules & DLP** that mask emails, phone numbers and secrets.
+* **Human-in-the-loop approval** for sensitive actions.
+* **Destructive actions need confirmation**, and every tool tells the AI client whether it is read-only or destructive.
+* **Activity audit log** that records the user, AI identity, client, tool, outcome and time, filterable by agent, status, tool, user and date.
+
+**Dashboard & Monitoring**
+
+See active agents, executions, success rate and latency at a glance. Members can open "Your AI Access" to see which tools their role allows and how to connect.
+
+==Example Prompts==
+
+* "Write a blog post about our summer sale, add it to the News category and schedule it for Monday 9 AM."
+* "Find all products under ₹500 and put them on a 20% sale until Sunday."
+* "Write meta descriptions for every post that doesn't have one."
+* "Export this month's Gravity Forms entries as CSV."
+* "Change the footer text in my theme, preview it, then publish."
+* "Why aren't my scheduled posts publishing? Check cron and the error log."
+* "Use the REST API to list this week's bookings from my booking plugin."
+
+= Need Help? =
+
+Ask in the [support forum](https://wordpress.org/support/plugin/miniorange-secure-mcp-server/) – our team responds quickly. For private or enterprise questions, email **info@xecurify.com** or use the **Contact Support** button inside the plugin.
+
+== Installation ==
 
 = Requirements =
 
@@ -284,86 +241,141 @@ Once you connect Claude or ChatGPT to WordPress with this MCP plugin, just chat:
 * PHP 7.4 or higher (PHP 8.0+ recommended)
 * HTTPS enabled (for OAuth login)
 
+
+= From your WordPress dashboard =
+
+1. Go to **Plugins → Add New Plugin**.
+2. Search for **miniOrange Secure MCP Server**.
+3. Click **Install Now**, then **Activate**.
+4. Open **Secure MCP Server** from the admin sidebar and click **Register your first agent**.
+5. Name the agent, set ability access by user role, and click **Create & Continue**.
+6. Under **Connect your AI client**, choose Claude, ChatGPT or another client and follow the setup panel.
+7. Sign in to WordPress and click **Allow Access**. Done!
+
+= Manual installation =
+
+1. Download the plugin zip.
+2. Go to **Plugins → Add New → Upload Plugin** and upload the zip.
+3. Activate the plugin and continue from step 4 above.
+
+
 == Frequently Asked Questions ==
 
-= What is the NHI Registry? =
+= What is an MCP server for WordPress? =
 
-The NHI (Non-Human Identity) Registry is where you create and manage named, role-based ability policies for AI clients. Each NHI maps WordPress roles to the abilities those roles may invoke. When an AI client makes an MCP request, the effective set of allowed abilities is the union — across every enabled NHI — of the abilities granted to the connecting user's role(s). So two users connecting the same client to the same site can see different tools, based on their roles. You can create as many NHIs as you need and toggle them on or off independently.
+MCP (Model Context Protocol) is an open standard that lets AI assistants use tools. This plugin makes your WordPress site an MCP server, so AI clients like Claude and ChatGPT can safely read and update your site through tools you control.
 
-= Can I disable an NHI without deleting it? =
+= Which AI clients are supported? =
 
-Yes. Every NHI has an enable/disable toggle in the NHI Registry screen. A disabled NHI has no effect on MCP requests but its name and ability list are preserved, so you can re-enable it at any time without reconfiguring it.
+Claude, ChatGPT, Gemini, Cursor, Grok, Windsurf and any MCP-compatible client.
 
-= Does this WordPress MCP server work with WooCommerce? =
+= How many tools are included? =
 
-Yes — full WooCommerce MCP support with 45 tools covering products, variations, orders, customers, coupons, and reports. Perfect for AI-powered store management.
+426 tools in 26 categories, covering WordPress core, WooCommerce, Yoast SEO, Rank Math, Advanced Custom Fields, Elementor, Divi, Kadence, Contact Form 7, WPForms, Gravity Forms, Fluent Forms, theme editing and site maintenance. Integration tools appear only when the related plugin is active.
 
-= Does it work with Yoast SEO? =
+= Is it safe to give AI access to my WordPress site? =
 
-Yes. 8 dedicated Yoast SEO MCP tools for meta descriptions, focus keywords, Open Graph tags, robots meta, and sitemap inclusion. Deepest Yoast integration of any WordPress MCP server.
+Yes. Access uses self-hosted OAuth 2.1 with PKCE, so the AI never sees your password. Every call is limited by role through the agent Registry, checked against WordPress capabilities, rate-limited and logged. You can require human approval for sensitive actions and mask sensitive data.
 
-= Does it work with Contact Form 7, WPForms, and Gravity Forms? =
+= Can the AI do more than my WordPress user can? =
 
-Yes — all three form plugins supported with 40 MCP tools total. Read entries, export CSV, moderate submissions, delete for GDPR compliance.
+No. Every tool runs as the WordPress user who approved the connection, and every call is checked against that user's capabilities exactly as in wp-admin.
 
-= Is it safe to connect AI to my WordPress site? =
+= Can AI use the REST API of my other plugins? =
 
-With this MCP plugin, absolutely. AI never sees your WordPress password (OAuth 2.1 with PKCE). Every action is capability-checked at the WordPress core level. Role-based permissions limit what each AI can do. All actions are logged. You can revoke access anytime.
+Yes. AI can discover and call any WordPress REST route, including those from WooCommerce, Yoast and other plugins, with no plugin update needed. A new agent starts with read-only access to core WordPress content. Writes and routes outside it need an explicit, per-role grant, and you can switch off all create, update or delete REST calls for the whole site. Plugin and theme install, activate, batch and blueprint-import routes are always blocked.
 
-= Can I disable specific MCP tools? =
+= Can AI break my theme or site? =
 
-Yes. Every MCP tool has a global on/off toggle. Turn off dangerous actions like "delete permanently" while keeping safe ones enabled. One-click safety.
+Theme changes never touch the live site directly. They go into a draft, PHP is syntax-checked and JSON validated, and you can preview the draft. Publishing takes a backup and rolls back automatically if the site fails to load, and you can restore any earlier publish.
 
-= Can AI call my site's REST API directly? =
+= Does it work with WooCommerce? =
 
-Only the routes and methods you explicitly grant, per AI, with one exception: a new AI starts with read-only access to core WordPress content so it's useful right away, and nothing more. Any write access, and anything outside WordPress's own endpoints, still needs an explicit grant — and granting a route is separate from granting the ability to use the REST bridge in the first place, so both are required. A site-wide switch can also pause all create, update, or delete requests through the REST bridge at once, independent of any individual AI's grants.
+Yes. 41 tools cover products, attributes, orders, order notes, refunds, customers, coupons and sales reports.
 
-= How do I revoke AI access? =
+= Does it work with Yoast SEO and Rank Math? =
 
-Open the NHI Registry and click Revoke. The AI immediately loses access. You can also disable specific NHIs (preserving their config) or turn off individual tools instantly.
+Yes. 14 Yoast SEO tools cover titles, meta descriptions, focus keywords, cornerstone content, robots, canonicals, breadcrumbs, Open Graph, Twitter/X cards, schema and sitemaps. Rank Math SEO metadata is also supported.
 
-= Can multiple AI connect at once? =
+= Does it support Advanced Custom Fields (ACF)? =
 
-Yes. Connect Claude, ChatGPT, Cursor, and Gemini simultaneously, each with different permissions. Track their activity separately in the audit log.
+Yes. 25 ACF tools cover field values, repeaters, flexible content, relationships, options pages, field groups and location rules.
 
-= Why does the "Source" column show a namespace instead of a plugin name? =
+= Does it support Elementor, Divi and Kadence? =
 
-The Abilities API does not record which plugin registered a given ability. The namespace prefix (the part before the slash in the ability name) is the most reliable indicator of where an ability comes from.
+Yes. Elementor (10 tools), Divi 3 and Divi 4, and Kadence Blocks (18 tools) are supported, so AI can read, edit, style and build layouts.
+
+= Which form plugins are supported? =
+
+Contact Form 7 (with Flamingo for submissions), WPForms, Gravity Forms and Fluent Forms, including CSV export of entries.
+
+= Can I disable specific tools? =
+
+Yes. Every tool has a global on/off toggle, and the agent Registry controls tools per role. Developers can also limit exposed tools with the `MOSMCP_EXPOSED_PREFIXES` constant.
+
+= How do I revoke an AI client's access? =
+
+Click **Revoke** in the agent Registry. Access ends immediately.
+
+= Can I connect multiple AI clients at the same time? =
+
+Yes. Connect as many as you need, each with separate permissions and its own audit trail.
+
+= What happens if an AI edit goes wrong? =
+
+Page lock blocks edits to content that changed after the AI read it, post revisions can be restored, theme changes publish with automatic backup and rollback, and destructive actions require confirmation.
+
+= Does my data go through a third-party server? =
+
+No. The MCP server and OAuth server run on your own WordPress site. Your AI client connects directly to your site.
+
+= Why does my AI client say it cannot reach my site? =
+
+AI clients need a public HTTPS URL. Sites on localhost or behind a firewall cannot be reached. Also make sure your CDN or cache is not caching the MCP endpoint. Open the **Troubleshooting** tab in Secure MCP Server to run a connection test; it lists the likely causes with the fix for each.
+
+= Do I need to know how to code? =
+
+No. Install, follow the onboarding checklist, and paste one URL into your AI client.
 
 == Screenshots ==
 
-1. The onboarding quick-start guide for Secure MCP Server — register your first agent and walk through connecting an AI client, step by step.
-2. The AI Agents list — role-based ability policies for each registered agent, plus which ability packs are ready to use.
-3. An agent's Overview tab — configuration, the access policy granted to each role, and its latest activity.
-4. The Activity Log — every ability execution across every agent, filterable by agent, status, ability, user, and date.
-5. Connecting an AI client: create a connector in ChatGPT, Claude, or any other MCP-compatible client, then paste the MCP URL via the miniOrange Gateway or a direct connection.
-6. The MCP Server Dashboard — active agents, total executions, success rate, and average latency at a glance.
-7. A member's "Your AI Access" view — the tools available to their role, with a one-click path to connect an AI client.
+1. Onboarding quick-start guide for registering your first AI agent.
+2. AI Agents list with role-based policies and ability packs.
+3. Agent overview showing configuration and recent activity.
+4. Activity log filterable by agent, status, ability, user and date.
+5. Connect to AI – setup for ChatGPT, Claude and other MCP clients.
+6. MCP Server dashboard with active agents, executions, success rate and latency.
+7. "Your AI Access" view showing a member's allowed tools and how to connect.
+
 
 == Changelog ==
 
+= 1.5.1 =
+* Improved the Troubleshooting page to show only likely connection problems.
+* Minor bug fixes in the WordPress MCP Server.
+
 = 1.5.0 =
-* Added support for REST APIs.
+* Added support for REST APIs in the WordPress MCP Server.
 * Added a Troubleshooting page.
 * Improved MCP connection reliability with AI providers.
-* Minor bug fixes.
+* Minor bug fixes in the WordPress MCP Server.
 
 = 1.4.14 =
 * Added theme editing for block themes: templates, template parts, global styles, style variations and patterns.
 * Added theme file editing: read, search and change theme code in a private draft.
 * Every theme change now waits in a draft you can preview before it goes live. Before publishing, the site is checked with the draft applied, publishing backs up first, and every change is rolled back automatically if the site breaks.
 * Improved: AI assistants are now told which inputs each tool requires and why a change was refused, including the closest matching text when wording is not found.
-* Minor bug fixes.
+* Minor Bug Fixes in the WordPress MCP Server
 
 = 1.4.13 =
 * Added surgical content editing: change part of the text in a post, a custom field or a setting without rewriting the whole thing.
 * Added 8 maintenance abilities covering scheduled events, permalinks, caches, and the site error log.
 * Added Fluent Forms support: 14 abilities for forms, fields, confirmation messages, email notifications and submissions.
-* Minor bug fixes.
+* Minor Bug Fixes in the WordPress MCP Server
 
 = 1.4.12 =
 * Added 34 site administration abilities covering site settings, plugin management, theme details, and update and Site Health checks.
-* Minor bug fixes.
+* Minor bug fixes in the WordPress MCP Server
 
 = 1.4.11 =
 * Security and performance improvements to the MCP connection flow.
@@ -371,35 +383,35 @@ The Abilities API does not record which plugin registered a given ability. The n
 * Added product sale schedule date fields to the WooCommerce abilities.
 
 = 1.4.10 =
-* Fixed: the health endpoint is no longer cacheable. Page and edge caches (e.g. LiteSpeed, Cloudflare) could previously serve a stale "no agent" state, causing a connected client to report "No NHI configured" even after an agent was enabled.
-* Minor bug fixes.
+* Fixed: the health endpoint is no longer cacheable. Page and edge caches (e.g. LiteSpeed, Cloudflare) could previously serve a stale "no agent" state, causing a connected client to report "No agent configured" even after an agent was enabled.
+* Minor bug fixes in the WordPress MCP Server
 
 = 1.4.9 =
 * Debug logging framework: a built-in diagnostic log for MCP and OAuth activity.
-* Minor Bug fixes.
+* Minor bug fixes in the WordPress MCP Server
 
 = 1.4.8 =
-* Minor bug fixes
+* Minor bug fixes in the WordPress MCP Server
 
 = 1.4.7 =
-* Elementor integration: 10 abilities that let a connected AI client read and edit pages, posts and custom post types built with Elementor. Read a layout's elements with their text, images and links, filter by widget type or by the text they contain, and render the result to check a change rather than assume it.
-* Edit Elementor content in place: change the text, image or link of a single element without touching the design. Reading a layout now also reports which text widget holds the article body, so an AI client editing an article no longer has to guess between a caption and the prose.
-* Edit selected Elementor styling: text and background colour, font size, weight and family, line height, letter spacing, letter casing, alignment, padding and margin — with separate values for tablet or mobile. Limited to those properties on purpose, so it cannot disturb the rest of a design.
-* Custom post type support: 19 abilities for any registered custom post type, whether it came from CPT UI, JetEngine, ACF or code. Read and edit items and their custom fields, assign taxonomy terms, set the featured image, change status, duplicate, trash and restore. Fields managed by another plugin are reported as read-only rather than being corrupted, and a read now tells you exactly why a field cannot be written.
-* Media uploads: add files to the media library from a public URL or from supplied file contents, then use the returned attachment ID to set a featured image or fill an image widget. The real file type is checked against the contents rather than the extension, and URL fetches are restricted to public web addresses so the site cannot be used to reach services on its own network.
-* Duplication now carries a page's whole appearance — layout, theme settings, taxonomies and featured image — and clears the copy's canonical URL, which would otherwise tell search engines the original is the real page and keep the duplicate out of search results.
-* More Yoast fields available to AI clients: breadcrumb title, canonical URL, SEO title, focus keyphrase, social and X/Twitter cards, advanced robots directives, cornerstone content and schema types. Reading a post's SEO now returns every field that can be written, including the title with its template variables resolved.
-* Slugs can now be edited on posts, pages and custom post types. Renaming something already published warns that the address has changed, and says plainly when WordPress will not redirect the old one.
-* Minor bug fixes
+* Elementor integration: Added 10 MCP Server abilities to read and edit Elementor pages, posts, and custom post types, including layout elements, text, images, links, widget types, and rendering changes for verification.
+* Elementor editing: Update text, images, links, and selected styling without affecting the rest of the design, with separate tablet/mobile values.
+* Custom post types: Added 19 abilities to read and edit items and custom fields, manage taxonomies, featured images, status, duplication, trash, and restore. Unsupported fields remain read-only with clear reasons.
+* Media uploads: Upload files from public URLs or supplied content, validate the real file type, and use attachment IDs for featured images or Elementor widgets.
+* Duplication: Copies now retain layout, theme settings, taxonomies, and featured images while clearing the canonical URL.
+* Yoast SEO: Added more editable fields, including breadcrumb title, canonical URL, SEO title, focus keyphrase, social/X cards, robots directives, cornerstone content, and schema types.
+* Slugs: Posts, pages, and custom post type slugs can now be edited with warnings about changed URLs and redirects.
+* Minor bug fixes in the WordPress MCP Server.
 
 = 1.4.6 =
-* Kadence integration: 17 abilities that let a connected AI client read, edit, and build pages made with Kadence Blocks. Read a page's full nested block structure by ID or title, get a single block's settings, and search blocks by type or by the text they contain.
-* Edit Kadence blocks in place: update text across 16 fields in 9 block types (headings, buttons, info boxes, testimonials, icon lists, image captions, accordion titles), update styling and responsive attributes across all 59 Kadence block types with desktop/tablet/mobile values, and duplicate or delete a block. Duplicates get freshly generated block IDs so styling never collides.
-* Build layouts: insert rows, columns, headings, images (from the media library by attachment ID), and buttons; create a new draft page pre-built with a row and columns; or build a nested row-and-column structure in a single request.
-* New abilities to read and set Kadence's per-page theme layout options.
-* Kadence edits rewrite only the block you target and leave every other byte of the page identical, so layouts authored in the Kadence editor are preserved. Writes accept an optional page lock so an edit is refused if the page changed since it was last read, and each write returns the previous and new value for verification.
-* Inserted Kadence markup is generated to match what the Kadence editor itself saves, including the block version marker, so inserted rows and columns get Kadence's generated CSS and sit side by side as expected. Block types whose markup cannot be reproduced reliably are declined with a message pointing to the duplicate-and-edit route instead of writing markup that would break the page.
-* Minor bug fixes
+* Kadence integration: Added 17 abilities to the MCP Server for AI clients to read, edit, and build Kadence Blocks pages, including reading nested blocks, block settings, and searching blocks by type or text.
+* Edit Kadence blocks: Update text across 16 fields in 9 block types, styling and responsive attributes across all 59 block types, and duplicate or delete blocks with unique IDs.
+* Build layouts: Insert rows, columns, headings, images, and buttons; create draft pages with pre-built layouts; or build nested row-and-column structures in one request.
+* Added abilities to read and set Kadence per-page theme layout options.
+* Safe editing: MCP Server edits change only the targeted block, preserve the rest of the page, support optional page locks, and return previous and new values for verification.
+* Kadence-compatible markup: Inserted blocks match Kadence editor markup and CSS.
+* Unsupported block types are declined with a duplicate-and-edit option.
+* Minor bug fixes.
 
 = 1.4.5 =
 * ChatGPT is now shown first when connecting a client, with a direct link to the official plugin listing and clearer, more accurate setup steps.
@@ -422,13 +434,13 @@ The Abilities API does not record which plugin registered a given ability. The n
 * New ability — "Update Page": edits the title and/or content of an existing page.
 
 = 1.4.0 =
-* New — bundled abilities library: 260+ ready-to-use, security-reviewed WordPress abilities exposed as MCP tools out of the box. Core content (posts, pages, categories, tags, media, revisions), users & roles, and comments are always available; ability sets for WooCommerce, Advanced Custom Fields, Yoast SEO, Contact Form 7 (with Flamingo), WPForms, and Gravity Forms activate automatically when those plugins are present.
-* Every bundled ability is capability-gated, carries explicit MCP tool annotations (read-only / destructive / idempotent / open-world), declares full input/output JSON schemas, and is reachable only through the governed MCP endpoint — never the public REST API.
-* Security hardening in the bundled abilities: reserved user-meta keys (capabilities, role level, session tokens) can never be read or written through an ability; role grants are limited to roles whose capabilities the caller already holds; and CSV entry exports are neutralized against spreadsheet formula injection.
-* Fixed the role & ability editor incorrectly flagging object-level abilities (those gated by per-object capabilities such as editing or deleting a specific post or page) as capability conflicts for every role, including Administrator. These capabilities are resolved per request against the target object, so they are no longer shown as conflicts; the runtime permission check is unchanged and was always correct.
-* Added a "Test Connection" check that confirms an AI client will actually be able to reach and sign in to your site, run from both your server and an outside vantage so it catches firewall, CDN, and reverse-proxy issues a same-server check would miss. Available on the Connect to AI page and beside Register Agent on the AI Agents screen.
-* Added a Troubleshooting guide, always available from the toolbar, that explains the common reasons an AI client can't connect and gives copy-paste Apache/Nginx fixes for each. When a connection test finds an issue, the most likely cause is highlighted automatically.
-* Reliability on CDN/cached hosts: the OAuth and MCP endpoints (discovery, registration, the MCP transport, and the authentication challenge) now send "Cache-Control: no-store", so an edge cache or CDN — such as Pantheon's Varnish, Cloudflare, WP Engine, or Kinsta — can no longer cache and misdeliver these per-request responses, which could otherwise intermittently break AI-client connections.
+* New — MCP Server abilities library: 260+ ready-to-use, security-reviewed WordPress abilities exposed as MCP tools, covering core content, users & roles, comments, WooCommerce, Advanced Custom Fields, Yoast SEO, Contact Form 7, WPForms, and Gravity Forms. Plugin-specific abilities activate automatically when available.
+* All abilities are capability-gated with MCP tool annotations and full input/output JSON schemas, and are accessible only through the governed MCP Server endpoint, never the public REST API.
+* Security hardening: Protected user-meta keys cannot be accessed, role grants require existing caller capabilities, and CSV exports are protected against spreadsheet formula injection.
+Fixed: Object-level abilities no longer show false capability conflicts in the role & ability editor. Runtime permission checks remain unchanged.
+* Test Connection: Checks AI-client access and sign-in from both your server and an external location to detect firewall, CDN, and reverse-proxy issues.
+* Troubleshooting guide: Provides common AI-client connection fixes, including copy-paste Apache/Nginx solutions, with likely causes highlighted automatically.
+* Reliability: OAuth and MCP Server endpoints now use Cache-Control: no-store to prevent CDN/edge caching issues that can disrupt AI-client connections.
 
 = 1.3.1 =
 * Minor fixes and reliability improvements in the MCP Server plugin.
@@ -436,20 +448,20 @@ The Abilities API does not record which plugin registered a given ability. The n
 = 1.3.0 =
 * Execution activity log: a full audit trail of every tool call, filterable by agent, status, or time range, with per-event detail including latency and error context.
 * Dashboard redesign: four focused metrics — Active Agents, Total Executions, Success Rate, and Average Latency — for an at-a-glance view of MCP server health.
-* Activity timeline on the agent overview: the last 5 executions appear inline on each NHI's overview tab.
-* Denied and unknown-tool calls are now correctly attributed to the responsible NHI, so the audit log is never missing an agent name.
+* Activity timeline on the agent overview: the last 5 executions appear inline on each agent overview tab.
+* Denied and unknown-tool calls are now correctly attributed to the responsible agent , so the audit log is never missing an agent name.
 
 = 1.2.3 =
-* Clearer role & ability editor: a single Select all / Clear all control (instead of separate All and None buttons), role names shown in each NHI's summary, and a smoother role & ability layout.
+* Clearer role & ability editor: a single Select all / Clear all control (instead of separate All and None buttons), role names shown in each Agents summary, and a smoother role & ability layout.
 * Refined the admin/member view switcher to a clearer segmented control.
 * Fixed the support form's country picker so it no longer shifts the page or scrolls unexpectedly when opened.
-* General UI polish across the NHI Registry and connection screens.
+* General UI polish across the agent Registry and connection screens.
 
 = 1.2.2 =
-* NHI Registry is now role-based: grant abilities to each WordPress role, with live capability-conflict detection. A request receives the abilities its user's role(s) are granted across all enabled NHIs.
+* Agent Registry is now role-based: grant abilities to each WordPress role, with live capability-conflict detection. A request receives the abilities its user's role(s) are granted across all enabled agents.
 * Added a "My AI Access" member view so any logged-in user can see the tools available to their role, with an admin/member view switcher for administrators.
-* Rebuilt NHI create/edit as full-screen pages (guided create wizard ending in a connection step); removed the cramped modal editor.
-* Existing NHIs are migrated automatically and keep working; review each one to scope its abilities per role.
+* Rebuilt agent create/edit as full-screen pages (guided create wizard ending in a connection step); removed the cramped modal editor.
+* Existing agents are migrated automatically and keep working; review each one to scope its abilities per role.
 * Support and deactivation-feedback emails now include the customer's email address in the subject line.
 * Added a Settings link to the plugin's row on the Plugins page.
 
@@ -459,7 +471,7 @@ The Abilities API does not record which plugin registered a given ability. The n
 * Redesigned the deactivation feedback prompt with a clearer, on-brand layout, guided reason selection, and the option to get help instead of deactivating.
 
 = 1.2.0 =
-* Added NHI Registry: a new admin screen to view and manage all non-human identity (AI client) registrations, including OAuth client details and token status.
+* Added agents Registry: a new admin screen to view and manage all non-human identity (AI client) registrations, including OAuth client details and token status.
 * Added per-ability toggle to enable or disable individual abilities from being exposed as MCP tools.
 * Revamped the plugin UI.
 
@@ -475,8 +487,11 @@ The Abilities API does not record which plugin registered a given ability. The n
 
 == Upgrade Notice ==
 
+= 1.5.1 =
+Improves the Troubleshooting page so it shows only likely connection problems. Minor bug fixes.
+
 = 1.5.0 =
-Adds support for REST APIs and a Troubleshooting page, and improves MCP connection reliability with AI providers. Minor bug fixes.
+Adds governed REST API access, so AI can use the REST routes of your other plugins under per-role permissions (new agents start read-only), and a Troubleshooting page that finds why an AI client can't connect. Improves connection reliability with AI providers. Minor bug fixes.
 
 = 1.4.14 =
 Adds theme editing: templates, template parts, global styles, style variations, patterns and theme files, all changed in a draft you can preview, checked for errors, and published with an automatic backup and rollback. Also gives AI assistants clearer guidance on every tool. Minor bug fixes.
@@ -491,7 +506,7 @@ Adds 34 site administration abilities covering site settings, plugin management,
 Security and performance improvements to the MCP connection flow, a new Rank Math SEO post meta update ability, and product sale schedule date fields for WooCommerce.
 
 = 1.4.10 =
-Fixed: the health endpoint is no longer cacheable. Page and edge caches (e.g. LiteSpeed, Cloudflare) could previously serve a stale "no agent" state, causing a connected client to report "No NHI configured" even after an agent was enabled. Minor bug fixes.
+Fixed: the health endpoint is no longer cacheable. Page and edge caches (e.g. LiteSpeed, Cloudflare) could previously serve a stale "no agent" state, causing a connected client to report "No agents configured" even after an agent was enabled. Minor bug fixes.
 
 = 1.4.9 =
 Adds a built-in debug logging framework, and minor bug fixes.
@@ -521,7 +536,7 @@ Redesigns the role & ability editor as a role-by-resource matrix and adds a guid
 Adds an "Update Page" ability so an AI client can edit pages.
 
 = 1.4.0 =
-Adds a bundled library of 260+ ready-to-use WordPress abilities (core content, users & roles, comments, plus sets that auto-activate for WooCommerce, Advanced Custom Fields, Yoast SEO, Contact Form 7, WPForms, and Gravity Forms — every ability capability-gated and governed by the NHI Registry), a Test Connection check, and a Troubleshooting guide for diagnosing AI-client connection issues. Also fixes false "capability conflict" warnings for object-level abilities (display-only; permission enforcement is unchanged). No database changes and no manual upgrade steps required.
+Adds a bundled library of 260+ ready-to-use WordPress MCP Server abilities for core content, users & roles, comments, WooCommerce, Advanced Custom Fields, Yoast SEO, Contact Form 7, WPForms, and Gravity Forms. All abilities are capability-gated and governed by the Agent Registry. Also adds Test Connection and Troubleshooting guides, fixes false “capability conflict” warnings for object-level abilities (display-only; enforcement unchanged), with no database changes or manual upgrade steps.
 
 = 1.3.1 =
 Minor fixes and reliability improvements. No upgrade steps required.
@@ -533,13 +548,13 @@ Adds a full execution activity log and a redesigned dashboard. Existing installs
 UI refinements to the role & ability editor and general polish and fixes
 
 = 1.2.2 =
-Adds role-based access control to the NHI Registry and a member "My AI Access" view. Existing NHIs are migrated automatically and continue to work; review each one to scope its abilities per role. No manual upgrade steps are required.
+Adds role-based access to the Agent Registry and “My AI Access.” Existing agents continue to work and are migrated automatically. Review abilities by role; no manual upgrade is needed.
 
 = 1.2.1 =
 Adds a floating Contact Support button, a quick Setup Guide link, and an improved deactivation feedback experience. No database changes or upgrade steps are required.
 
 = 1.2.0 =
-Adds the NHI Registry screen for managing connected AI clients, per-ability toggles on the Abilities screen, and a revamped plugin UI. No database changes; no upgrade steps required.
+Adds the agent Registry screen for managing connected AI clients, per-ability toggles on the Abilities screen, and a revamped plugin UI. No database changes; no upgrade steps required.
 
 = 1.1.1 =
 Adds support and deactivation feedback forms. No database changes; no upgrade steps required.

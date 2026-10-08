@@ -338,13 +338,13 @@ class Local_Checks {
 		return array(
 			'health_pretty'   => array( 'url' => home_url( '/wp-json/' . $ns . '/health' ) ),
 			'health_fallback' => array( 'url' => home_url( '/index.php' ) . '?rest_route=/' . $ns . '/health' ),
-			'wk_prm'          => array( 'url' => home_url( '/.well-known/oauth-protected-resource' ) ),
-			'wk_asm'          => array( 'url' => home_url( '/.well-known/oauth-authorization-server' ) ),
 			'mcp'             => array(
 				'url'     => Utils::resource_url(),
 				'method'  => 'POST',
 				'headers' => array(
 					'Authorization'             => 'Bearer ' . self::PROBE_BEARER,
+					// Same two headers the gateway sends, so the result matches real gateway traffic.
+					'X-MO-Authorization'        => 'Bearer ' . self::PROBE_BEARER,
 					'X-MOSMCP-Diagnostic-Probe' => '1',
 					'Content-Type'              => 'application/json',
 					'Accept'                    => 'application/json',
@@ -392,10 +392,7 @@ class Local_Checks {
 	private static function http_rows( array $res ) {
 		$labels = array(
 			'mcp_health'                     => __( 'REST API reachable (/wp-json/ and ?rest_route=)', 'miniorange-secure-mcp-server' ),
-			'wellknown_protected_resource'   => __( 'OAuth protected resource metadata', 'miniorange-secure-mcp-server' ),
-			'wellknown_authorization_server' => __( 'OAuth authorization server metadata', 'miniorange-secure-mcp-server' ),
 			'mcp_json_passthrough'           => __( 'MCP endpoint answers 401 without a valid token', 'miniorange-secure-mcp-server' ),
-			'www_authenticate_present'       => __( 'Authentication challenge header present', 'miniorange-secure-mcp-server' ),
 			'auth_header_passthrough'        => __( 'Authorization header reaches WordPress', 'miniorange-secure-mcp-server' ),
 			'oauth_registration_endpoint'    => __( 'Client registration endpoint', 'miniorange-secure-mcp-server' ),
 			'oauth_token_endpoint'           => __( 'Token endpoint', 'miniorange-secure-mcp-server' ),
@@ -406,7 +403,6 @@ class Local_Checks {
 		$get    = function ( $key ) use ( $res, $none ) {
 			return isset( $res[ $key ] ) ? $res[ $key ] : $none;
 		};
-		$origin = self::expected_origin();
 
 		$pretty   = Response_Classifier::classify_health( $get( 'health_pretty' ) );
 		$fallback = Response_Classifier::classify_health( $get( 'health_fallback' ) );
@@ -414,10 +410,7 @@ class Local_Checks {
 
 		$verdicts = array(
 			'mcp_health'                     => Setup_Evaluator::evaluate_rest_paths( $pretty, $fallback ),
-			'wellknown_protected_resource'   => Response_Classifier::classify_wellknown( $get( 'wk_prm' ), $origin ),
-			'wellknown_authorization_server' => Response_Classifier::classify_wellknown( $get( 'wk_asm' ), $origin ),
 			'mcp_json_passthrough'           => $mcp['mcp'],
-			'www_authenticate_present'       => $mcp['www_authenticate'],
 			'auth_header_passthrough'        => $mcp['auth_header'],
 			'oauth_registration_endpoint'    => Response_Classifier::classify_oauth_error( $get( 'register' ) ),
 			'oauth_token_endpoint'           => Response_Classifier::classify_oauth_error( $get( 'token' ) ),
@@ -426,10 +419,7 @@ class Local_Checks {
 
 		$status_for = array(
 			'mcp_health'                     => 'health_pretty',
-			'wellknown_protected_resource'   => 'wk_prm',
-			'wellknown_authorization_server' => 'wk_asm',
 			'mcp_json_passthrough'           => 'mcp',
-			'www_authenticate_present'       => 'mcp',
 			'auth_header_passthrough'        => 'mcp',
 			'oauth_registration_endpoint'    => 'register',
 			'oauth_token_endpoint'           => 'token',
@@ -443,18 +433,6 @@ class Local_Checks {
 		}
 
 		return $rows;
-	}
-
-	/**
-	 * Scheme and host the OAuth documents are expected to advertise.
-	 *
-	 * @return string
-	 */
-	private static function expected_origin() {
-		$facts = self::url_facts();
-		$parts = wp_parse_url( $facts['home'] );
-
-		return ( is_array( $parts ) && isset( $parts['scheme'], $parts['host'] ) ) ? $parts['scheme'] . '://' . $parts['host'] : '';
 	}
 
 	/**

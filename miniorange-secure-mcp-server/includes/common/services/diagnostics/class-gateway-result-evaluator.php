@@ -29,7 +29,13 @@ class Gateway_Result_Evaluator {
 	/**
 	 * Legacy checks that only make sense once the MCP endpoint itself answered.
 	 */
-	const DEPENDENT_ON_MCP = array( 'www_authenticate_present', 'auth_header_passthrough' );
+	const DEPENDENT_ON_MCP = array( 'auth_header_passthrough' );
+
+	/**
+	 * Checks that only matter for direct connections, which are deprecated. The gateway still runs them
+	 * for older plugins; this plugin does not show them.
+	 */
+	const DIRECT_ONLY = array( 'wellknown_protected_resource', 'wellknown_authorization_server', 'www_authenticate_present' );
 
 	/**
 	 * Evaluates a gateway report.
@@ -142,6 +148,9 @@ class Gateway_Result_Evaluator {
 		$rows = array();
 		foreach ( $checks as $check ) {
 			$key = isset( $check['check_key'] ) ? (string) $check['check_key'] : '';
+			if ( in_array( $key, self::DIRECT_ONLY, true ) ) {
+				continue;
+			}
 
 			if ( $mcp_failed_upstream && in_array( $key, self::DEPENDENT_ON_MCP, true ) ) {
 				$verdict = Response_Classifier::verdict( Response_Classifier::SKIP, 'not_reached', __( 'Skipped: the MCP endpoint could not be reached.', 'miniorange-secure-mcp-server' ) );
@@ -181,10 +190,11 @@ class Gateway_Result_Evaluator {
 		$blocked = $http > 0 || '' !== $print || '' !== $kind;
 
 		if ( 'auth_header_passthrough' === $key && 401 === $http ) {
-			return Response_Classifier::verdict( Response_Classifier::FAIL, 'auth_header_stripped', __( 'The server removed the Authorization header before WordPress saw it, so every AI request looks signed out.', 'miniorange-secure-mcp-server' ) );
-		}
-		if ( 'www_authenticate_present' === $key && 401 === $http ) {
-			return Response_Classifier::verdict( Response_Classifier::FAIL, 'missing_challenge_header', __( 'The 401 has no WWW-Authenticate header, so AI clients cannot discover how to sign in. A proxy or firewall is stripping it.', 'miniorange-secure-mcp-server' ) );
+			// The gateway sends this text when the echo header never came back; only an explicit "0" means both headers were removed.
+			if ( isset( $check['detail'] ) && 'the plugin did not report whether the Authorization header arrived' === $check['detail'] ) {
+				return Response_Classifier::verdict( Response_Classifier::WARN, 'auth_header_unknown', __( 'The plugin did not report whether the Authorization header arrived (a proxy may be stripping response headers).', 'miniorange-secure-mcp-server' ) );
+			}
+			return Response_Classifier::verdict( Response_Classifier::FAIL, 'auth_header_stripped', __( 'The server removed both sign-in headers (Authorization and the gateway\'s backup header) before WordPress saw them, so every request looks signed out.', 'miniorange-secure-mcp-server' ) );
 		}
 		if ( 'scheme_host_consistency' === $key ) {
 			return Response_Classifier::verdict( Response_Classifier::FAIL, 'scheme_host_mismatch', __( 'The site advertises addresses (http or another host) that differ from the one the gateway used, so tokens are rejected after connecting.', 'miniorange-secure-mcp-server' ) );

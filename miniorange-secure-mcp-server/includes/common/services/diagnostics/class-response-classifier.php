@@ -126,24 +126,6 @@ class Response_Classifier {
 	}
 
 	/**
-	 * Whether response headers show the body came from a cache layer.
-	 *
-	 * @param array<string,string> $headers Lowercase headers.
-	 * @return bool
-	 */
-	public static function served_from_cache( array $headers ) {
-		$cache_headers = array( 'x-litespeed-cache', 'x-cache', 'x-proxy-cache', 'x-fastcgi-cache', 'x-cache-status', 'cf-cache-status' );
-
-		foreach ( $cache_headers as $name ) {
-			if ( isset( $headers[ $name ] ) && preg_match( '/\b(hit|stale|revalidated|updating)\b/i', $headers[ $name ] ) ) {
-				return true;
-			}
-		}
-
-		return isset( $headers['age'] ) && (int) $headers['age'] > 0;
-	}
-
-	/**
 	 * Classifies the failure modes shared by every endpoint: transport errors, firewall pages,
 	 * rate limiting, server errors and redirects.
 	 *
@@ -166,7 +148,9 @@ class Response_Classifier {
 			'modsecurity_block'    => __( 'ModSecurity (a server firewall) blocked the request.', 'miniorange-secure-mcp-server' ),
 			'imunify_block'        => __( 'Imunify360 (a server firewall) blocked the request.', 'miniorange-secure-mcp-server' ),
 		);
-		if ( isset( $blocks[ $print ] ) ) {
+		$is_block_status = in_array( $status, array( 403, 406, 429, 503 ), true );
+		$cf_challenge     = isset( $res['headers']['cf-mitigated'] ) && 'challenge' === strtolower( $res['headers']['cf-mitigated'] );
+		if ( isset( $blocks[ $print ] ) && ( $is_block_status || $cf_challenge ) ) {
 			return self::verdict( self::FAIL, $print, $blocks[ $print ] );
 		}
 
@@ -221,49 +205,10 @@ class Response_Classifier {
 	}
 
 	/**
-	 * Classifies an OAuth discovery document: 200 JSON, no redirect, not a stale cached copy.
-	 *
-	 * @param array  $res             Normalized response.
-	 * @param string $expected_origin Scheme+host the document should advertise, '' to skip the staleness test.
-	 * @return array
-	 */
-	public static function classify_wellknown( array $res, $expected_origin = '' ) {
-		$fail = self::common_failure( $res );
-		if ( null !== $fail ) {
-			return $fail;
-		}
-
-		$cached = self::served_from_cache( $res['headers'] );
-		$type   = isset( $res['headers']['content-type'] ) ? strtolower( $res['headers']['content-type'] ) : '';
-		$json   = json_decode( $res['body'], true );
-
-		if ( 200 !== $res['status'] ) {
-			return self::unexpected( $res, 200 );
-		}
-
-		if ( false === strpos( $type, 'json' ) || ! is_array( $json ) ) {
-			if ( $cached ) {
-				return self::verdict( self::FAIL, 'cached_response', __( 'A page cache is serving a stored web page at this address instead of the live OAuth document.', 'miniorange-secure-mcp-server' ) );
-			}
-			return self::verdict( self::FAIL, 'html_response', __( 'The address returned a web page instead of JSON, so something is intercepting it.', 'miniorange-secure-mcp-server' ) );
-		}
-
-		if ( $cached ) {
-			$advertised = isset( $json['issuer'] ) ? $json['issuer'] : ( isset( $json['resource'] ) ? $json['resource'] : '' );
-			if ( '' !== $expected_origin && is_string( $advertised ) && '' !== $advertised && self::origin( $advertised ) !== self::origin( $expected_origin ) ) {
-				return self::verdict( self::FAIL, 'stale_cached_doc', __( 'A cache is serving an out-of-date copy of this document that advertises a different address.', 'miniorange-secure-mcp-server' ) );
-			}
-			return self::verdict( self::WARN, 'cached_response', __( 'The document is served from a cache. It works today, but a cached copy goes stale if the site address changes.', 'miniorange-secure-mcp-server' ) );
-		}
-
-		return self::verdict( self::PASS, 'ok', __( 'Valid JSON, no redirect, not cached.', 'miniorange-secure-mcp-server' ) );
-	}
-
-	/**
-	 * Classifies the unauthenticated MCP request into three dependent rows.
+	 * Classifies the unauthenticated MCP request into the endpoint row and the dependent header row.
 	 *
 	 * @param array $res Normalized response to a POST carrying a dummy bearer token.
-	 * @return array{mcp:array, www_authenticate:array, auth_header:array}
+	 * @return array{mcp:array, auth_header:array}
 	 */
 	public static function classify_mcp_endpoint( array $res ) {
 		$skip = function ( $reason ) {
@@ -274,9 +219,8 @@ class Response_Classifier {
 		if ( null !== $fail ) {
 			$why = __( 'Skipped: the MCP endpoint could not be reached.', 'miniorange-secure-mcp-server' );
 			return array(
-				'mcp'              => $fail,
-				'www_authenticate' => $skip( $why ),
-				'auth_header'      => $skip( $why ),
+				'mcp'         => $fail,
+				'auth_header' => $skip( $why ),
 			);
 		}
 
@@ -288,9 +232,8 @@ class Response_Classifier {
 
 		if ( 401 === $status && isset( $headers['www-authenticate'] ) && 0 === stripos( ltrim( $headers['www-authenticate'] ), 'basic' ) ) {
 			return array(
-				'mcp'              => self::verdict( self::FAIL, 'basic_auth', __( 'The site is behind HTTP Basic authentication (a password prompt), which blocks AI clients before WordPress runs.', 'miniorange-secure-mcp-server' ) ),
-				'www_authenticate' => $skip( $why ),
-				'auth_header'      => $skip( $why ),
+				'mcp'         => self::verdict( self::FAIL, 'basic_auth', __( 'The site is behind HTTP Basic authentication (a password prompt), which blocks AI clients before WordPress runs.', 'miniorange-secure-mcp-server' ) ),
+				'auth_header' => $skip( $why ),
 			);
 		}
 
@@ -301,22 +244,16 @@ class Response_Classifier {
 				: self::unexpected( $res, 401 );
 
 			return array(
-				'mcp'              => $mcp,
-				'www_authenticate' => $skip( $why ),
-				'auth_header'      => $skip( $why ),
+				'mcp'         => $mcp,
+				'auth_header' => $skip( $why ),
 			);
 		}
 
 		$mcp = self::verdict( self::PASS, 'ok', __( 'The endpoint answered 401 as expected.', 'miniorange-secure-mcp-server' ) );
 
-		$www = ( isset( $headers['www-authenticate'] ) && '' !== trim( $headers['www-authenticate'] ) )
-			? self::verdict( self::PASS, 'ok', __( 'The 401 carries a WWW-Authenticate header.', 'miniorange-secure-mcp-server' ) )
-			: self::verdict( self::FAIL, 'missing_challenge_header', __( 'The 401 has no WWW-Authenticate header, so AI clients cannot discover how to sign in. A proxy or firewall is stripping it.', 'miniorange-secure-mcp-server' ) );
-
 		return array(
-			'mcp'              => $mcp,
-			'www_authenticate' => $www,
-			'auth_header'      => self::classify_auth_header( $res ),
+			'mcp'         => $mcp,
+			'auth_header' => self::classify_auth_header( $res ),
 		);
 	}
 
@@ -332,8 +269,12 @@ class Response_Classifier {
 		if ( '1' === $seen ) {
 			return self::verdict( self::PASS, 'ok', __( 'The Authorization header reaches WordPress.', 'miniorange-secure-mcp-server' ) );
 		}
+		// Only the gateway's backup header arrived: the gateway still signs in, so this is not a problem.
+		if ( 'fallback' === $seen ) {
+			return self::verdict( self::PASS, 'ok', __( 'Your server removes the standard Authorization header, but the gateway\'s backup header gets through, so sign-in works.', 'miniorange-secure-mcp-server' ) );
+		}
 		if ( '0' === $seen ) {
-			return self::verdict( self::FAIL, 'auth_header_stripped', __( 'The server removed the Authorization header before WordPress saw it, so every AI request looks signed out.', 'miniorange-secure-mcp-server' ) );
+			return self::verdict( self::FAIL, 'auth_header_stripped', __( 'The server removed both sign-in headers (Authorization and the gateway\'s backup header) before WordPress saw them, so every request looks signed out.', 'miniorange-secure-mcp-server' ) );
 		}
 
 		return self::verdict( self::WARN, 'auth_header_unknown', __( 'The plugin did not report whether the Authorization header arrived (a proxy may be stripping response headers).', 'miniorange-secure-mcp-server' ) );
@@ -441,17 +382,4 @@ class Response_Classifier {
 		return false === $pos ? $url : substr( $url, 0, $pos );
 	}
 
-	/**
-	 * Lowercased scheme://host of a URL.
-	 *
-	 * @param string $url The URL.
-	 * @return string
-	 */
-	private static function origin( $url ) {
-		$parts = parse_url( $url ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- WP-free by design.
-
-		return is_array( $parts ) && isset( $parts['host'] )
-			? strtolower( ( isset( $parts['scheme'] ) ? $parts['scheme'] : '' ) . '://' . $parts['host'] )
-			: '';
-	}
 }

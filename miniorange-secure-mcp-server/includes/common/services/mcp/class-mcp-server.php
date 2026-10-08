@@ -13,7 +13,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use MoSMCP\Common\Repositories\NHI_Store;
 use MoSMCP\Common\Repositories\Store;
-use MoSMCP\Common\Services\Diagnostics\Connectivity_Checker;
 use MoSMCP\Common\Services\Logging\Audit_Logger;
 use MoSMCP\Common\Services\Logging\Debug_Logger;
 use MoSMCP\Common\Views\Admin\Admin_App;
@@ -309,9 +308,6 @@ class MCP_Server {
 		$enabled_nhis = NHI_Store::count_enabled();
 
 		if ( 0 === $enabled_nhis ) {
-			// A real client got in but nothing is enabled: have the admin UI run the connection test.
-			self::flag_auto_run( 'no_agent' );
-
 			// The -32001 an AI client reports only as a failed connection. Logged as a
 			// warning because it is never a normal state for a site someone is actively
 			// trying to connect to.
@@ -421,25 +417,9 @@ class MCP_Server {
 			$tools[] = self::ability_to_tool( $ability );
 		}
 
-		if ( empty( $tools ) ) {
-			self::flag_auto_run( 'zero_abilities' );
-		}
-
 		self::log_exposure( $abilities );
 
 		return array( 'tools' => $tools );
-	}
-
-	/**
-	 * Asks the admin UI to run the connection test, unless this is the test's own request.
-	 *
-	 * @param string $reason Why the test is wanted.
-	 * @return void
-	 */
-	private static function flag_auto_run( $reason ) {
-		if ( ! self::$diagnostic ) {
-			Connectivity_Checker::flag_auto_run( $reason );
-		}
 	}
 
 	/**

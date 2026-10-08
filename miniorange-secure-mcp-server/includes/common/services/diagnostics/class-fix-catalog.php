@@ -38,11 +38,8 @@ class Fix_Catalog {
 		'rest_restricted'          => array( 'rest_restricted' ),
 		'wpjson_blocked'           => array( 'waf_exemption' ),
 		'rest_route_blocked'       => array( 'waf_exemption' ),
-		'missing_challenge_header' => array( 'challenge_header_stripped' ),
 		'redirect'                 => array( 'site_address' ),
-		'cached_response'          => array( 'wellknown_cache' ),
-		'stale_cached_doc'         => array( 'wellknown_cache' ),
-		'html_response'            => array( 'wellknown_blocked', 'wellknown_cache' ),
+		'html_response'            => array( 'api_cache' ),
 		'basic_auth'               => array( 'basic_auth_fix' ),
 		'server_error'             => array( 'server_error' ),
 		'transport_dns'            => array( 'site_unreachable' ),
@@ -192,11 +189,9 @@ class Fix_Catalog {
 			'egress_allowlist'          => __( 'Your firewall lets some of our servers in, not all', 'miniorange-secure-mcp-server' ),
 			'rest_restricted'           => __( 'A setting or plugin is locking the REST API', 'miniorange-secure-mcp-server' ),
 			'basic_auth_fix'            => __( 'A password prompt sits in front of your site', 'miniorange-secure-mcp-server' ),
-			'challenge_header_stripped' => __( 'Something is removing a sign-in header', 'miniorange-secure-mcp-server' ),
 			'auth_header'               => __( 'Your server is not passing the AI\'s sign-in to WordPress', 'miniorange-secure-mcp-server' ),
 			'site_address'              => __( 'Your site address needs tidying up', 'miniorange-secure-mcp-server' ),
-			'wellknown_blocked'         => __( 'Your server is hiding the AI\'s connection files', 'miniorange-secure-mcp-server' ),
-			'wellknown_cache'           => __( 'A cache is serving old connection files', 'miniorange-secure-mcp-server' ),
+			'api_cache'                 => __( 'A cache or redirect answers instead of the plugin', 'miniorange-secure-mcp-server' ),
 			'site_unreachable'          => __( 'Your site could not be reached', 'miniorange-secure-mcp-server' ),
 			'tls_certificate'           => __( 'Your security certificate has a problem', 'miniorange-secure-mcp-server' ),
 			'dns_stray_records'         => __( 'Your domain also points at the wrong server', 'miniorange-secure-mcp-server' ),
@@ -236,14 +231,6 @@ class Fix_Catalog {
 	private static function entries() {
 		return array(
 			array(
-				'id'       => 'wellknown',
-				'icon'     => 'search',
-				'title'    => __( 'AI assistant can\'t find your connection settings', 'miniorange-secure-mcp-server' ),
-				'subtitle' => __( 'The client reports it can\'t read the connection or discovery URLs', 'miniorange-secure-mcp-server' ),
-				'symptoms' => array(),
-				'fixes'    => array( 'wellknown_blocked', 'wellknown_cache' ),
-			),
-			array(
 				'id'       => 'scheme-host',
 				'icon'     => 'link',
 				'title'    => __( 'Every request fails after connecting', 'miniorange-secure-mcp-server' ),
@@ -269,7 +256,7 @@ class Fix_Catalog {
 					__( 'The connection process starts but never finishes', 'miniorange-secure-mcp-server' ),
 					__( 'It works for some people or some of the time, not others', 'miniorange-secure-mcp-server' ),
 				),
-				'fixes'    => array( 'cloudflare_skip_rule', 'waf_exemption', 'egress_allowlist', 'rest_restricted', 'basic_auth_fix', 'challenge_header_stripped' ),
+				'fixes'    => array( 'cloudflare_skip_rule', 'waf_exemption', 'egress_allowlist', 'rest_restricted', 'basic_auth_fix', 'api_cache' ),
 			),
 			array(
 				'id'       => 'unreachable',
@@ -378,11 +365,9 @@ class Fix_Catalog {
 			$steps[]   = self::step( __( 'Only a change on the server itself fixes this, and this server type is not one we can edit for you. Ask your host to pass the Authorization header through to PHP and send them the copied diagnostics.', 'miniorange-secure-mcp-server' ) );
 		}
 
-		$steps[] = self::step( __( 'Connections through the miniOrange gateway also send the token in an X-MO-Authorization header, which the plugin accepts when Authorization is missing. Only clients that connect directly still need this fix.', 'miniorange-secure-mcp-server' ) );
-
 		return array(
 			'title'     => __( 'Let the Authorization header reach WordPress', 'miniorange-secure-mcp-server' ),
-			'why'       => __( 'Your server removes the Authorization header before WordPress runs (common when PHP runs as CGI or FastCGI, such as cgi-fcgi). AI clients sign in with that header, so every request looks signed out.', 'miniorange-secure-mcp-server' ),
+			'why'       => __( 'Your server removes the sign-in headers before WordPress runs (common when PHP runs as CGI or FastCGI, such as cgi-fcgi). The gateway sends the token in two headers, Authorization and X-MO-Authorization, and both are being removed, so every request looks signed out.', 'miniorange-secure-mcp-server' ),
 			'host_only' => $host_only,
 			'steps'     => $steps,
 		);
@@ -398,7 +383,7 @@ class Fix_Catalog {
 			'title' => __( 'Stop Cloudflare challenging the connection', 'miniorange-secure-mcp-server' ),
 			'why'   => __( 'Cloudflare treats the AI gateway as a bot and answers with a challenge page instead of your site. A custom rule that skips bot checks for the MCP and OAuth paths fixes this.', 'miniorange-secure-mcp-server' ),
 			'steps' => array(
-				self::step( __( 'In Cloudflare open Security, then WAF, then Custom rules, and create a rule. Choose "Edit expression" and paste:', 'miniorange-secure-mcp-server' ), '(starts_with(http.request.uri.path, "/wp-json/mosmcp/v1/")) or (starts_with(http.request.uri.path, "/.well-known/oauth-"))' ),
+				self::step( __( 'In Cloudflare open Security, then WAF, then Custom rules, and create a rule. Choose "Edit expression" and paste:', 'miniorange-secure-mcp-server' ), '(starts_with(http.request.uri.path, "/wp-json/mosmcp/v1/")) or (http.request.uri.query contains "rest_route=/mosmcp/")' ),
 				self::step( __( 'Set the action to Skip. Tick Super Bot Fight Mode rules (or Bot Fight Mode where offered) and Security Level.', 'miniorange-secure-mcp-server' ) ),
 				self::step( __( 'Save and drag the rule to the top of the list so it runs first.', 'miniorange-secure-mcp-server' ) ),
 				self::step( __( 'On the Free plan Cloudflare may not let any rule skip Bot Fight Mode. If the challenge continues, turn Bot Fight Mode off under Security, then Bots, or allowlist the gateway IPs shown below.', 'miniorange-secure-mcp-server' ) ),
@@ -416,7 +401,6 @@ class Fix_Catalog {
 		$steps = array(
 			self::step( __( 'Check your firewall or security plugin\'s log for blocked requests to /wp-json/mosmcp/v1/mcp, /register or /token, and allow all three.', 'miniorange-secure-mcp-server' ) ),
 			self::step( __( 'In your firewall, security plugin or host panel, exempt these paths from blocking and bot checks:', 'miniorange-secure-mcp-server' ), "/wp-json/mosmcp/*\n/index.php?rest_route=/mosmcp/*" ),
-			self::step( __( 'If the OAuth discovery pages also fail, exempt this one too:', 'miniorange-secure-mcp-server' ), '/.well-known/oauth-*' ),
 		);
 
 		$hints = array(
@@ -490,64 +474,29 @@ class Fix_Catalog {
 	}
 
 	/**
-	 * Fix: WWW-Authenticate header removed.
-	 *
-	 * @return array
-	 */
-	private static function fix_challenge_header_stripped() {
-		return array(
-			'title'     => __( 'Keep the WWW-Authenticate response header', 'miniorange-secure-mcp-server' ),
-			'why'       => __( 'The plugin sends a WWW-Authenticate header that tells AI clients how to sign in, but something between WordPress and the client removes it.', 'miniorange-secure-mcp-server' ),
-			'host_only' => true,
-			'steps'     => array(
-				self::step( __( 'Check any CDN, proxy or security rule that rewrites or strips response headers, and exempt these paths:', 'miniorange-secure-mcp-server' ), '/wp-json/mosmcp/*' ),
-				self::step( __( 'If you cannot find one, ask your host whether a proxy strips response headers and send them the copied diagnostics.', 'miniorange-secure-mcp-server' ) ),
-			),
-		);
-	}
-
-	/**
-	 * Fix: cached discovery pages.
+	 * Fix: a cache or redirect answers the plugin's API with a stored web page.
 	 *
 	 * @param array $ctx Fix context.
 	 * @return array
 	 */
-	private static function fix_wellknown_cache( array $ctx ) {
+	private static function fix_api_cache( array $ctx ) {
 		$steps = array();
 
 		if ( in_array( 'litespeed', $ctx['layers'], true ) || in_array( 'litespeed_cache', $ctx['layers'], true ) ) {
-			$steps[] = self::step( __( 'LiteSpeed Cache: open Cache, then Excludes, and add this under Do Not Cache URIs:', 'miniorange-secure-mcp-server' ), '/.well-known/oauth-', self::tag( $ctx, 'LiteSpeed' ) );
+			$steps[] = self::step( __( 'LiteSpeed Cache: open Cache, then Excludes, and add this under Do Not Cache URIs:', 'miniorange-secure-mcp-server' ), '/wp-json/mosmcp/', self::tag( $ctx, 'LiteSpeed' ) );
 		}
 		if ( in_array( 'cloudflare', $ctx['layers'], true ) ) {
-			$steps[] = self::step( __( 'Cloudflare: add a Cache Rule that bypasses the cache when the URI path starts with:', 'miniorange-secure-mcp-server' ), '/.well-known/oauth-', self::tag( $ctx, 'Cloudflare' ) );
+			$steps[] = self::step( __( 'Cloudflare: add a Cache Rule that bypasses the cache when the URI path starts with:', 'miniorange-secure-mcp-server' ), '/wp-json/mosmcp/', self::tag( $ctx, 'Cloudflare' ) );
 		}
 		if ( empty( $steps ) || ! empty( $ctx['guide'] ) ) {
-			$steps[] = self::step( __( 'In your cache plugin or CDN, exclude this path from caching:', 'miniorange-secure-mcp-server' ), '/.well-known/oauth-', self::tag( $ctx, 'Other cache or CDN' ) );
+			$steps[] = self::step( __( 'In your cache plugin or CDN, exclude this path from caching and from any redirect rule:', 'miniorange-secure-mcp-server' ), '/wp-json/mosmcp/', self::tag( $ctx, 'Other cache or CDN' ) );
 		}
 		$steps[] = self::step( __( 'Purge the whole cache, then run the connection test again.', 'miniorange-secure-mcp-server' ) );
 
 		return array(
-			'title' => __( 'Stop caching the OAuth discovery pages', 'miniorange-secure-mcp-server' ),
-			'why'   => __( 'A cache is serving a stored copy of the discovery documents, which can be a web page or an out-of-date address. AI clients need the live JSON.', 'miniorange-secure-mcp-server' ),
+			'title' => __( 'Stop caching the plugin\'s API', 'miniorange-secure-mcp-server' ),
+			'why'   => __( 'A cache or redirect rule answers requests to the plugin with a stored web page, so the gateway never reaches WordPress.', 'miniorange-secure-mcp-server' ),
 			'steps' => $steps,
-		);
-	}
-
-	/**
-	 * Fix: discovery pages intercepted.
-	 *
-	 * @param array $ctx Fix context.
-	 * @return array
-	 */
-	private static function fix_wellknown_blocked( array $ctx ) {
-		return array(
-			'title' => __( 'Let the OAuth discovery files through', 'miniorange-secure-mcp-server' ),
-			'why'   => __( 'Something answers /.well-known/ requests with a web page, usually a rule that hides every path starting with a dot (meant to protect .env or .git), or Permalinks set to Plain, which these files do not work with.', 'miniorange-secure-mcp-server' ),
-			'steps' => array(
-				self::step( __( 'In Settings, then Permalinks, choose Post name and save. This alone fixes a meaningful share of cases.', 'miniorange-secure-mcp-server' ) ),
-				self::step( __( 'If that is not it, allow .well-known above the "# BEGIN WordPress" block of your .htaccess (replace an existing dot-file block with this version):', 'miniorange-secure-mcp-server' ), "# Allow the MCP/OAuth discovery files under .well-known\n<IfModule mod_rewrite.c>\nRewriteCond %{REQUEST_URI} !^/\\.well-known/\nRewriteRule \"(^|/)\\.\" - [F]\n</IfModule>", self::tag( $ctx, 'Apache' ) ),
-				self::step( __( 'Nginx has no self-editable equivalent. Ask your host to add this before any dot-file deny rule:', 'miniorange-secure-mcp-server' ), "location ^~ /.well-known/ {\n\tallow all;\n}", self::tag( $ctx, 'Nginx' ) ),
-			),
 		);
 	}
 
@@ -561,7 +510,7 @@ class Fix_Catalog {
 			'title' => __( 'Remove the password prompt in front of the site', 'miniorange-secure-mcp-server' ),
 			'why'   => __( 'The site asks for a username and password (HTTP Basic authentication) before WordPress runs, and an AI client cannot answer it.', 'miniorange-secure-mcp-server' ),
 			'steps' => array(
-				self::step( __( 'Remove the password protection from the site, or exempt these paths from it (host panel "Password protected directories", or .htpasswd rules):', 'miniorange-secure-mcp-server' ), "/wp-json/mosmcp/*\n/.well-known/oauth-*" ),
+				self::step( __( 'Remove the password protection from the site, or exempt these paths from it (host panel "Password protected directories", or .htpasswd rules):', 'miniorange-secure-mcp-server' ), "/wp-json/mosmcp/*\n/index.php?rest_route=/mosmcp/*" ),
 			),
 		);
 	}
@@ -727,7 +676,7 @@ class Fix_Catalog {
 			'why'   => __( 'AI clients need a single public https address. Plain http, mixed www and non-www hosts, a private address, or a proxy that makes WordPress think it is on http all make sign-in fail, or make every request come back unauthorized after connecting.', 'miniorange-secure-mcp-server' ),
 			'steps' => array(
 				self::step( __( 'In Settings, then General, set WordPress Address and Site Address to the same public https address, with one canonical host (all www or all non-www).', 'miniorange-secure-mcp-server' ) ),
-				self::step( __( 'Redirect the other host to it, but never for /wp-json/ or /.well-known/: AI clients do not follow redirects there, and a redirected POST loses its body and sign-in header. A local address such as localhost cannot be reached from outside your computer.', 'miniorange-secure-mcp-server' ) ),
+				self::step( __( 'Redirect the other host to it, but never for /wp-json/: the gateway does not follow redirects there, and a redirected POST loses its body and sign-in header. A local address such as localhost cannot be reached from outside your computer.', 'miniorange-secure-mcp-server' ) ),
 				self::step( __( 'If HTTPS ends at a proxy or load balancer, add this near the top of wp-config.php so WordPress knows it is on https:', 'miniorange-secure-mcp-server' ), "if ( isset( \$_SERVER['HTTP_X_FORWARDED_PROTO'] ) && 'https' === strtolower( \$_SERVER['HTTP_X_FORWARDED_PROTO'] ) ) {\n\t\$_SERVER['HTTPS'] = 'on';\n}" ),
 			),
 		);
