@@ -27,7 +27,14 @@ class Utils {
 	 * @return string The canonical MCP endpoint URL, without a trailing slash.
 	 */
 	public static function resource_url() {
-		return self::maybe_force_https( untrailingslashit( rest_url( MOSMCP_REST_NAMESPACE . '/mcp' ) ) );
+		// Not rest_url(): language plugins (Polylang/WPML) prefix it per request (e.g. /it), so consent and MCP calls disagree on the audience.
+		$home  = untrailingslashit( (string) get_option( 'home' ) );
+		$route = '/' . MOSMCP_REST_NAMESPACE . '/mcp';
+		$url   = get_option( 'permalink_structure' )
+			? $home . '/' . rest_get_url_prefix() . $route
+			: $home . '/index.php?rest_route=' . $route;
+
+		return self::maybe_force_https( self::rewrite_url( $url ) );
 	}
 
 	/**

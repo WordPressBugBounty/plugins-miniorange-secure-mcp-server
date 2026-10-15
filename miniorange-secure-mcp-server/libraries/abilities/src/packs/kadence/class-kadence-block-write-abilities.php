@@ -23,6 +23,7 @@
 namespace MoSMCP\Abilities\Packs\Kadence;
 
 use MoSMCP\Abilities\Packs\Core\Support\Core_Schema as Schema;
+use MoSMCP\Abilities\Support\Html_Policy;
 use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -228,6 +229,9 @@ class Kadence_Block_Write_Abilities {
 						'block'     => Schema::str(),
 						'deleted'   => Schema::boolean(),
 						'modified'  => Schema::str(),
+						// Declared because the engine always reports it; undeclared, every
+						// successful delete failed output validation.
+						'verified'  => Schema::boolean( __( 'True once the saved page is confirmed not to contain the block any more.', 'mosmcp-abilities' ) ),
 					),
 					array( 'id', 'unique_id', 'deleted' )
 				),
@@ -255,6 +259,9 @@ class Kadence_Block_Write_Abilities {
 						'id'            => Schema::int(),
 						'source_id'     => Schema::str(),
 						'new_unique_id' => Schema::str(),
+						// Declared because the result carries it (the engine verifies the copy by it);
+						// undeclared, every successful duplicate failed output validation.
+						'unique_id'     => Schema::str( __( 'Same as new_unique_id.', 'mosmcp-abilities' ) ),
 						'block'         => Schema::str(),
 						'modified'      => Schema::str(),
 						'verified'      => Schema::boolean(),
@@ -276,12 +283,11 @@ class Kadence_Block_Write_Abilities {
 	 */
 	public static function execute_update_text( $input = array() ) {
 		$raw_text   = isset( $input['text'] ) ? (string) $input['text'] : '';
-		$rich_text  = wp_kses_post( $raw_text );
 		$plain_text = sanitize_text_field( $raw_text );
 
 		return Kadence_Write_Engine::run(
 			$input,
-			static function ( array &$blocks, array &$result ) use ( $input, $rich_text, $plain_text ) {
+			static function ( array &$blocks, array &$result ) use ( $input, $raw_text, $plain_text ) {
 				$path = Kadence_Write_Engine::require_single( $blocks, isset( $input['unique_id'] ) ? $input['unique_id'] : '' );
 				if ( $path instanceof WP_Error ) {
 					return $path;
@@ -291,6 +297,14 @@ class Kadence_Block_Write_Abilities {
 				$block = isset( $node['blockName'] ) ? (string) $node['blockName'] : '';
 
 				if ( isset( self::TEXT_ATTR[ $block ] ) ) {
+					// Rich text: the markup rule the block editor applies to this user; see Html_Policy.
+					$warnings  = array();
+					$rich_text = Html_Policy::apply( $raw_text, Html_Policy::restriction(), __( 'the text of this Kadence block', 'mosmcp-abilities' ), $warnings );
+					if ( is_wp_error( $rich_text ) ) {
+						return $rich_text;
+					}
+					$result['warnings'] = $warnings;
+
 					return self::apply_simple_text( $blocks, $path, $node, $block, $rich_text, $input, $result );
 				}
 

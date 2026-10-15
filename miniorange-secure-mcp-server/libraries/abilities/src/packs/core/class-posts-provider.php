@@ -16,6 +16,7 @@ use MoSMCP\Abilities\Packs\Core\Support\Post_Display;
 use MoSMCP\Abilities\Packs\Core\Support\Post_Duplicator;
 use MoSMCP\Abilities\Packs\Core\Support\Post_Fields;
 use MoSMCP\Abilities\Packs\Core\Support\Post_Meta_Diff;
+use MoSMCP\Abilities\Support\Html_Policy;
 use MoSMCP\Abilities\Support\Pagination;
 use WP_Error;
 use WP_Query;
@@ -71,11 +72,22 @@ class Posts_Provider {
 			return new WP_Error( 'missing_title', __( 'A title is required to create a draft.', 'mosmcp-abilities' ) );
 		}
 
+		$warnings = array();
+		$content  = '';
+
+		if ( isset( $input['content'] ) ) {
+			// The same markup rule the WordPress editor applies to this user; see Html_Policy.
+			$content = Html_Policy::apply( (string) $input['content'], Html_Policy::restriction(), Html_Policy::field_label( 'content', 'post' ), $warnings );
+			if ( is_wp_error( $content ) ) {
+				return $content;
+			}
+		}
+
 		$postarr = array(
 			'post_type'    => 'post',
 			'post_status'  => 'draft',
 			'post_title'   => $title,
-			'post_content' => isset( $input['content'] ) ? wp_kses_post( $input['content'] ) : '',
+			'post_content' => $content,
 			'post_excerpt' => isset( $input['excerpt'] ) ? sanitize_text_field( $input['excerpt'] ) : '',
 			'post_author'  => get_current_user_id(),
 		);
@@ -88,7 +100,8 @@ class Posts_Provider {
 			$postarr['post_name'] = $slug;
 		}
 
-		$post_id = wp_insert_post( $postarr, true );
+		// wp_slash() because wp_insert_post() unslashes its input; see Post_Fields::apply_update().
+		$post_id = wp_insert_post( wp_slash( $postarr ), true );
 
 		if ( is_wp_error( $post_id ) ) {
 			return $post_id;
@@ -100,6 +113,7 @@ class Posts_Provider {
 			'slug'     => (string) get_post_field( 'post_name', $post_id ),
 			'status'   => (string) get_post_status( $post_id ),
 			'edit_url' => self::edit_url( (int) $post_id ),
+			'warnings' => array_merge( $warnings, Post_Fields::stored_warnings( (int) $post_id, $postarr ) ),
 		);
 	}
 

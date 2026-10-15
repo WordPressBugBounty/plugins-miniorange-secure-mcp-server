@@ -13,6 +13,7 @@
 namespace MoSMCP\Abilities\Packs\Kadence;
 
 use MoSMCP\Abilities\Packs\Core\Support\Core_Schema as Schema;
+use MoSMCP\Abilities\Support\Html_Policy;
 use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -387,12 +388,17 @@ class Kadence_Insert_Abilities {
 
 		$columns = isset( $input['columns'] ) ? max( 1, min( 6, absint( $input['columns'] ) ) ) : 1;
 
+		// wp_slash() on both writes: wp_insert_post() and wp_update_post() unslash
+		// their input, which would drop backslashes from the title and from the
+		// JSON unicode escapes inside the serialized block markup.
 		$page_id = wp_insert_post(
-			array(
-				'post_type'   => 'page',
-				'post_status' => 'draft',
-				'post_title'  => $title,
-				'post_author' => get_current_user_id(),
+			wp_slash(
+				array(
+					'post_type'   => 'page',
+					'post_status' => 'draft',
+					'post_title'  => $title,
+					'post_author' => get_current_user_id(),
+				)
 			),
 			true
 		);
@@ -404,9 +410,11 @@ class Kadence_Insert_Abilities {
 
 		$content = Kadence_Blocks_Helper::serialize( array( $row ) );
 		wp_update_post(
-			array(
-				'ID'           => (int) $page_id,
-				'post_content' => $content,
+			wp_slash(
+				array(
+					'ID'           => (int) $page_id,
+					'post_content' => $content,
+				)
 			)
 		);
 
@@ -437,16 +445,40 @@ class Kadence_Insert_Abilities {
 			'attributes' => isset( $input['attributes'] ) && is_array( $input['attributes'] ) ? $input['attributes'] : array(),
 			'children'   => isset( $input['children'] ) && is_array( $input['children'] ) ? $input['children'] : array(),
 		);
+
+		$warnings = array();
 		if ( array_key_exists( 'content', $input ) ) {
-			$spec['content'] = wp_kses_post( (string) $input['content'] );
+			// The markup rule the block editor applies to this user; see Html_Policy.
+			$content = Html_Policy::apply( (string) $input['content'], Html_Policy::restriction(), __( 'the text of the new Kadence block', 'mosmcp-abilities' ), $warnings );
+			if ( is_wp_error( $content ) ) {
+				return $content;
+			}
+			$spec['content'] = $content;
 		}
 
-		return Kadence_Insert_Engine::insert(
+		$result = Kadence_Insert_Engine::insert(
 			$input,
 			static function ( array $blocks, $post_id ) use ( $spec ) {
 				return Kadence_Insert_Engine::build( $spec, $blocks, $post_id );
 			}
 		);
+
+		return self::with_warnings( $result, $warnings );
+	}
+
+	/**
+	 * Adds warnings raised before the write to an insert's result.
+	 *
+	 * @param array<string, mixed>|WP_Error     $result   Result from Kadence_Insert_Engine::insert().
+	 * @param array<int, array<string, string>> $warnings Warnings raised before the write.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	private static function with_warnings( $result, array $warnings ) {
+		if ( is_array( $result ) && $warnings ) {
+			$result['warnings'] = array_merge( $warnings, isset( $result['warnings'] ) ? (array) $result['warnings'] : array() );
+		}
+
+		return $result;
 	}
 
 	/**
@@ -501,10 +533,15 @@ class Kadence_Insert_Abilities {
 	 * @return array<string, mixed>|WP_Error
 	 */
 	public static function execute_insert_heading( $input = array() ) {
-		$text  = isset( $input['text'] ) ? wp_kses_post( (string) $input['text'] ) : '';
+		// The markup rule the block editor applies to this user; see Html_Policy.
+		$warnings = array();
+		$text     = Html_Policy::apply( isset( $input['text'] ) ? (string) $input['text'] : '', Html_Policy::restriction(), __( 'the text of the new Kadence heading', 'mosmcp-abilities' ), $warnings );
+		if ( is_wp_error( $text ) ) {
+			return $text;
+		}
 		$level = isset( $input['level'] ) ? max( 1, min( 6, absint( $input['level'] ) ) ) : 2;
 
-		return Kadence_Insert_Engine::insert(
+		$result = Kadence_Insert_Engine::insert(
 			$input,
 			static function ( array $blocks, $post_id ) use ( $text, $level ) {
 				$uid = Kadence_Insert_Engine::new_id( $blocks, $post_id );
@@ -525,6 +562,8 @@ class Kadence_Insert_Abilities {
 				);
 			}
 		);
+
+		return self::with_warnings( $result, $warnings );
 	}
 
 	/**
@@ -578,10 +617,15 @@ class Kadence_Insert_Abilities {
 	 * @return array<string, mixed>|WP_Error
 	 */
 	public static function execute_insert_button( $input = array() ) {
-		$text = isset( $input['text'] ) ? wp_kses_post( (string) $input['text'] ) : '';
+		// The markup rule the block editor applies to this user; see Html_Policy.
+		$warnings = array();
+		$text     = Html_Policy::apply( isset( $input['text'] ) ? (string) $input['text'] : '', Html_Policy::restriction(), __( 'the text of the new Kadence button', 'mosmcp-abilities' ), $warnings );
+		if ( is_wp_error( $text ) ) {
+			return $text;
+		}
 		$link = isset( $input['link'] ) ? esc_url_raw( (string) $input['link'] ) : '';
 
-		return Kadence_Insert_Engine::insert(
+		$result = Kadence_Insert_Engine::insert(
 			$input,
 			static function ( array $blocks, $post_id ) use ( $text, $link ) {
 				$btn_uid = Kadence_Insert_Engine::new_id( $blocks, $post_id );
@@ -606,6 +650,8 @@ class Kadence_Insert_Abilities {
 				);
 			}
 		);
+
+		return self::with_warnings( $result, $warnings );
 	}
 
 	/**

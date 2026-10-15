@@ -50,6 +50,7 @@ class ComposerStaticInit08a96392d045503f5e6cf47ea33148dd
         'MoSMCP\\Common\\Services\\Diagnostics\\Setup_Evaluator' => __DIR__ . '/../..' . '/includes/common/services/diagnostics/class-setup-evaluator.php',
         'MoSMCP\\Common\\Services\\Diagnostics\\Test_Token' => __DIR__ . '/../..' . '/includes/common/services/diagnostics/class-test-token.php',
         'MoSMCP\\Common\\Services\\Discovery\\Discovery' => __DIR__ . '/../..' . '/includes/common/services/discovery/class-discovery.php',
+        'MoSMCP\\Common\\Services\\Http\\No_Cache' => __DIR__ . '/../..' . '/includes/common/services/http/class-no-cache.php',
         'MoSMCP\\Common\\Services\\Logging\\Audit_Logger' => __DIR__ . '/../..' . '/includes/common/services/logging/class-audit-logger.php',
         'MoSMCP\\Common\\Services\\Logging\\Debug_Logger' => __DIR__ . '/../..' . '/includes/common/services/logging/class-debug-logger.php',
         'MoSMCP\\Common\\Services\\MCP\\MCP_Server' => __DIR__ . '/../..' . '/includes/common/services/mcp/class-mcp-server.php',

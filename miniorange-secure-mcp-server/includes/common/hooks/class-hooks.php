@@ -18,6 +18,7 @@ use MoSMCP\Common\Migration\Migration;
 use MoSMCP\Common\Repositories\Audit_Store;
 use MoSMCP\Common\Repositories\Debug_Store;
 use MoSMCP\Common\Services\Discovery\Discovery;
+use MoSMCP\Common\Services\Http\No_Cache;
 use MoSMCP\Common\Services\OAuth\OAuth_Server;
 use MoSMCP\Common\Services\Rest\Rest_Abilities;
 use MoSMCP\Common\Services\Rest\Route_Registry;
@@ -59,6 +60,11 @@ class Hooks {
 
 		// REST routes (MCP transport + OAuth server).
 		add_action( 'rest_api_init', array( Rest_Routes::class, 'register' ) );
+
+		// Keep every mosmcp/v1 response out of page, server and edge caches (live agent
+		// state, client registrations, tokens). Late priority so a cache plugin's own
+		// rest_post_dispatch headers cannot overwrite ours on these routes.
+		add_filter( 'rest_post_dispatch', array( No_Cache::class, 'filter_rest_response' ), 99, 3 );
 
 		// Log export for the debug log — a raw file download, so it runs through
 		// admin-post.php rather than the REST API (see Debug_Controller).

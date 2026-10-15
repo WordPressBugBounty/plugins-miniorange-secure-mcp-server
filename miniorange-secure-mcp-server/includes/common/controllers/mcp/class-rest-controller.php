@@ -66,13 +66,9 @@ class REST_Controller {
 		);
 
 		// This document reports live NHI state that flips the moment an admin enables an
-		// agent. It MUST NOT be cached: page/edge caches (LiteSpeed on Hostinger, Cloudflare,
-		// etc.) otherwise serve a stale `nhi_count:0` to the gateway, which then blocks
-		// connections with "No NHI configured" even after an agent is enabled. Mirrors the
-		// no-store the OAuth endpoints already send.
-		$response->header( 'Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0' );
-		$response->header( 'Pragma', 'no-cache' );
-
+		// agent, so it must never be cached: a stale `nhi_count: 0` makes the gateway block
+		// connections with "No agent registered". No_Cache::filter_rest_response() marks it
+		// uncacheable, including for LiteSpeed Cache, which ignores Cache-Control alone.
 		return $response;
 	}
 

@@ -13,6 +13,7 @@
 namespace MoSMCP\Abilities\Packs\FluentForms;
 
 use MoSMCP\Abilities\Packs\Site\Site_Support;
+use MoSMCP\Abilities\Support\Html_Policy;
 use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -289,7 +290,15 @@ class Fluent_Forms_Provider {
 		}
 
 		if ( null !== $message ) {
-			$settings['confirmation']['messageToShow'] = wp_kses_post( $message );
+			$html_warnings = array();
+			$message       = Html_Policy::apply( (string) $message, self::html_restriction(), __( 'the confirmation message', 'mosmcp-abilities' ), $html_warnings );
+			if ( is_wp_error( $message ) ) {
+				return $message;
+			}
+			$settings['confirmation']['messageToShow'] = $message;
+			foreach ( $html_warnings as $warning ) {
+				$notes[] = $warning['message'];
+			}
 		}
 
 		if ( null !== $redirect ) {
@@ -406,6 +415,12 @@ class Fluent_Forms_Provider {
 			}
 		}
 
+		$html_warnings = array();
+		$message       = Html_Policy::apply( (string) $input['message'], self::html_restriction(), __( 'the notification message', 'mosmcp-abilities' ), $html_warnings );
+		if ( is_wp_error( $message ) ) {
+			return $message;
+		}
+
 		/*
 		 * Created switched off on purpose. A notification that starts enabled begins
 		 * emailing a real recipient the moment the next visitor submits, before anyone
@@ -418,7 +433,7 @@ class Fluent_Forms_Provider {
 				'email' => (string) $input['send_to'],
 			),
 			'subject' => sanitize_text_field( (string) $input['subject'] ),
-			'message' => wp_kses_post( (string) $input['message'] ),
+			'message' => $message,
 			'enabled' => false,
 		);
 
@@ -449,6 +464,9 @@ class Fluent_Forms_Provider {
 		$result = ( $meta instanceof WP_Error ) ? array() : self::describe_notification( $meta, true );
 
 		$result['notes'] = array( __( 'The notification was created switched off, so nothing is emailed yet. Review what it says, then enable it with mosmcp/fluent-update-notification.', 'mosmcp-abilities' ) );
+		foreach ( $html_warnings as $warning ) {
+			$result['notes'][] = $warning['message'];
+		}
 
 		return $result;
 	}
@@ -490,8 +508,14 @@ class Fluent_Forms_Provider {
 			$changed[]          = 'subject';
 		}
 
+		$html_warnings = array();
+
 		if ( isset( $input['message'] ) && '' !== trim( (string) $input['message'] ) ) {
-			$current['message'] = wp_kses_post( (string) $input['message'] );
+			$message = Html_Policy::apply( (string) $input['message'], self::html_restriction(), __( 'the notification message', 'mosmcp-abilities' ), $html_warnings );
+			if ( is_wp_error( $message ) ) {
+				return $message;
+			}
+			$current['message'] = $message;
 			$changed[]          = 'message';
 		}
 
@@ -522,7 +546,7 @@ class Fluent_Forms_Provider {
 		);
 
 		$after = self::notification_row( $id );
-		$notes = array();
+		$notes = wp_list_pluck( $html_warnings, 'message' );
 
 		if ( in_array( 'enabled', $changed, true ) ) {
 			$notes[] = ! empty( $current['enabled'] )
@@ -1120,5 +1144,23 @@ class Fluent_Forms_Provider {
 			'user_id'       => isset( $row['user_id'] ) ? (int) $row['user_id'] : 0,
 			'values'        => is_array( $values ) ? $values : array(),
 		);
+	}
+
+	/**
+	 * Whether the current user's message markup must be filtered, as Fluent Forms decides it.
+	 *
+	 * Fluent Forms' own editor saves form settings unfiltered for a user with the
+	 * unfiltered_html capability (or when its fluentform/disable_fields_sanitize
+	 * filter says so), so the AI acting as that user may too. Its helper is used
+	 * when present so the two can never disagree.
+	 *
+	 * @return string '' when the markup is stored as given, otherwise an Html_Policy restriction code.
+	 */
+	private static function html_restriction() {
+		$allowed = function_exists( 'fluentformCanUnfilteredHTML' )
+			? (bool) fluentformCanUnfilteredHTML()
+			: current_user_can( 'unfiltered_html' );
+
+		return $allowed ? '' : Html_Policy::NO_UNFILTERED_HTML;
 	}
 }

@@ -4,7 +4,7 @@ Tags: mcp, ai, mcp-server, chatgpt, claude
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.5.1
+Stable tag: 1.5.2
 License: Expat
 License URI: https://plugins.miniorange.com/mit-license
 
@@ -343,12 +343,19 @@ No. Install, follow the onboarding checklist, and paste one URL into your AI cli
 2. AI Agents list with role-based policies and ability packs.
 3. Agent overview showing configuration and recent activity.
 4. Activity log filterable by agent, status, ability, user and date.
-5. Connect to AI – setup for ChatGPT, Claude and other MCP clients.
+5. Connect to AI – setup for ChatGPT, Claude, Cursor and other MCP clients.
 6. MCP Server dashboard with active agents, executions, success rate and latency.
 7. "Your AI Access" view showing a member's allowed tools and how to connect.
 
 
 == Changelog ==
+
+= 1.5.2 =
+* Fixed AI clients failing to connect, or not seeing a new agent, on sites using LiteSpeed Cache or another page cache. MCP and OAuth responses are no longer cached.
+* Fixed AI edits removing forms, scripts and styles and dropping backslashes, which broke pages with custom code such as calculators. AI edits to pages, posts, custom content, Elementor, Kadence, Fluent Forms messages and media now follow the same rules as editing by hand: anyone allowed to add HTML there keeps it exactly as written, and markup a user is not allowed to add is refused with a reason instead of being silently removed.
+* Fixed Kadence block edits damaging links and settings in other blocks on the same page. Pages already affected can be restored from WordPress revisions.
+* Fixed the Kadence duplicate and delete abilities reporting an error even though the change was made.
+* Minor bug fixes in the WordPress MCP Server.
 
 = 1.5.1 =
 * Improved the Troubleshooting page to show only likely connection problems.
@@ -486,6 +493,9 @@ Fixed: Object-level abilities no longer show false capability conflicts in the r
 * Initial release: read-only viewer for abilities registered through the WordPress Abilities API.
 
 == Upgrade Notice ==
+
+= 1.5.2 =
+Adds Cursor setup and fixes AI connections on LiteSpeed Cache sites (purge the cache once after updating), AI edits stripping HTML and backslashes (admins can now save HTML through AI, as in the editor) and Kadence edits damaging other blocks (restore those pages from Revisions).
 
 = 1.5.1 =
 Improves the Troubleshooting page so it shows only likely connection problems. Minor bug fixes.

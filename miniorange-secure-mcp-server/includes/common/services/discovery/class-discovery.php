@@ -11,6 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use MoSMCP\Common\Services\Http\No_Cache;
 use MoSMCP\Common\Services\Logging\Debug_Logger;
 use MoSMCP\Common\Utils\Utils;
 
@@ -166,16 +167,20 @@ class Discovery {
 	}
 
 	/**
-	 * Emits a JSON document with caching and CORS headers, then exits.
+	 * Emits a JSON document with no-cache and CORS headers, then exits.
 	 *
-	 * @param array<string, mixed> $data
+	 * Never cached: the documents embed scheme- and host-derived URLs, and a cached
+	 * copy served from a CDN or LiteSpeed outlives a change of site address or HTTPS
+	 * setting and points clients at the wrong endpoints.
+	 *
+	 * @param array<string, mixed> $data The discovery document.
 	 * @return void
 	 */
 	private static function send_json( array $data ) {
 		if ( ! headers_sent() ) {
 			header( 'Access-Control-Allow-Origin: *' );
-			header( 'Cache-Control: public, max-age=3600' );
 		}
+		No_Cache::send_headers();
 
 		wp_send_json( $data, 200 );
 	}

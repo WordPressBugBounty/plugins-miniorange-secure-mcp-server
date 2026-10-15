@@ -15,6 +15,7 @@ namespace MoSMCP\Abilities\Packs\Core;
 use MoSMCP\Abilities\Packs\Core\Support\Post_Display;
 use MoSMCP\Abilities\Packs\Core\Support\Post_Duplicator;
 use MoSMCP\Abilities\Packs\Core\Support\Post_Fields;
+use MoSMCP\Abilities\Support\Html_Policy;
 use MoSMCP\Abilities\Support\Pagination;
 use WP_Error;
 use WP_Query;
@@ -69,11 +70,22 @@ class Pages_Provider {
 			}
 		}
 
+		$warnings = array();
+		$content  = '';
+
+		if ( isset( $input['content'] ) ) {
+			// The same markup rule the WordPress editor applies to this user; see Html_Policy.
+			$content = Html_Policy::apply( (string) $input['content'], Html_Policy::restriction(), Html_Policy::field_label( 'content', 'page' ), $warnings );
+			if ( is_wp_error( $content ) ) {
+				return $content;
+			}
+		}
+
 		$postarr = array(
 			'post_type'    => 'page',
 			'post_status'  => 'draft',
 			'post_title'   => $title,
-			'post_content' => isset( $input['content'] ) ? wp_kses_post( $input['content'] ) : '',
+			'post_content' => $content,
 			'post_parent'  => $parent_id,
 			'post_author'  => get_current_user_id(),
 		);
@@ -86,7 +98,8 @@ class Pages_Provider {
 			$postarr['post_name'] = $slug;
 		}
 
-		$page_id = wp_insert_post( $postarr, true );
+		// wp_slash() because wp_insert_post() unslashes its input; see Post_Fields::apply_update().
+		$page_id = wp_insert_post( wp_slash( $postarr ), true );
 
 		if ( is_wp_error( $page_id ) ) {
 			return $page_id;
@@ -99,6 +112,7 @@ class Pages_Provider {
 			'status'    => (string) get_post_status( $page_id ),
 			'parent_id' => $parent_id,
 			'edit_url'  => self::edit_url( (int) $page_id ),
+			'warnings'  => array_merge( $warnings, Post_Fields::stored_warnings( (int) $page_id, $postarr ) ),
 		);
 	}
 

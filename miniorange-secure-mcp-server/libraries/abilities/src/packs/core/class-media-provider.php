@@ -379,10 +379,13 @@ class Media_Provider {
 
 		$caption = isset( $input['caption'] ) ? sanitize_text_field( $input['caption'] ) : '';
 
+		// wp_slash() because wp_update_post() unslashes its input and would drop backslashes.
 		$result = wp_update_post(
-			array(
-				'ID'           => $att->ID,
-				'post_excerpt' => $caption,
+			wp_slash(
+				array(
+					'ID'           => $att->ID,
+					'post_excerpt' => $caption,
+				)
 			),
 			true
 		);
@@ -412,10 +415,13 @@ class Media_Provider {
 
 		$description = isset( $input['description'] ) ? sanitize_textarea_field( $input['description'] ) : '';
 
+		// wp_slash() because wp_update_post() unslashes its input and would drop backslashes.
 		$result = wp_update_post(
-			array(
-				'ID'           => $att->ID,
-				'post_content' => $description,
+			wp_slash(
+				array(
+					'ID'           => $att->ID,
+					'post_content' => $description,
+				)
 			),
 			true
 		);
@@ -449,10 +455,13 @@ class Media_Provider {
 			return new WP_Error( 'missing_title', __( 'A new title is required.', 'mosmcp-abilities' ) );
 		}
 
+		// wp_slash() because wp_update_post() unslashes its input and would drop backslashes.
 		$result = wp_update_post(
-			array(
-				'ID'         => $att->ID,
-				'post_title' => $title,
+			wp_slash(
+				array(
+					'ID'         => $att->ID,
+					'post_title' => $title,
+				)
 			),
 			true
 		);

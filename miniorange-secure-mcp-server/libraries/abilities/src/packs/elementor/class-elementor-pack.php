@@ -323,7 +323,7 @@ class Elementor_Pack extends Ability_Pack {
 			'mosmcp/elementor-element-set-content',
 			array(
 				'label'         => __( 'Edit Elementor Element Content', 'mosmcp-abilities' ),
-				'description'   => __( 'Changes the text, image or link of a single element inside an Elementor layout, leaving the design untouched. Only content settings can be reached, so this cannot alter colours, fonts or spacing. Read the layout first to get the element_id you want to change. Also known as: edit Elementor text, change heading, change button text, page builder content.', 'mosmcp-abilities' ),
+				'description'   => __( 'Changes the text, image or link of a single element inside an Elementor layout, leaving the design untouched. Only content settings can be reached, so this cannot change an element\'s colour, font or spacing settings. Markup is handled exactly as in Elementor\'s editor: users with the unfiltered_html capability can store any HTML, including <script>, <style>, <svg> and <canvas> in an HTML widget (which also needs Elementor\'s HTML-widget permission); markup a user is not allowed to store is refused with the reason, never silently removed. Read the layout first to get the element_id you want to change. Also known as: edit Elementor text, change heading, change button text, edit HTML widget code, page builder content.', 'mosmcp-abilities' ),
 				'category'      => 'mosmcp-elementor',
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
@@ -333,7 +333,7 @@ class Elementor_Pack extends Ability_Pack {
 					array(
 						'id'                => Schema::int( __( 'The ID of the post or page whose layout should be edited.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
 						'element_id'        => Schema::str( __( 'The Elementor element ID to change, as reported when reading the layout.', 'mosmcp-abilities' ), array( 'minLength' => 1 ) ),
-						'text'              => Schema::str( __( 'New primary text — a heading\'s title, a button\'s label, a text block\'s body.', 'mosmcp-abilities' ) ),
+						'text'              => Schema::str( __( 'New primary text — a heading\'s title, a button\'s label, a text block\'s body, or an HTML widget\'s code.', 'mosmcp-abilities' ) ),
 						'body'              => Schema::str( __( 'New secondary text, for widgets that have both a title and a description.', 'mosmcp-abilities' ) ),
 						'image_id'          => Schema::int( __( 'Media library ID of an image to use for this element.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
 						'link_url'          => Schema::str( __( 'New link target: a full http(s) URL, a site-relative path starting with /, or an anchor starting with #.', 'mosmcp-abilities' ) ),

@@ -10,6 +10,7 @@
 
 namespace MoSMCP\Abilities\Packs\Core\Support;
 
+use MoSMCP\Abilities\Support\Html_Policy;
 use WP_Error;
 use WP_Post;
 
@@ -109,8 +110,21 @@ class Post_Fields {
 			$update['post_title'] = sanitize_text_field( $input['title'] );
 			$changed[]            = 'title';
 		}
+
+		$html_warnings = array();
+
 		if ( isset( $input['content'] ) ) {
-			$update['post_content'] = wp_kses_post( $input['content'] );
+			// The same markup rule the WordPress editor applies to this user; see Html_Policy.
+			$content = Html_Policy::apply(
+				(string) $input['content'],
+				Html_Policy::restriction(),
+				Html_Policy::field_label( 'content', $post->post_type ),
+				$html_warnings
+			);
+			if ( is_wp_error( $content ) ) {
+				return $content;
+			}
+			$update['post_content'] = $content;
 			$changed[]              = 'content';
 		}
 
@@ -130,14 +144,24 @@ class Post_Fields {
 			);
 		}
 
-		$result = wp_update_post( $update, true );
+		/*
+		 * wp_slash() because wp_update_post() unslashes what it is given (it is
+		 * written for $_POST data). Unslashed input loses every backslash, which
+		 * breaks regular expressions and file paths in code, and the JSON unicode
+		 * escapes WordPress keeps inside block markup for &, <, > and quotes.
+		 */
+		$result = wp_update_post( wp_slash( $update ), true );
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}
 
 		$updated = get_post( $post->ID );
 
-		$warnings = Post_Display::content_visibility_warnings( (int) $updated->ID, $changed );
+		$warnings = array_merge(
+			Post_Display::content_visibility_warnings( (int) $updated->ID, $changed ),
+			$html_warnings,
+			self::stored_warnings( (int) $updated->ID, $update )
+		);
 
 		if ( null !== $requested_slug ) {
 			$warnings = array_merge(
@@ -158,6 +182,48 @@ class Post_Fields {
 			'view_url'  => (string) get_permalink( $updated->ID ),
 			'warnings'  => $warnings,
 		);
+	}
+
+	/**
+	 * Warnings for any title, content or excerpt that WordPress did not store as sent.
+	 *
+	 * Read back after the save rather than assumed: WordPress unslashes post fields,
+	 * and a plugin can rewrite them on the way in, so a value that lost markup or
+	 * backslashes is reported instead of presented as a clean success.
+	 *
+	 * @param int                  $post_id Post ID.
+	 * @param array<string, mixed> $sent    The post array that was handed to WordPress, unslashed.
+	 * @return array<int, array<string, string>>
+	 */
+	public static function stored_warnings( $post_id, array $sent ) {
+		$post = get_post( (int) $post_id );
+		if ( ! $post instanceof WP_Post ) {
+			return array();
+		}
+
+		$warnings = array();
+		$fields   = array(
+			'post_content' => 'content',
+			'post_title'   => 'title',
+			'post_excerpt' => 'excerpt',
+		);
+
+		foreach ( $fields as $column => $field ) {
+			if ( ! array_key_exists( $column, $sent ) ) {
+				continue;
+			}
+
+			$warnings = array_merge(
+				$warnings,
+				Html_Policy::save_warnings(
+					(string) $sent[ $column ],
+					(string) $post->$column,
+					Html_Policy::field_label( $field, $post->post_type )
+				)
+			);
+		}
+
+		return $warnings;
 	}
 
 	/**

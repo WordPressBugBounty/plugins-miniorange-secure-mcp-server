@@ -28,6 +28,7 @@
 
 namespace MoSMCP\Abilities\Packs\Core\Support;
 
+use MoSMCP\Abilities\Support\Html_Policy;
 use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -146,6 +147,13 @@ class Media_Uploader {
 			return $gate;
 		}
 
+		// Before anything is fetched, so a refused description never leaves a download behind.
+		$described = self::apply_description_rule( $input );
+		if ( $described instanceof WP_Error ) {
+			return $described;
+		}
+		$input = $described['input'];
+
 		$url = isset( $input['url'] ) ? trim( (string) $input['url'] ) : '';
 		if ( '' === $url ) {
 			return new WP_Error( 'missing_url', __( 'Provide the URL of the file to add.', 'mosmcp-abilities' ) );
@@ -165,7 +173,7 @@ class Media_Uploader {
 			? (string) $input['filename']
 			: self::filename_from_url( $url );
 
-		return self::sideload( $fetched['path'], $filename, $input, $fetched['warnings'] );
+		return self::sideload( $fetched['path'], $filename, $input, array_merge( $described['warnings'], $fetched['warnings'] ) );
 	}
 
 	/**
@@ -181,6 +189,13 @@ class Media_Uploader {
 		if ( $gate instanceof WP_Error ) {
 			return $gate;
 		}
+
+		// Before the file is decoded and written, so a refused description leaves nothing behind.
+		$described = self::apply_description_rule( $input );
+		if ( $described instanceof WP_Error ) {
+			return $described;
+		}
+		$input = $described['input'];
 
 		$filename = isset( $input['filename'] ) ? trim( (string) $input['filename'] ) : '';
 		if ( '' === $filename ) {
@@ -232,7 +247,33 @@ class Media_Uploader {
 			return new WP_Error( 'temp_write_failed', __( 'The upload could not be written to a temporary file.', 'mosmcp-abilities' ) );
 		}
 
-		return self::sideload( $tmp, $filename, $input, array() );
+		return self::sideload( $tmp, $filename, $input, $described['warnings'] );
+	}
+
+	/**
+	 * Applies the markup rule to an upload's description before anything is stored.
+	 *
+	 * The description is the attachment's post content, so it follows the same rule
+	 * as any other post content; see Html_Policy.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array{input: array<string, mixed>, warnings: array<int, array<string, string>>}|WP_Error
+	 */
+	private static function apply_description_rule( array $input ) {
+		$warnings = array();
+
+		if ( isset( $input['description'] ) ) {
+			$description = Html_Policy::apply( (string) $input['description'], Html_Policy::restriction(), __( 'the description of this media item', 'mosmcp-abilities' ), $warnings );
+			if ( is_wp_error( $description ) ) {
+				return $description;
+			}
+			$input['description'] = $description;
+		}
+
+		return array(
+			'input'    => $input,
+			'warnings' => $warnings,
+		);
 	}
 
 	/* --------------------------------------------------------------- guards */
@@ -705,15 +746,22 @@ class Media_Uploader {
 			return new WP_Error( 'sideload_failed', (string) $sideloaded['error'] );
 		}
 
+		/*
+		 * The description was already put through the markup rule by
+		 * apply_description_rule(). wp_slash() because wp_insert_attachment() hands
+		 * this to wp_insert_post(), which unslashes it and would drop backslashes.
+		 */
 		$attachment_id = wp_insert_attachment(
-			array(
-				'post_mime_type' => (string) $sideloaded['type'],
-				'post_title'     => isset( $input['title'] ) && '' !== trim( (string) $input['title'] )
-					? sanitize_text_field( (string) $input['title'] )
-					: preg_replace( '/\.[^.]+$/', '', $filename ),
-				'post_content'   => isset( $input['description'] ) ? wp_kses_post( (string) $input['description'] ) : '',
-				'post_excerpt'   => isset( $input['caption'] ) ? sanitize_textarea_field( (string) $input['caption'] ) : '',
-				'post_status'    => 'inherit',
+			wp_slash(
+				array(
+					'post_mime_type' => (string) $sideloaded['type'],
+					'post_title'     => isset( $input['title'] ) && '' !== trim( (string) $input['title'] )
+						? sanitize_text_field( (string) $input['title'] )
+						: preg_replace( '/\.[^.]+$/', '', $filename ),
+					'post_content'   => isset( $input['description'] ) ? (string) $input['description'] : '',
+					'post_excerpt'   => isset( $input['caption'] ) ? sanitize_textarea_field( (string) $input['caption'] ) : '',
+					'post_status'    => 'inherit',
+				)
 			),
 			$sideloaded['file'],
 			self::resolve_parent( $input, $warnings )

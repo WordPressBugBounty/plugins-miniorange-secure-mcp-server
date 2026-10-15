@@ -21,6 +21,7 @@
 
 namespace MoSMCP\Abilities\Packs\Kadence;
 
+use MoSMCP\Abilities\Support\Html_Policy;
 use WP_Error;
 use WP_Post;
 
@@ -77,10 +78,19 @@ class Kadence_Write_Engine {
 			return $validation;
 		}
 
+		/*
+		 * wp_slash() because wp_update_post() unslashes what it is given. The whole
+		 * page is re-serialized here, and block markup stores characters such as &,
+		 * <, > and " inside block settings as JSON unicode escapes; unslashed, every
+		 * one of those on the page lost its backslash, corrupting links and settings
+		 * in blocks this edit never touched.
+		 */
 		$saved = wp_update_post(
-			array(
-				'ID'           => (int) $post->ID,
-				'post_content' => $content,
+			wp_slash(
+				array(
+					'ID'           => (int) $post->ID,
+					'post_content' => $content,
+				)
 			),
 			true
 		);
@@ -88,9 +98,19 @@ class Kadence_Write_Engine {
 			return self::error( 'validation_failed', $saved->get_error_message() );
 		}
 
+		if ( ! isset( $result['warnings'] ) || ! is_array( $result['warnings'] ) ) {
+			$result['warnings'] = array();
+		}
+
 		$reloaded = get_post( (int) $post->ID );
 		if ( $reloaded instanceof WP_Post ) {
 			$result['verified'] = self::verify_saved( $reloaded, $result );
+
+			// The page as stored, not as sent: anything lost on the way in is reported.
+			$result['warnings'] = array_merge(
+				$result['warnings'],
+				Html_Policy::save_warnings( $content, (string) $reloaded->post_content, Html_Policy::field_label( 'content', $reloaded->post_type ) )
+			);
 		}
 
 		$result['id']       = (int) $post->ID;
@@ -400,11 +420,12 @@ class Kadence_Write_Engine {
 
 	/**
 	 * Read-after-write check: re-reads the post and confirms the targeted uniqueID
-	 * still resolves (best-effort; the block editor's own validation cannot be
-	 * reproduced here).
+	 * still resolves — or, for a delete, that it no longer does (best-effort; the
+	 * block editor's own validation cannot be reproduced here).
 	 *
 	 * @param WP_Post              $post   Reloaded post.
-	 * @param array<string, mixed> $result Result array carrying an optional 'unique_id'.
+	 * @param array<string, mixed> $result Result array carrying an optional 'unique_id',
+	 *                                     and 'deleted' when the target was removed.
 	 * @return bool
 	 */
 	private static function verify_saved( WP_Post $post, array $result ) {
@@ -414,7 +435,9 @@ class Kadence_Write_Engine {
 		}
 
 		$blocks = Kadence_Blocks_Helper::parse_post( $post );
-		return null !== self::locate( $blocks, $unique_id );
+		$found  = null !== self::locate( $blocks, $unique_id );
+
+		return empty( $result['deleted'] ) ? $found : ! $found;
 	}
 
 	/**

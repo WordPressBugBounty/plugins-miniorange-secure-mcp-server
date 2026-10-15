@@ -363,14 +363,22 @@ class Users_Provider {
 
 		$password = ! empty( $input['password'] ) ? (string) $input['password'] : wp_generate_password( 20 );
 
+		$first_name = isset( $input['first_name'] ) ? sanitize_text_field( (string) $input['first_name'] ) : '';
+		$last_name  = isset( $input['last_name'] ) ? sanitize_text_field( (string) $input['last_name'] ) : '';
+
+		/*
+		 * Only the names are slashed: wp_insert_user() unslashes them, which would
+		 * drop a backslash. The login and email cannot hold one, and the password is
+		 * deliberately left exactly as given.
+		 */
 		$user_id = wp_insert_user(
 			array(
 				'user_login' => $login,
 				'user_email' => $email,
 				'user_pass'  => $password,
 				'role'       => $role,
-				'first_name' => isset( $input['first_name'] ) ? sanitize_text_field( (string) $input['first_name'] ) : '',
-				'last_name'  => isset( $input['last_name'] ) ? sanitize_text_field( (string) $input['last_name'] ) : '',
+				'first_name' => wp_slash( $first_name ),
+				'last_name'  => wp_slash( $last_name ),
 			)
 		);
 
@@ -1045,10 +1053,18 @@ class Users_Provider {
 			return new WP_Error( 'mosmcp_cannot_edit', __( 'You are not allowed to edit this user.', 'mosmcp-abilities' ) );
 		}
 
+		/*
+		 * wp_slash() because wp_update_user() unslashes the value (it is written for
+		 * $_POST data), which would drop every backslash in a name or biography.
+		 *
+		 * slash-ok: the email is left as given on purpose. An address has no
+		 * backslash to keep, and slashing one that holds an apostrophe would make
+		 * WordPress see a changed address and send an email-change notice for nothing.
+		 */
 		$result = wp_update_user(
 			array(
 				'ID'   => $id,
-				$field => $value,
+				$field => 'user_email' === $field ? $value : wp_slash( $value ),
 			)
 		);
 		if ( is_wp_error( $result ) ) {

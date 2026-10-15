@@ -10,6 +10,7 @@ namespace MoSMCP\Abilities\Packs\Cpt;
 use MoSMCP\Abilities\Packs\Core\Support\Post_Display;
 use MoSMCP\Abilities\Packs\Core\Support\Post_Duplicator;
 use MoSMCP\Abilities\Packs\Core\Support\Post_Fields;
+use MoSMCP\Abilities\Support\Html_Policy;
 use WP_Error;
 use WP_Post;
 use WP_Query;
@@ -297,8 +298,15 @@ class Cpt_Provider {
 			'post_author' => get_current_user_id(),
 		);
 
+		$html_warnings = array();
+
 		if ( isset( $input['content'] ) ) {
-			$postarr['post_content'] = wp_kses_post( (string) $input['content'] );
+			// The same markup rule the WordPress editor applies to this user; see Html_Policy.
+			$content = Html_Policy::apply( (string) $input['content'], Html_Policy::restriction(), Html_Policy::field_label( 'content', $type->name ), $html_warnings );
+			if ( is_wp_error( $content ) ) {
+				return $content;
+			}
+			$postarr['post_content'] = $content;
 		}
 		if ( isset( $input['excerpt'] ) ) {
 			$postarr['post_excerpt'] = sanitize_textarea_field( (string) $input['excerpt'] );
@@ -324,7 +332,7 @@ class Cpt_Provider {
 			return $id;
 		}
 
-		$warnings = array();
+		$warnings = array_merge( $html_warnings, Post_Fields::stored_warnings( (int) $id, $postarr ) );
 		$stored   = (string) get_post_field( 'post_name', $id );
 		if ( isset( $slug ) && is_string( $slug ) && $stored !== $slug ) {
 			$warnings[] = array(
@@ -816,7 +824,8 @@ class Cpt_Provider {
 			$update['menu_order'] = (int) $input['menu_order'];
 		}
 
-		$result = wp_update_post( $update, true );
+		// Only integers here, but slashed like every other post write so no path is ever missed.
+		$result = wp_update_post( wp_slash( $update ), true );
 		if ( is_wp_error( $result ) ) {
 			return $result;
 		}

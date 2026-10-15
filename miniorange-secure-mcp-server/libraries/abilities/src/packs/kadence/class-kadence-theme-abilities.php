@@ -197,7 +197,8 @@ class Kadence_Theme_Abilities {
 				$value = sanitize_text_field( $value );
 			}
 
-			update_post_meta( (int) $post->ID, $meta_key, $value );
+			// wp_slash because the metadata API unslashes on the way in.
+			update_post_meta( (int) $post->ID, $meta_key, wp_slash( $value ) );
 			$updated[ $name ] = $value;
 		}
 

@@ -17,6 +17,7 @@ namespace MoSMCP\Abilities\Packs\Cpt;
 use MoSMCP\Abilities\Ability;
 use MoSMCP\Abilities\Ability_Pack;
 use MoSMCP\Abilities\Packs\Core\Support\Core_Schema as Schema;
+use MoSMCP\Abilities\Support\Html_Policy;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -272,7 +273,7 @@ class Cpt_Pack extends Ability_Pack {
 					array(
 						'post_type' => self::post_type_property(),
 						'title'     => Schema::str( __( 'Title for the new item.', 'mosmcp-abilities' ), array( 'minLength' => 1 ) ),
-						'content'   => Schema::str( __( 'Body text. Only for types that support an editor.', 'mosmcp-abilities' ) ),
+						'content'   => Schema::str( __( 'Body text. Only for types that support an editor.', 'mosmcp-abilities' ) . ' ' . Html_Policy::rule_summary() ),
 						'excerpt'   => Schema::str( __( 'Excerpt. Only for types that support one.', 'mosmcp-abilities' ) ),
 						'status'    => Schema::str(
 							__( 'Status for the new item. Publishing requires the type\'s publish capability.', 'mosmcp-abilities' ),
@@ -329,7 +330,7 @@ class Cpt_Pack extends Ability_Pack {
 						'post_type' => self::post_type_property(),
 						'id'        => self::id_property(),
 						'title'     => Schema::str( __( 'New title. Omit to keep the current one.', 'mosmcp-abilities' ) ),
-						'content'   => Schema::str( __( 'New body text. Omit to keep the current text.', 'mosmcp-abilities' ) ),
+						'content'   => Schema::str( __( 'New body text. Omit to keep the current text.', 'mosmcp-abilities' ) . ' ' . Html_Policy::rule_summary() ),
 						'excerpt'   => Schema::str( __( 'New excerpt. Pass an empty string to clear it.', 'mosmcp-abilities' ) ),
 						'slug'      => Schema::str( __( 'New URL slug. Omit to leave the address unchanged. Reduced to a URL-safe form, and a suffix is added if it is already taken.', 'mosmcp-abilities' ) ),
 					),

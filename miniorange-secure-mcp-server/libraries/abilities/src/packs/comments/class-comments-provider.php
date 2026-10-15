@@ -338,17 +338,29 @@ class Comments_Provider {
 		$parent       = get_comment( $id );
 		$current_user = wp_get_current_user();
 
+		/*
+		 * The same rule as WordPress's own comment screens and REST API: a user with
+		 * unfiltered_html posts the reply as written; anyone else's is filtered here,
+		 * and WordPress filters it again on save, as it always has.
+		 *
+		 * wp_slash() because wp_new_comment() unslashes what it is given (it is
+		 * written for $_POST data), which would drop every backslash in the reply.
+		 */
+		$reply = current_user_can( 'unfiltered_html' ) ? $content : wp_kses_post( $content );
+
 		$new_id = wp_new_comment(
-			array(
-				'comment_post_ID'      => $parent->comment_post_ID,
-				'comment_parent'       => $id,
-				'comment_content'      => wp_kses_post( $content ),
-				'comment_author'       => $current_user->display_name,
-				'comment_author_email' => $current_user->user_email,
-				'comment_author_url'   => $current_user->user_url,
-				'user_id'              => $current_user->ID,
-				'comment_approved'     => 1,
-				'comment_type'         => '',
+			wp_slash(
+				array(
+					'comment_post_ID'      => $parent->comment_post_ID,
+					'comment_parent'       => $id,
+					'comment_content'      => $reply,
+					'comment_author'       => $current_user->display_name,
+					'comment_author_email' => $current_user->user_email,
+					'comment_author_url'   => $current_user->user_url,
+					'user_id'              => $current_user->ID,
+					'comment_approved'     => 1,
+					'comment_type'         => '',
+				)
 			),
 			true
 		);

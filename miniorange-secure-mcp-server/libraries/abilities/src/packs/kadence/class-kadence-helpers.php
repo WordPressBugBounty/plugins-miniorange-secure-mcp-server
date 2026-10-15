@@ -16,6 +16,7 @@
 namespace MoSMCP\Abilities\Packs\Kadence;
 
 use MoSMCP\Abilities\Naming;
+use MoSMCP\Abilities\Packs\Core\Support\Core_Schema;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -88,6 +89,17 @@ class Kadence_Helpers {
 		unset( $meta['mcp'] );
 		$meta['annotations'] = $annotations;
 		$args['meta']        = $meta;
+
+		/*
+		 * Every Kadence write goes through Kadence_Write_Engine::run(), which can
+		 * return warnings (markup a user could not keep, or content WordPress changed
+		 * while saving). Output schemas are closed, so an undeclared key would fail
+		 * output validation; declaring it once here keeps every ability in step.
+		 */
+		if ( isset( $args['output_schema']['properties'] ) && is_array( $args['output_schema']['properties'] )
+			&& ! isset( $args['output_schema']['properties']['warnings'] ) ) {
+			$args['output_schema']['properties']['warnings'] = Core_Schema::warnings();
+		}
 
 		Naming::register_ability( self::NS . '/' . $key, $args );
 	}

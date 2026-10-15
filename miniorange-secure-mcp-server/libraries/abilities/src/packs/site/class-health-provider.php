@@ -398,9 +398,18 @@ class Health_Provider {
 				continue;
 			}
 
-			$result = self::run_test( $health, $name );
+			$error  = '';
+			$result = self::run_test( $health, $name, $error );
 
 			if ( null === $result ) {
+				if ( '' !== $error ) {
+					$notes[] = sprintf(
+						/* translators: 1: Site Health test name, 2: the error it raised */
+						__( 'The "%1$s" check crashed instead of running, so it is not counted in the totals. A crashing check usually points to a problem in the plugin or theme that added it. It said: %2$s', 'mosmcp-abilities' ),
+						is_string( $name ) ? $name : (string) $key,
+						$error
+					);
+				}
 				continue;
 			}
 
@@ -445,14 +454,16 @@ class Health_Provider {
 	 * Runs a single Site Health test, tolerating a test that errors.
 	 *
 	 * A third-party plugin can register a Site Health test, and a fatal in one of
-	 * those must not take down the whole answer, so each is run defensively and a
-	 * failing test is simply omitted.
+	 * those must not take down the whole answer, so each is run defensively. A test
+	 * that crashes is left out of the totals, but its error is handed back so the
+	 * caller can say so rather than silently reporting fewer tests.
 	 *
 	 * @param WP_Site_Health  $health The Site Health instance.
 	 * @param string|callable $name   Test name or callable, as registered.
+	 * @param string          $error  Set to the error message when the test crashes.
 	 * @return array<string, mixed>|null The test result, or null when it could not run.
 	 */
-	private static function run_test( WP_Site_Health $health, $name ) {
+	private static function run_test( WP_Site_Health $health, $name, &$error ) {
 		$callback = null;
 
 		if ( is_string( $name ) ) {
@@ -472,6 +483,7 @@ class Health_Provider {
 		try {
 			$result = call_user_func( $callback );
 		} catch ( \Throwable $e ) {
+			$error = '' !== $e->getMessage() ? $e->getMessage() : get_class( $e );
 			return null;
 		}
 

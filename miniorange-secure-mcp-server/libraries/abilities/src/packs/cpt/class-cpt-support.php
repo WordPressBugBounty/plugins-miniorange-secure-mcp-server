@@ -48,6 +48,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Cpt_Support {
 
 	/**
+	 * Why JetEngine's fields could not be read, per post type, for this request.
+	 *
+	 * @var array<string, string>
+	 */
+	private static $jetengine_errors = array();
+
+	/**
 	 * Custom post types this pack refuses to touch, and why.
 	 *
 	 * Every entry is either owned by a pack that understands its semantics, or is
@@ -617,10 +624,25 @@ class Cpt_Support {
 
 			$memo[ $post_type ] = self::normalise_jetengine_fields( $raw );
 		} catch ( \Throwable $e ) {
-			$memo[ $post_type ] = array();
+			// Still no fields, but remembered, so the type's description can say the
+			// read failed rather than implying the type has no JetEngine fields.
+			$memo[ $post_type ]                   = array();
+			self::$jetengine_errors[ $post_type ] = '' !== $e->getMessage() ? $e->getMessage() : get_class( $e );
 		}
 
 		return $memo[ $post_type ];
+	}
+
+	/**
+	 * Why JetEngine's fields for a post type could not be read, or '' if they could.
+	 *
+	 * Only meaningful after jetengine_fields_for() has run for the type.
+	 *
+	 * @param string $post_type Post type slug.
+	 * @return string
+	 */
+	public static function jetengine_error( $post_type ) {
+		return isset( self::$jetengine_errors[ (string) $post_type ] ) ? self::$jetengine_errors[ (string) $post_type ] : '';
 	}
 
 	/**
@@ -1081,6 +1103,13 @@ class Cpt_Support {
 		}
 		if ( self::jetengine_fields_for( $slug ) ) {
 			$notes[] = __( 'Some of this type\'s fields are defined in JetEngine. The generic field abilities read and write them, and a value is converted to the format JetEngine stores for that field — a date field set up to hold a Unix timestamp receives one.', 'mosmcp-abilities' );
+		}
+		if ( '' !== self::jetengine_error( $slug ) ) {
+			$notes[] = sprintf(
+				/* translators: %s: the error JetEngine raised */
+				__( 'JetEngine is active, but its fields for this type could not be read, so any JetEngine fields are missing from this description. JetEngine said: %s', 'mosmcp-abilities' ),
+				self::jetengine_error( $slug )
+			);
 		}
 		if ( ! post_type_supports( $slug, 'custom-fields' ) ) {
 			$notes[] = __( 'This type has no custom-fields editor of its own, which is normal for a type built by a field plugin. Its fields can still be read and written; a field nothing manages and nothing has ever stored is refused, because a value there could never be read back.', 'mosmcp-abilities' );

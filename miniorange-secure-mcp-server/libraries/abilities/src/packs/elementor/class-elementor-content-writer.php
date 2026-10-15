@@ -18,6 +18,7 @@
 
 namespace MoSMCP\Abilities\Packs\Elementor;
 
+use MoSMCP\Abilities\Support\Html_Policy;
 use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -64,6 +65,13 @@ class Elementor_Content_Writer {
 	const ATOMIC_WRITABLE_ROLES = array( 'text', 'body' );
 
 	/**
+	 * Slug of Elementor's HTML widget, which Elementor gates separately.
+	 *
+	 * @var string
+	 */
+	const HTML_WIDGET = 'html';
+
+	/**
 	 * Builds the mutator for a content change.
 	 *
 	 * @param array<string, mixed> $input Ability input.
@@ -85,7 +93,9 @@ class Elementor_Content_Writer {
 				? (string) $node['widgetType']
 				: ( isset( $node['elType'] ) ? (string) $node['elType'] : '' );
 
-			$plan = self::plan( $slug, $node, $input );
+			$warnings = array();
+
+			$plan = self::plan( $slug, $node, $input, $warnings );
 			if ( is_wp_error( $plan ) ) {
 				return $plan;
 			}
@@ -132,6 +142,10 @@ class Elementor_Content_Writer {
 				$result['changes'][] = $change;
 			}
 
+			foreach ( $warnings as $warning ) {
+				$result['warnings'][] = $warning;
+			}
+
 			/*
 			 * Ask the engine to confirm the exact values, not just that the settings
 			 * exist. Elementor's save is a silent no-op on post types it is not
@@ -155,12 +169,13 @@ class Elementor_Content_Writer {
 	 *
 	 * Everything that can be refused is refused here, before the tree is touched.
 	 *
-	 * @param string               $slug  Widget or element slug.
-	 * @param array<string, mixed> $node  The target node as currently stored.
-	 * @param array<string, mixed> $input Ability input.
+	 * @param string                            $slug     Widget or element slug.
+	 * @param array<string, mixed>              $node     The target node as currently stored.
+	 * @param array<string, mixed>              $input    Ability input.
+	 * @param array<int, array<string, string>> $warnings Warnings accumulator, modified in place.
 	 * @return array<int, array<string, mixed>>|WP_Error
 	 */
-	private static function plan( $slug, array $node, array $input ) {
+	private static function plan( $slug, array $node, array $input, array &$warnings ) {
 		$requested = array();
 		foreach ( self::FIELD_ROLES as $field => $role ) {
 			if ( array_key_exists( $field, $input ) && '' !== trim( (string) $input[ $field ] ) ) {
@@ -245,7 +260,7 @@ class Elementor_Content_Writer {
 				);
 			}
 
-			$value = self::build_value( $role, $raw, $control, $settings, $is_atomic, $element );
+			$value = self::build_value( $role, $raw, $control, $settings, $is_atomic, $element, $slug, $warnings );
 			if ( is_wp_error( $value ) ) {
 				return $value;
 			}
@@ -284,15 +299,17 @@ class Elementor_Content_Writer {
 	/**
 	 * Builds the stored value for one role.
 	 *
-	 * @param string               $role      Content role.
-	 * @param mixed                $raw       Caller-supplied value.
-	 * @param string               $control   Control name.
-	 * @param array<string, mixed> $settings  Existing node settings.
-	 * @param bool                 $is_atomic Whether the element is atomic.
-	 * @param object               $element   Widget or element object.
+	 * @param string                            $role      Content role.
+	 * @param mixed                             $raw       Caller-supplied value.
+	 * @param string                            $control   Control name.
+	 * @param array<string, mixed>              $settings  Existing node settings.
+	 * @param bool                              $is_atomic Whether the element is atomic.
+	 * @param object                            $element   Widget or element object.
+	 * @param string                            $slug      Widget or element slug.
+	 * @param array<int, array<string, string>> $warnings  Warnings accumulator, modified in place.
 	 * @return mixed|WP_Error
 	 */
-	private static function build_value( $role, $raw, $control, array $settings, $is_atomic, $element ) {
+	private static function build_value( $role, $raw, $control, array $settings, $is_atomic, $element, $slug, array &$warnings ) {
 		if ( 'image' === $role ) {
 			return self::build_image( $raw );
 		}
@@ -301,15 +318,142 @@ class Elementor_Content_Writer {
 			return self::build_link( $raw, $control, $settings );
 		}
 
-		// Text roles. wp_kses_post keeps the inline markup Elementor's editors
-		// legitimately store while stripping scripts and event handlers.
-		$text = wp_kses_post( (string) $raw );
+		// Text roles: markup is handled exactly as Elementor's editor handles it for
+		// this user, and never stripped silently. See filter_html().
+		$text = self::filter_html( (string) $raw, $slug, $control, $is_atomic, $warnings );
+		if ( is_wp_error( $text ) ) {
+			return $text;
+		}
 
 		if ( ! $is_atomic ) {
 			return $text;
 		}
 
 		return self::build_atomic_text( $text, $control, $settings, $element );
+	}
+
+	/**
+	 * Applies the rule Elementor's own editor uses for markup in content.
+	 *
+	 * Elementor stores markup exactly as given for users with the unfiltered_html
+	 * capability and runs everyone else's through wp_kses_post() when it saves
+	 * (Document::save()), so the AI acting as a user can store exactly what that
+	 * user could store by hand. Two Elementor rules narrow this further: the HTML
+	 * widget also needs Elementor's HTML-widget permission, and v4 (atomic) elements
+	 * are sanitised by Elementor for every user, so they are always filtered here.
+	 *
+	 * Filtering is never silent: whole elements that would be lost are refused, and
+	 * removed attributes are reported. Html_Policy applies that; this method only
+	 * decides which of Elementor's rules applies to the user and the widget.
+	 *
+	 * @param string                            $raw       Caller-supplied markup.
+	 * @param string                            $slug      Widget or element slug.
+	 * @param string                            $control   Control name.
+	 * @param bool                              $is_atomic Whether the element is atomic.
+	 * @param array<int, array<string, string>> $warnings  Warnings accumulator, modified in place.
+	 * @return string|WP_Error
+	 */
+	private static function filter_html( $raw, $slug, $control, $is_atomic, array &$warnings ) {
+		$detail = '';
+		$reason = self::html_restriction( $slug, $is_atomic, $detail );
+
+		return Html_Policy::apply(
+			$raw,
+			$reason,
+			sprintf(
+				/* translators: 1: setting name, 2: widget slug */
+				__( 'the "%1$s" setting of this "%2$s" element', 'mosmcp-abilities' ),
+				$control,
+				$slug
+			),
+			$warnings,
+			'' === $reason ? '' : self::restriction_message( $reason, $detail )
+		);
+	}
+
+	/**
+	 * Why the current user's markup must be filtered, or '' when it is stored as given.
+	 *
+	 * @param string $slug      Widget or element slug.
+	 * @param bool   $is_atomic Whether the element is atomic.
+	 * @param string $detail    Set to Elementor's error when its permission check fails.
+	 * @return string 'atomic', 'unfiltered_html', 'html_widget', 'html_widget_unconfirmed',
+	 *                or '' for no filtering.
+	 */
+	private static function html_restriction( $slug, $is_atomic, &$detail ) {
+		if ( $is_atomic ) {
+			return 'atomic';
+		}
+
+		if ( ! current_user_can( 'unfiltered_html' ) ) {
+			return 'unfiltered_html';
+		}
+
+		if ( self::HTML_WIDGET === $slug && ! self::can_use_html_widget( $detail ) ) {
+			return '' === $detail ? 'html_widget' : 'html_widget_unconfirmed';
+		}
+
+		return '';
+	}
+
+	/**
+	 * Whether the current user may put code in Elementor's HTML widget.
+	 *
+	 * Elementor gates this widget separately from unfiltered_html: only users with
+	 * manage_options can edit it, plus roles allowed under Elementor > Role Manager.
+	 * Editors hold unfiltered_html on a single site, yet Elementor keeps them out of
+	 * this widget by default, so the AI does too.
+	 *
+	 * If Elementor's own check fails, access is refused (fail closed), and the error
+	 * is handed back so the caller is told the check failed rather than that the
+	 * user lacks the permission.
+	 *
+	 * @param string $error Set to Elementor's error message when its check fails.
+	 * @return bool
+	 */
+	private static function can_use_html_widget( &$error ) {
+		if ( current_user_can( 'manage_options' ) ) {
+			return true;
+		}
+
+		$check = array( \Elementor\User::class, 'is_current_user_can_use_custom_html' );
+		if ( ! is_callable( $check ) ) {
+			return false;
+		}
+
+		try {
+			return (bool) call_user_func( $check );
+		} catch ( \Throwable $e ) {
+			$error = '' !== $e->getMessage() ? $e->getMessage() : get_class( $e );
+			return false;
+		}
+	}
+
+	/**
+	 * Explains a restriction to the caller, saying who is allowed.
+	 *
+	 * @param string $reason Restriction code from html_restriction().
+	 * @param string $detail Elementor's error, for 'html_widget_unconfirmed'.
+	 * @return string
+	 */
+	private static function restriction_message( $reason, $detail = '' ) {
+		if ( 'atomic' === $reason ) {
+			return __( 'Elementor v4 elements only keep basic text formatting; use a classic HTML widget for code.', 'mosmcp-abilities' );
+		}
+
+		if ( 'html_widget_unconfirmed' === $reason ) {
+			return sprintf(
+				/* translators: %s: error message from Elementor */
+				__( 'Elementor\'s HTML-widget permission check failed, so this account\'s access could not be confirmed (Elementor said: %s). An administrator can still make this change.', 'mosmcp-abilities' ),
+				$detail
+			);
+		}
+
+		if ( 'html_widget' === $reason ) {
+			return __( 'Elementor only allows code in an HTML widget for administrators and for roles given HTML-widget access under Elementor > Role Manager.', 'mosmcp-abilities' );
+		}
+
+		return __( 'WordPress and Elementor only allow this markup for users with the unfiltered_html capability: administrators and editors on a single site, super admins on multisite, and nobody when DISALLOW_UNFILTERED_HTML is set.', 'mosmcp-abilities' );
 	}
 
 	/**

@@ -11,6 +11,7 @@ use MoSMCP\Abilities\Ability;
 use MoSMCP\Abilities\Ability_Pack;
 use MoSMCP\Abilities\Packs\Core\Support\Core_Schema as Schema;
 use MoSMCP\Abilities\Packs\Core\Support\Post_Duplicator;
+use MoSMCP\Abilities\Support\Html_Policy;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -112,7 +113,7 @@ class Posts_Pack extends Ability_Pack {
 				'input_schema'  => Schema::object(
 					array(
 						'title'   => Schema::str( __( 'The title of the new draft.', 'mosmcp-abilities' ), array( 'minLength' => 1 ) ),
-						'content' => Schema::str( __( 'Optional content/body of the new draft.', 'mosmcp-abilities' ), array( 'default' => '' ) ),
+						'content' => Schema::str( __( 'Optional content/body of the new draft.', 'mosmcp-abilities' ) . ' ' . Html_Policy::rule_summary(), array( 'default' => '' ) ),
 						'excerpt' => Schema::str( __( 'Optional excerpt for the new draft.', 'mosmcp-abilities' ), array( 'default' => '' ) ),
 						'slug'    => Schema::str( __( 'New URL slug. Omit to leave the address unchanged. Reduced to a URL-safe form, and a suffix is added if it is already taken.', 'mosmcp-abilities' ) ),
 					),
@@ -127,6 +128,7 @@ class Posts_Pack extends Ability_Pack {
 						'edit_url'  => Schema::str(),
 						'view_url'  => Schema::str(),
 						'post_type' => Schema::str(),
+						'warnings'  => Schema::warnings( __( 'Notes about the save, such as attributes that could not be kept or content that WordPress changed while saving.', 'mosmcp-abilities' ) ),
 					),
 					array( 'id', 'title', 'status' )
 				),
@@ -250,7 +252,7 @@ class Posts_Pack extends Ability_Pack {
 					array(
 						'id'      => Schema::int( __( 'The ID of the post to update.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
 						'title'   => Schema::str( __( 'New title. Omit to keep the current title.', 'mosmcp-abilities' ) ),
-						'content' => Schema::str( __( 'New content. Omit to keep the current content.', 'mosmcp-abilities' ) ),
+						'content' => Schema::str( __( 'New content. Omit to keep the current content.', 'mosmcp-abilities' ) . ' ' . Html_Policy::rule_summary() ),
 						'excerpt' => Schema::str( __( 'New excerpt. Omit to keep the current excerpt; pass an empty string to clear it.', 'mosmcp-abilities' ) ),
 						'slug'    => Schema::str( __( 'New URL slug. Omit to leave the address unchanged. Reduced to a URL-safe form, and a suffix is added if it is already taken.', 'mosmcp-abilities' ) ),
 					),
@@ -409,7 +411,7 @@ class Posts_Pack extends Ability_Pack {
 					array(
 						'id'      => Schema::int( __( 'The ID of the post to update.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
 						'title'   => Schema::str( __( 'New title for the post. Omit to keep the current title.', 'mosmcp-abilities' ) ),
-						'content' => Schema::str( __( 'New content for the post. Omit to keep the current content.', 'mosmcp-abilities' ) ),
+						'content' => Schema::str( __( 'New content for the post. Omit to keep the current content.', 'mosmcp-abilities' ) . ' ' . Html_Policy::rule_summary() ),
 						'excerpt' => Schema::str( __( 'New excerpt for the post. Omit to keep the current excerpt; pass an empty string to clear it.', 'mosmcp-abilities' ) ),
 						'slug'    => Schema::str( __( 'New URL slug. Omit to leave the address unchanged. Reduced to a URL-safe form, and a suffix is added if it is already taken.', 'mosmcp-abilities' ) ),
 					),
