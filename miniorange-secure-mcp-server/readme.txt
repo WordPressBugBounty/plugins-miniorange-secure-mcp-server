@@ -4,7 +4,7 @@ Tags: mcp, ai, mcp-server, chatgpt, claude
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.5.2
+Stable tag: 1.5.3
 License: Expat
 License URI: https://plugins.miniorange.com/mit-license
 
@@ -350,6 +350,14 @@ No. Install, follow the onboarding checklist, and paste one URL into your AI cli
 
 == Changelog ==
 
+= 1.5.3 =
+* Fixed AI clients being disconnected when a token refresh was interrupted by a timeout or restart. A retried refresh now succeeds instead of forcing a reconnect.
+* Fixed AI client replies breaking when another plugin prints PHP notices or warnings during MCP and OAuth requests.
+* The Debug Log now always records failures, even while capture is off, without usernames or IP addresses. Entries carry the gateway's request ID so a failed call can be traced end to end.
+* AI clients now get a log reference instead of a broken reply when a tool crashes.
+* Troubleshooting: a gateway check that could not be completed is now shown as inconclusive instead of a failure on your site.
+* Minor bug fixes in the WordPress MCP Server.
+
 = 1.5.2 =
 * Fixed AI clients failing to connect, or not seeing a new agent, on sites using LiteSpeed Cache or another page cache. MCP and OAuth responses are no longer cached.
 * Fixed AI edits removing forms, scripts and styles and dropping backslashes, which broke pages with custom code such as calculators. AI edits to pages, posts, custom content, Elementor, Kadence, Fluent Forms messages and media now follow the same rules as editing by hand: anyone allowed to add HTML there keeps it exactly as written, and markup a user is not allowed to add is refused with a reason instead of being silently removed.
@@ -493,6 +501,9 @@ Fixed: Object-level abilities no longer show false capability conflicts in the r
 * Initial release: read-only viewer for abilities registered through the WordPress Abilities API.
 
 == Upgrade Notice ==
+
+= 1.5.3 =
+Keeps AI clients connected when a token refresh is interrupted, stops other plugins' PHP notices from breaking AI replies, and always records failures in the Debug Log (without usernames or IP addresses) so connection problems are easier to trace. Minor bug fixes.
 
 = 1.5.2 =
 Adds Cursor setup and fixes AI connections on LiteSpeed Cache sites (purge the cache once after updating), AI edits stripping HTML and backslashes (admins can now save HTML through AI, as in the editor) and Kadence edits damaging other blocks (restore those pages from Revisions).

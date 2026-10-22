@@ -27,6 +27,12 @@ class Gateway_Result_Evaluator {
 	const BLOCK_FINGERPRINTS = array( 'cloudflare_challenge', 'cloudflare_block', 'wordfence_block', 'sucuri_block', 'modsecurity_block', 'imunify_block', 'rest_restricted' );
 
 	/**
+	 * What the gateway reports for a check that raised an unexpected error on its own side (the
+	 * check never reached a verdict about the site). Keep in sync with the gateway's diagnostics.
+	 */
+	const GATEWAY_CHECK_FAILED_DETAIL = 'the check could not be completed';
+
+	/**
 	 * Legacy checks that only make sense once the MCP endpoint itself answered.
 	 */
 	const DEPENDENT_ON_MCP = array( 'auth_header_passthrough' );
@@ -182,6 +188,12 @@ class Gateway_Result_Evaluator {
 	private static function verdict_for_check( array $check, $key ) {
 		if ( isset( $check['status'] ) && 'pass' === $check['status'] ) {
 			return Response_Classifier::verdict( Response_Classifier::PASS, 'ok', __( 'Passed from the gateway.', 'miniorange-secure-mcp-server' ) );
+		}
+
+		// The gateway itself failed to run this check, so it says nothing about the site: an
+		// inconclusive result, not a failure to blame on the server (and not "HTTP 0").
+		if ( isset( $check['detail'] ) && self::GATEWAY_CHECK_FAILED_DETAIL === $check['detail'] ) {
+			return Response_Classifier::verdict( Response_Classifier::WARN, 'gateway_check_failed', __( 'The gateway could not finish this check because of an unexpected error on its side, so there is no result for your site. Run the test again; if it keeps happening, contact support.', 'miniorange-secure-mcp-server' ) );
 		}
 
 		$http    = isset( $check['http_status'] ) ? (int) $check['http_status'] : 0;

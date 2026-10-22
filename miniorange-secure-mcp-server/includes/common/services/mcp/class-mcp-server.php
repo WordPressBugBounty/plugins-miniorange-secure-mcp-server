@@ -17,6 +17,7 @@ use MoSMCP\Common\Services\Logging\Audit_Logger;
 use MoSMCP\Common\Services\Logging\Debug_Logger;
 use MoSMCP\Common\Views\Admin\Admin_App;
 use stdClass;
+use WP_Error;
 
 /**
  * Class MCP_Server
@@ -329,31 +330,84 @@ class MCP_Server {
 			);
 		}
 
-		switch ( $method ) {
-			case 'initialize':
-				return self::success_response( $id, self::initialize_result( $params ) );
+		try {
+			switch ( $method ) {
+				case 'initialize':
+					return self::success_response( $id, self::initialize_result( $params ) );
 
-			case 'ping':
-				return self::success_response( $id, new stdClass() );
+				case 'ping':
+					return self::success_response( $id, new stdClass() );
 
-			case 'tools/list':
-				return self::success_response( $id, self::list_tools() );
+				case 'tools/list':
+					return self::success_response( $id, self::list_tools() );
 
-			case 'tools/call':
-				return self::call_tool( $id, $params );
+				case 'tools/call':
+					return self::call_tool( $id, $params );
 
-			default:
-				Debug_Logger::warning(
-					Debug_Logger::CHANNEL_MCP,
-					sprintf( 'Rejected unknown MCP method "%s".', $method ),
-					array(
-						'method' => $method,
-						'rpc_id' => $id,
-					)
-				);
+				default:
+					Debug_Logger::warning(
+						Debug_Logger::CHANNEL_MCP,
+						sprintf( 'Rejected unknown MCP method "%s".', $method ),
+						array(
+							'method' => $method,
+							'rpc_id' => $id,
+						)
+					);
 
-				return self::error_response( $id, -32601, __( 'Method not found.', 'miniorange-secure-mcp-server' ) );
+					return self::error_response( $id, -32601, __( 'Method not found.', 'miniorange-secure-mcp-server' ) );
+			}
+		} catch ( \Throwable $e ) {
+			// Anything that escapes a handler (a registry or filter callback that throws, a TypeError)
+			// would otherwise become a bare HTML 500 the broker can only report as a bad reply.
+			return self::internal_error( $id, $method, $e );
 		}
+	}
+
+	/**
+	 * Answers a request whose handler threw: a JSON-RPC internal error carrying the log reference.
+	 *
+	 * The exception's message and location go to the log, not to the caller: they are for the site
+	 * owner, and a file path or query fragment has no business in an AI client's context.
+	 *
+	 * @param mixed      $id     The JSON-RPC id.
+	 * @param string     $method The method being handled.
+	 * @param \Throwable $e      What was thrown.
+	 * @return array<string, mixed> The JSON-RPC error response.
+	 */
+	private static function internal_error( $id, $method, \Throwable $e ) {
+		Debug_Logger::error(
+			Debug_Logger::CHANNEL_MCP,
+			sprintf( 'MCP method "%s" threw %s.', $method, get_class( $e ) ),
+			array(
+				'method'    => $method,
+				'exception' => get_class( $e ),
+				'detail'    => self::describe_throwable( $e ),
+				'rpc_id'    => $id,
+			)
+		);
+
+		return self::error_response(
+			$id,
+			-32603,
+			sprintf(
+				/* translators: %s: a reference the site owner can find in the debug log. */
+				__( 'Internal error. Reference: %s', 'miniorange-secure-mcp-server' ),
+				Debug_Logger::current_request_id()
+			)
+		);
+	}
+
+	/**
+	 * A throwable's message and location, short enough to log.
+	 *
+	 * @param \Throwable $e What was thrown.
+	 * @return array{message: string, at: string}
+	 */
+	private static function describe_throwable( \Throwable $e ) {
+		return array(
+			'message' => function_exists( 'mb_substr' ) ? mb_substr( $e->getMessage(), 0, 300 ) : substr( $e->getMessage(), 0, 300 ),
+			'at'      => basename( $e->getFile() ) . ':' . $e->getLine(),
+		);
 	}
 
 	/**
@@ -581,8 +635,31 @@ class MCP_Server {
 
 		// Execute and measure wall-clock latency.
 		$start_us = microtime( true );
-		$result   = $ability->execute( $input );
-		$latency  = (int) round( ( microtime( true ) - $start_us ) * 1000.0 );
+		try {
+			$result = $ability->execute( $input );
+		} catch ( \Throwable $e ) {
+			// A crash inside an ability becomes the same "tool failed" result as an ability that
+			// returned a WP_Error, so the AI client gets an answer it can relay (with a reference to
+			// quote) instead of a dead connection. The detail rides in `cause`, which is logged
+			// below but never shown to the client (see error_details()).
+			$result = new WP_Error(
+				'ability_exception',
+				sprintf(
+					/* translators: %s: a reference the site owner can find in the debug log. */
+					__( 'The tool failed unexpectedly. Reference: %s', 'miniorange-secure-mcp-server' ),
+					Debug_Logger::current_request_id()
+				),
+				array(
+					'status'    => 500,
+					'retryable' => false,
+					'cause'     => array(
+						'exception' => get_class( $e ),
+						'detail'    => self::describe_throwable( $e ),
+					),
+				)
+			);
+		}
+		$latency = (int) round( ( microtime( true ) - $start_us ) * 1000.0 );
 
 		if ( is_wp_error( $result ) ) {
 			Audit_Logger::record_tool_call(
@@ -594,13 +671,19 @@ class MCP_Server {
 				$id
 			);
 
-			Debug_Logger::error(
+			// A crash or server fault is a failure worth keeping with capture off; a refusal or bad input
+			// (permission denied, not found, invalid argument) is routine and would crowd those out.
+			$error_data = $result->get_error_data();
+			$http       = is_array( $error_data ) && isset( $error_data['status'] ) ? (int) $error_data['status'] : 0;
+			$failed_at  = 'ability_exception' === $result->get_error_code() || $http >= 500 ? 'error' : 'warning';
+
+			Debug_Logger::$failed_at(
 				Debug_Logger::CHANNEL_MCP,
 				sprintf( 'Tool call "%s" failed: %s', $ability->get_name(), $result->get_error_message() ),
 				array(
 					'tool_name'   => $ability->get_name(),
 					'error_code'  => $result->get_error_code(),
-					'error_data'  => $result->get_error_data(),
+					'error_data'  => $error_data,
 					'latency_ms'  => $latency,
 					'input_keys'  => is_array( $input ) ? array_keys( $input ) : gettype( $input ),
 					'json_rpc_id' => $id,

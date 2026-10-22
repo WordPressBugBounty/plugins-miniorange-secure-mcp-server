@@ -19,6 +19,8 @@ use MoSMCP\Common\Repositories\Audit_Store;
 use MoSMCP\Common\Repositories\Debug_Store;
 use MoSMCP\Common\Services\Discovery\Discovery;
 use MoSMCP\Common\Services\Http\No_Cache;
+use MoSMCP\Common\Services\Http\Output_Guard;
+use MoSMCP\Common\Services\Logging\Debug_Logger;
 use MoSMCP\Common\Services\OAuth\OAuth_Server;
 use MoSMCP\Common\Services\Rest\Rest_Abilities;
 use MoSMCP\Common\Services\Rest\Route_Registry;
@@ -65,6 +67,17 @@ class Hooks {
 		// state, client registrations, tokens). Late priority so a cache plugin's own
 		// rest_post_dispatch headers cannot overwrite ours on these routes.
 		add_filter( 'rest_post_dispatch', array( No_Cache::class, 'filter_rest_response' ), 99, 3 );
+
+		// A notice printed by any plugin or theme lands in front of the JSON body and makes it
+		// unparseable. For requests to our own REST routes only, buffer from here (plugin load) and
+		// drop whatever was printed before the response is served.
+		Output_Guard::maybe_start();
+		if ( Output_Guard::is_plugin_rest_request() ) {
+			// A fatal error cannot be caught; this at least leaves a log row for it on every route
+			// (the OAuth token endpoint included, not just /mcp).
+			Debug_Logger::watch_for_fatal();
+		}
+		add_filter( 'rest_pre_serve_request', array( Output_Guard::class, 'discard_stray_output' ), 0 );
 
 		// Log export for the debug log — a raw file download, so it runs through
 		// admin-post.php rather than the REST API (see Debug_Controller).

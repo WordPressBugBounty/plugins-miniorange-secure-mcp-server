@@ -48,6 +48,26 @@ class Tokens {
 	const TYPE_REFRESH = 'refresh';
 
 	/**
+	 * Token type for a refresh token that has just been spent. The row stays for
+	 * {@see REFRESH_GRACE_TTL} seconds so a retry of the same request (the reply was lost) can be
+	 * answered; the `type` column is varchar(10), so this must stay within 10 characters.
+	 */
+	const TYPE_ROTATED = 'rotated';
+
+	/**
+	 * How long a spent refresh token is still answered, in seconds. Refresh tokens are single-use,
+	 * so a reply that never reaches the caller (a timeout, a restart between our answer and theirs)
+	 * would otherwise leave the caller holding a dead token and force the user to reconnect. A retry
+	 * inside this window gets a fresh pair; after it the token is rejected as before.
+	 *
+	 * Sized to outlast the broker's own timeout on this call (15 s) with the same again for the AI
+	 * client's retry: the broker only learns the reply was lost when that timeout fires, and never
+	 * retries a refresh itself. A window shorter than the timeout would close before the retry could
+	 * arrive. Longer than this only lengthens the time a leaked, already-spent token stays usable.
+	 */
+	const REFRESH_GRACE_TTL = 30;
+
+	/**
 	 * Generates a cryptographically secure, URL-safe opaque secret.
 	 *
 	 * @return string A 43-character base64url string (256 bits of entropy).

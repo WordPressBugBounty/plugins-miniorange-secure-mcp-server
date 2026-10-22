@@ -258,13 +258,46 @@ class Debug_Store {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE created < %d', $table, $cutoff ) );
 
+		self::trim_to( $max );
+	}
+
+	/**
+	 * Keeps only the newest rows, deleting everything older than the Nth most recent.
+	 *
+	 * With a level, only rows of that level are counted and deleted, so capping the always-on error
+	 * rows leaves the info, warning and debug rows an admin collected with capture on. (Error rows
+	 * from such a session are capped with the rest: a row does not record how it was written.)
+	 *
+	 * @param int         $max_rows Most rows to keep.
+	 * @param string|null $level    Limit the trim to this level, or null for every row.
+	 * @return void
+	 */
+	public static function trim_to( $max_rows, $level = null ) {
+		global $wpdb;
+
+		$table = self::table();
+		// The id of the Nth newest row; everything older goes, so exactly N rows are kept.
+		$offset = max( 1, (int) $max_rows ) - 1;
+
+		if ( null === $level ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$boundary = $wpdb->get_var(
+				$wpdb->prepare( 'SELECT id FROM %i ORDER BY id DESC LIMIT 1 OFFSET %d', $table, $offset )
+			);
+			if ( $boundary ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE id < %d', $table, (int) $boundary ) );
+			}
+			return;
+		}
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$boundary = $wpdb->get_var(
-			$wpdb->prepare( 'SELECT id FROM %i ORDER BY id DESC LIMIT 1 OFFSET %d', $table, $max )
+			$wpdb->prepare( 'SELECT id FROM %i WHERE level = %s ORDER BY id DESC LIMIT 1 OFFSET %d', $table, $level, $offset )
 		);
 		if ( $boundary ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE id < %d', $table, (int) $boundary ) );
+			$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE level = %s AND id < %d', $table, $level, (int) $boundary ) );
 		}
 	}
 

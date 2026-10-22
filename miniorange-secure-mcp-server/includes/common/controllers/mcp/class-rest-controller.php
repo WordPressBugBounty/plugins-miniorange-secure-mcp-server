@@ -203,6 +203,9 @@ class REST_Controller {
 	 * @return WP_REST_Response The JSON-RPC response.
 	 */
 	public static function handle( WP_REST_Request $request ) {
+		// A fatal PHP error cannot be caught; this at least leaves a log row saying it happened.
+		Debug_Logger::watch_for_fatal();
+
 		$body    = $request->get_body();
 		$decoded = json_decode( $body, true );
 

@@ -253,8 +253,8 @@ class OAuth_Server {
 				self::redirect_error( $params['redirect_uri'], 'access_denied', $params['state'] );
 			}
 
-			$code = Tokens::generate();
-			Store::insert_code(
+			$code        = Tokens::generate();
+			$code_stored = Store::insert_code(
 				array(
 					'code_hash'      => Tokens::hash( $code ),
 					'client_id'      => $params['client_id'],
@@ -267,6 +267,17 @@ class OAuth_Server {
 					'used'           => 0,
 				)
 			);
+
+			if ( ! $code_stored ) {
+				// Redirecting with a code that was never stored sends the user back to the AI
+				// client with a code the token endpoint can only reject, with no trace of why.
+				Debug_Logger::error(
+					Debug_Logger::CHANNEL_OAUTH,
+					'Could not store the authorization code. The database write failed.',
+					array( 'client_id' => $params['client_id'] )
+				);
+				self::redirect_error( $params['redirect_uri'], 'server_error', $params['state'] );
+			}
 
 			$redirect = add_query_arg(
 				array(
@@ -423,13 +434,20 @@ class OAuth_Server {
 		$hash = Tokens::hash( $refresh_token );
 		$row  = Store::get_token( $hash );
 
-		if ( ! $row || Tokens::TYPE_REFRESH !== $row['type'] ) {
+		// A spent token inside its grace window is a retry, not an unknown token.
+		$is_retry = $row && Tokens::TYPE_ROTATED === $row['type'];
+
+		if ( ! $row || ( Tokens::TYPE_REFRESH !== $row['type'] && ! $is_retry ) ) {
 			return self::token_error( 'invalid_grant', __( 'Invalid refresh token.', 'miniorange-secure-mcp-server' ) );
 		}
 
 		if ( (int) $row['expires'] < time() ) {
 			Store::delete_token( $hash );
-			return self::token_error( 'invalid_grant', __( 'The refresh token has expired.', 'miniorange-secure-mcp-server' ) );
+			// An expired grace marker is just a spent token: say what an unknown one says.
+			$message = $is_retry
+				? __( 'Invalid refresh token.', 'miniorange-secure-mcp-server' )
+				: __( 'The refresh token has expired.', 'miniorange-secure-mcp-server' );
+			return self::token_error( 'invalid_grant', $message );
 		}
 
 		if ( $row['client_id'] !== $client_id ) {
@@ -441,32 +459,231 @@ class OAuth_Server {
 			return self::token_error( 'invalid_client', $client_check->get_error_message(), 401 );
 		}
 
-		// Rotate: spend the presented refresh token, then revoke any access tokens minted from
-		// it. Claiming is atomic, so if two refreshes race, only the one that removed the row
-		// gets a new pair; the other is told the token is no longer valid.
-		if ( ! Store::claim_token( $hash ) ) {
+		if ( $is_retry ) {
+			return self::reissue_after_rotation( $hash, $row );
+		}
+
+		// Rotate: spend the presented refresh token. Spending is atomic, so if two refreshes race,
+		// only the one whose UPDATE changed the row rotates; the other is told the token is no longer
+		// valid. The successor is chosen first and recorded in that same UPDATE, so a concurrent retry
+		// that reads the marker always sees which pair it replaces.
+		$successor = Tokens::generate();
+		$spent     = self::spend_refresh_token( $hash, Tokens::hash( $successor ) );
+		if ( false === $spent ) {
+			// The database failed: not the caller's fault, and not a reason for it to drop the
+			// connection. A 5xx tells the broker to try again later (invalid_grant would not).
+			Debug_Logger::error(
+				Debug_Logger::CHANNEL_OAUTH,
+				// (No colon after "token": Debug_Logger::redact_message() would mask the rest.)
+				'Could not rotate a refresh token. The database write failed.',
+				array( 'client_id' => $client_id )
+			);
+			return self::token_error( 'server_error', __( 'The refresh could not be completed. Try again shortly.', 'miniorange-secure-mcp-server' ), 500 );
+		}
+		if ( 0 === $spent ) {
 			return self::token_error( 'invalid_grant', __( 'Invalid refresh token.', 'miniorange-secure-mcp-server' ) );
 		}
 		Store::delete_tokens_by_parent( $hash );
 
-		return self::issue_token_response( $client_id, (int) $row['user_id'], $row['scope'], $row['resource'], 'refresh_token' );
+		$response = self::issue_successor( $hash, $row, $successor, 'refresh_token' );
+		if ( 500 === $response->get_status() ) {
+			// Issuing failed after the token was spent. Put it back so the client's next attempt works,
+			// rather than leaving it to lapse with the grace window and force a full reconnect.
+			self::unspend_refresh_token( $hash, (int) $row['expires'] );
+		}
+
+		return $response;
+	}
+
+	/**
+	 * Undoes {@see spend_refresh_token()} when no replacement could be issued.
+	 *
+	 * @param string $hash    The hashed refresh token.
+	 * @param int    $expires Its original expiry.
+	 * @return void
+	 */
+	private static function unspend_refresh_token( $hash, $expires ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query(
+			$wpdb->prepare(
+				'UPDATE %i SET type = %s, expires = %d, parent_hash = NULL WHERE token_hash = %s AND type = %s',
+				Store::table( 'tokens' ),
+				Tokens::TYPE_REFRESH,
+				$expires,
+				$hash,
+				Tokens::TYPE_ROTATED
+			)
+		);
+	}
+
+	/**
+	 * Spends a refresh token by turning it into a short-lived "rotated" marker that names its successor.
+	 *
+	 * One UPDATE guarded by `type = refresh` is the whole claim: of any number of concurrent
+	 * requests with the same token, exactly one changes the row. (The marker, instead of a delete,
+	 * is what lets {@see reissue_after_rotation()} answer a retry.)
+	 *
+	 * @param string $hash           The hashed refresh token.
+	 * @param string $successor_hash The hash of the refresh token that will replace it.
+	 * @return int|false 1 when this call spent it, 0 when it was already spent, false on a database error.
+	 */
+	private static function spend_refresh_token( $hash, $successor_hash ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$changed = $wpdb->query(
+			$wpdb->prepare(
+				'UPDATE %i SET type = %s, expires = %d, parent_hash = %s WHERE token_hash = %s AND type = %s',
+				Store::table( 'tokens' ),
+				Tokens::TYPE_ROTATED,
+				time() + Tokens::REFRESH_GRACE_TTL,
+				$successor_hash,
+				$hash,
+				Tokens::TYPE_REFRESH
+			)
+		);
+
+		return false === $changed ? false : ( $changed > 0 ? 1 : 0 );
+	}
+
+	/**
+	 * Takes over a marker from the pair issued for it before, so only one retry replaces that pair.
+	 *
+	 * @param string $marker_hash   The hashed spent refresh token.
+	 * @param string $previous_hash The successor the marker named when it was read ('' if none).
+	 * @param string $new_hash      The hash of the refresh token that will replace it.
+	 * @return int|false 1 when this call took the marker over, 0 when another retry got there first, false on a database error.
+	 */
+	private static function claim_marker( $marker_hash, $previous_hash, $new_hash ) {
+		global $wpdb;
+
+		$guard = '' === $previous_hash ? "(parent_hash IS NULL OR parent_hash = '')" : $wpdb->prepare( 'parent_hash = %s', $previous_hash );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$changed = $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE %i SET parent_hash = %s WHERE token_hash = %s AND type = %s AND {$guard}",
+				Store::table( 'tokens' ),
+				$new_hash,
+				$marker_hash,
+				Tokens::TYPE_ROTATED
+			)
+		);
+
+		return false === $changed ? false : ( $changed > 0 ? 1 : 0 );
+	}
+
+	/**
+	 * Answers a retry of a refresh whose reply may never have arrived.
+	 *
+	 * Inside the grace window the same refresh token gets a new pair. The pair issued the first
+	 * time is revoked first, so one refresh token never leaves two live pairs behind. A reuse after
+	 * the window is rejected, as it always was.
+	 *
+	 * @param string               $hash The hashed (spent) refresh token the caller presented.
+	 * @param array<string, mixed> $row  Its marker row.
+	 * @return WP_REST_Response The token response.
+	 */
+	private static function reissue_after_rotation( $hash, array $row ) {
+		global $wpdb;
+
+		$previous  = (string) $row['parent_hash'];
+		$successor = Tokens::generate();
+		$claimed   = self::claim_marker( $hash, $previous, Tokens::hash( $successor ) );
+
+		if ( false === $claimed ) {
+			Debug_Logger::error(
+				Debug_Logger::CHANNEL_OAUTH,
+				'Could not answer a refresh retry. The database write failed.',
+				array( 'client_id' => (string) $row['client_id'] )
+			);
+			return self::token_error( 'server_error', __( 'The refresh could not be completed. Try again shortly.', 'miniorange-secure-mcp-server' ), 500 );
+		}
+		if ( 0 === $claimed ) {
+			// Another retry of this token is being answered right now. Asking the caller to come back
+			// is safe (the next attempt finds the marker settled) and keeps one live pair.
+			return self::token_error( 'temporarily_unavailable', __( 'Another refresh of this token is in progress. Try again shortly.', 'miniorange-secure-mcp-server' ), 503 );
+		}
+
+		if ( '' !== $previous ) {
+			// Only its access token and the refresh token itself: the marker rows that point at the
+			// successor (including this one) must survive for a further retry.
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->delete(
+				Store::table( 'tokens' ),
+				array(
+					'parent_hash' => $previous,
+					'type'        => Tokens::TYPE_ACCESS,
+				)
+			);
+			Store::delete_token( $previous );
+		}
+
+		Debug_Logger::warning(
+			Debug_Logger::CHANNEL_OAUTH,
+			'A spent refresh token was used again inside the grace window; issued a new pair.',
+			array(
+				'client_id'   => (string) $row['client_id'],
+				'age_seconds' => max( 0, Tokens::REFRESH_GRACE_TTL - ( (int) $row['expires'] - time() ) ),
+			)
+		);
+
+		return self::issue_successor( $hash, $row, $successor, 'refresh_token_retry' );
+	}
+
+	/**
+	 * Issues the pair that replaces a spent refresh token, and checks it is still the one the marker names.
+	 *
+	 * A retry can take the marker over while this pair is still being written. In that case this pair has
+	 * already been replaced, so it is revoked rather than left live beside the retry's.
+	 *
+	 * @param string               $marker_hash The hashed spent refresh token.
+	 * @param array<string, mixed> $row         The spent token's row.
+	 * @param string               $refresh     The new refresh token, already named on the marker.
+	 * @param string               $grant_type  The grant that produced this pair.
+	 * @return WP_REST_Response The token response (200), or an error response.
+	 */
+	private static function issue_successor( $marker_hash, array $row, $refresh, $grant_type ) {
+		global $wpdb;
+
+		$response = self::issue_token_response( (string) $row['client_id'], (int) $row['user_id'], $row['scope'], $row['resource'], $grant_type, $refresh );
+		if ( 200 !== $response->get_status() ) {
+			return $response;
+		}
+
+		$refresh_hash = Tokens::hash( $refresh );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$current = $wpdb->get_var(
+			$wpdb->prepare( 'SELECT parent_hash FROM %i WHERE token_hash = %s AND type = %s', Store::table( 'tokens' ), $marker_hash, Tokens::TYPE_ROTATED )
+		);
+		if ( $current === $refresh_hash ) {
+			return $response;
+		}
+
+		Store::delete_tokens_by_parent( $refresh_hash );
+		Store::delete_token( $refresh_hash );
+
+		return self::token_error( 'temporarily_unavailable', __( 'Another refresh of this token is in progress. Try again shortly.', 'miniorange-secure-mcp-server' ), 503 );
 	}
 
 	/**
 	 * Mints an access/refresh token pair and builds the token response.
 	 *
-	 * @param string $client_id  The client identifier.
-	 * @param int    $user_id    The WordPress user the tokens act on behalf of.
-	 * @param string $scope      The granted scope.
-	 * @param string $audience   The bound resource (audience).
-	 * @param string $grant_type The grant that produced this pair.
+	 * @param string      $client_id  The client identifier.
+	 * @param int         $user_id    The WordPress user the tokens act on behalf of.
+	 * @param string      $scope      The granted scope.
+	 * @param string      $audience   The bound resource (audience).
+	 * @param string      $grant_type The grant that produced this pair.
+	 * @param string|null $refresh    A refresh token chosen in advance, or null to generate one.
 	 * @return WP_REST_Response The token response.
 	 */
-	private static function issue_token_response( $client_id, $user_id, $scope, $audience, $grant_type = '' ) {
-		$refresh      = Tokens::generate();
+	private static function issue_token_response( $client_id, $user_id, $scope, $audience, $grant_type = '', $refresh = null ) {
+		$refresh      = null === $refresh ? Tokens::generate() : $refresh;
 		$refresh_hash = Tokens::hash( $refresh );
 
-		Store::insert_token(
+		$refresh_stored = Store::insert_token(
 			array(
 				'token_hash'  => $refresh_hash,
 				'type'        => Tokens::TYPE_REFRESH,
@@ -481,7 +698,7 @@ class OAuth_Server {
 
 		$access = Tokens::generate();
 
-		Store::insert_token(
+		$access_stored = $refresh_stored && Store::insert_token(
 			array(
 				'token_hash'  => Tokens::hash( $access ),
 				'type'        => Tokens::TYPE_ACCESS,
@@ -493,6 +710,23 @@ class OAuth_Server {
 				'parent_hash' => $refresh_hash,
 			)
 		);
+
+		if ( ! $access_stored ) {
+			// Never hand out credentials that were not stored: the caller would hold a token that
+			// every later request rejects, with nothing anywhere saying why.
+			if ( $refresh_stored ) {
+				Store::delete_token( $refresh_hash );
+			}
+			Debug_Logger::error(
+				Debug_Logger::CHANNEL_OAUTH,
+				'Could not store the issued tokens. The database write failed.',
+				array(
+					'client_id'  => $client_id,
+					'grant_type' => $grant_type,
+				)
+			);
+			return self::token_error( 'server_error', __( 'The tokens could not be issued. Try again shortly.', 'miniorange-secure-mcp-server' ), 500 );
+		}
 
 		Debug_Logger::info(
 			Debug_Logger::CHANNEL_OAUTH,

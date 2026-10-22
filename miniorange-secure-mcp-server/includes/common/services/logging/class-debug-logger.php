@@ -57,6 +57,25 @@ class Debug_Logger {
 	const MAX_BUFFER = 500;
 
 	/**
+	 * Error-level events are recorded even while capture is switched off, so a failure has a trace
+	 * on the site without the admin having to enable logging first and reproduce it. This caps how
+	 * many one request may add in that mode...
+	 */
+	const ALWAYS_ON_MAX_PER_REQUEST = 10;
+
+	/**
+	 * ...and this caps how many always-on rows the table keeps (the oldest are trimmed on write,
+	 * so the log cannot grow while nobody is looking at it).
+	 */
+	const ALWAYS_ON_MAX_ROWS = 500;
+
+	/**
+	 * Longest correlation id adopted from an incoming X-Request-ID header. The debug table's
+	 * request_id column is varchar(36); an id that would not fit is replaced, not truncated.
+	 */
+	const MAX_REQUEST_ID_LENGTH = 36;
+
+	/**
 	 * Longest message stored, in characters. Longer messages are truncated so
 	 * one call can't bloat the table.
 	 */
@@ -123,6 +142,20 @@ class Debug_Logger {
 	 * @var bool
 	 */
 	private static $truncated = false;
+
+	/**
+	 * Error rows buffered this request while capture was off ({@see ALWAYS_ON_MAX_PER_REQUEST}).
+	 *
+	 * @var int
+	 */
+	private static $always_on_count = 0;
+
+	/**
+	 * Whether the shutdown check for a fatal error is already armed.
+	 *
+	 * @var bool
+	 */
+	private static $fatal_watch = false;
 
 	/**
 	 * Whether the shutdown flush has already been registered.
@@ -220,8 +253,14 @@ class Debug_Logger {
 	 * @return void
 	 */
 	private static function log( $level, $channel, $message, array $context ) {
-		if ( ! self::is_enabled() ) {
-			return;
+		$capturing = self::is_enabled();
+
+		if ( ! $capturing ) {
+			// Capture is off: only a failure is kept, and only a few per request.
+			if ( 'error' !== $level || self::$always_on_count >= self::ALWAYS_ON_MAX_PER_REQUEST ) {
+				return;
+			}
+			++self::$always_on_count;
 		}
 
 		if ( count( self::$buffer ) >= self::MAX_BUFFER ) {
@@ -232,7 +271,7 @@ class Debug_Logger {
 			return;
 		}
 
-		self::$buffer[] = self::build_row( $level, $channel, $message, $context );
+		self::$buffer[] = self::build_row( $level, $channel, $message, $context, $capturing );
 
 		if ( ! self::$shutdown_registered ) {
 			self::$shutdown_registered = true;
@@ -247,15 +286,18 @@ class Debug_Logger {
 	 * @param string               $channel Short category.
 	 * @param string               $message Human-readable summary.
 	 * @param array<string, mixed> $context Additional structured detail.
+	 * @param bool                 $capturing Whether the admin has switched capture on. When it is off
+	 *                                        this is an always-on error row, which carries no username
+	 *                                        or IP address: the admin never opted in to those.
 	 * @return array<string, mixed>
 	 */
-	private static function build_row( $level, $channel, $message, array $context ) {
+	private static function build_row( $level, $channel, $message, array $context, $capturing = true ) {
 		$user    = wp_get_current_user();
 		$user_id = $user ? (int) $user->ID : 0;
-		$login   = ( $user && $user_id ) ? (string) $user->user_login : '';
+		$login   = ( $capturing && $user && $user_id ) ? (string) $user->user_login : '';
 
 		$ip = '';
-		if ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
+		if ( $capturing && ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
 			$raw_ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
 			$ip     = filter_var( $raw_ip, FILTER_VALIDATE_IP ) ? $raw_ip : '';
 		}
@@ -303,6 +345,12 @@ class Debug_Logger {
 		self::$truncated = false;
 
 		Debug_Store::insert_many( $rows );
+
+		if ( ! self::is_enabled() ) {
+			// Cap the error rows, and only those: the info, warning and debug rows somebody collected
+			// with capture on must survive until they are downloaded or age out.
+			Debug_Store::trim_to( self::ALWAYS_ON_MAX_ROWS, 'error' );
+		}
 	}
 
 	/**
@@ -335,16 +383,100 @@ class Debug_Logger {
 	}
 
 	/**
-	 * Lazily generates this request's correlation id.
+	 * This request's correlation id: the one the MCP gateway sent in X-Request-ID when it is
+	 * well-formed (so a gateway log line and the entries here can be matched), otherwise a fresh
+	 * UUID.
 	 *
 	 * @return string
 	 */
 	private static function request_id() {
 		if ( null === self::$request_id ) {
-			self::$request_id = wp_generate_uuid4();
+			self::$request_id = self::incoming_request_id();
+			if ( '' === self::$request_id ) {
+				self::$request_id = wp_generate_uuid4();
+			}
 		}
 
 		return self::$request_id;
+	}
+
+	/**
+	 * This request's correlation id, for quoting in an error shown to a user or an AI client so the
+	 * matching log rows can be found. (The detail itself stays in the log.)
+	 *
+	 * @return string
+	 */
+	public static function current_request_id() {
+		return self::request_id();
+	}
+
+	/**
+	 * Arms a one-time check, at shutdown, for a fatal PHP error during this request.
+	 *
+	 * A fatal error (memory exhausted, an uncatchable engine error) cannot be caught, so the caller
+	 * gets whatever the server answers and, without this, nothing records why. It can only log:
+	 * the response is already lost.
+	 *
+	 * @return void
+	 */
+	public static function watch_for_fatal() {
+		if ( self::$fatal_watch ) {
+			return;
+		}
+		self::$fatal_watch = true;
+		register_shutdown_function( array( __CLASS__, 'log_fatal' ) );
+	}
+
+	/**
+	 * Shutdown handler for {@see watch_for_fatal()}.
+	 *
+	 * @return void
+	 */
+	public static function log_fatal() {
+		$last = error_get_last();
+		if ( ! $last || ! in_array( $last['type'], array( E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR ), true ) ) {
+			return;
+		}
+
+		// An uncaught exception's message ends in a stack trace, and with exception args on it lists each
+		// call's argument values (a bearer token, a secret). The first line says what happened and where.
+		$message = (string) $last['message'];
+		$trace   = strpos( $message, "\nStack trace:" );
+		if ( false !== $trace ) {
+			$message = substr( $message, 0, $trace );
+		}
+
+		self::error(
+			self::CHANNEL_MCP,
+			'PHP stopped with a fatal error while handling an MCP request.',
+			array(
+				'error_type' => (int) $last['type'],
+				'detail'     => self::truncate( $message, 300 ),
+				'at'         => basename( (string) $last['file'] ) . ':' . (int) $last['line'],
+			)
+		);
+		self::flush();
+	}
+
+	/**
+	 * The X-Request-ID header, if present and safe to store.
+	 *
+	 * The value is caller-controlled, so it is only adopted when it is short and made of id-like
+	 * characters (the gateway sends 32 hex characters); anything else is ignored rather than cleaned.
+	 *
+	 * @return string The id, or '' when there is none or it is unusable.
+	 */
+	private static function incoming_request_id() {
+		if ( empty( $_SERVER['HTTP_X_REQUEST_ID'] ) || ! is_string( $_SERVER['HTTP_X_REQUEST_ID'] ) ) {
+			return '';
+		}
+
+		// Not sanitized, deliberately: cleaning a hostile value would adopt a different id than the
+		// one sent. The allow-list below accepts the value exactly as sent or not at all.
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$id = wp_unslash( $_SERVER['HTTP_X_REQUEST_ID'] );
+
+		return 1 === preg_match( '/^[A-Za-z0-9._:=\-]{1,' . self::MAX_REQUEST_ID_LENGTH . '}$/D', $id ) ? $id : '';
 	}
 
 	/**
@@ -375,6 +507,9 @@ class Debug_Logger {
 				$result[ $key ] = '***redacted***';
 			} elseif ( is_array( $value ) || is_object( $value ) ) {
 				$result[ $key ] = self::redact( $value );
+			} elseif ( is_string( $value ) ) {
+				// A secret can sit in a value under an innocent key (a notice snippet, an exception message).
+				$result[ $key ] = self::redact_message( $value );
 			} else {
 				$result[ $key ] = $value;
 			}
@@ -395,7 +530,8 @@ class Debug_Logger {
 	 * @return string Message with sensitive-looking fragments masked.
 	 */
 	private static function redact_message( $message ) {
-		$pattern = '/\b(' . implode( '|', self::REDACTED_KEY_PATTERNS ) . ')\w*\s*[:=]\s*\S+/i';
+		// An auth scheme word ("Authorization: Bearer <credential>") is skipped so the credential is masked too.
+		$pattern = '/\b(' . implode( '|', self::REDACTED_KEY_PATTERNS ) . ')\w*\s*[:=]\s*(?:(?:bearer|basic|digest|token)\s+)?\S+/i';
 
 		return (string) preg_replace( $pattern, '$1=***redacted***', $message );
 	}

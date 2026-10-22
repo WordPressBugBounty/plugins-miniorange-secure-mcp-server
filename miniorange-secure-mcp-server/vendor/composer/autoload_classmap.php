@@ -50,6 +50,7 @@ return array(
     'MoSMCP\\Common\\Services\\Diagnostics\\Test_Token' => $baseDir . '/includes/common/services/diagnostics/class-test-token.php',
     'MoSMCP\\Common\\Services\\Discovery\\Discovery' => $baseDir . '/includes/common/services/discovery/class-discovery.php',
     'MoSMCP\\Common\\Services\\Http\\No_Cache' => $baseDir . '/includes/common/services/http/class-no-cache.php',
+    'MoSMCP\\Common\\Services\\Http\\Output_Guard' => $baseDir . '/includes/common/services/http/class-output-guard.php',
     'MoSMCP\\Common\\Services\\Logging\\Audit_Logger' => $baseDir . '/includes/common/services/logging/class-audit-logger.php',
     'MoSMCP\\Common\\Services\\Logging\\Debug_Logger' => $baseDir . '/includes/common/services/logging/class-debug-logger.php',
     'MoSMCP\\Common\\Services\\MCP\\MCP_Server' => $baseDir . '/includes/common/services/mcp/class-mcp-server.php',
