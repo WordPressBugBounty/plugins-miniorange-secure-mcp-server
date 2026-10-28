@@ -181,14 +181,13 @@ class Theme_Health {
 		) as $label => $type ) {
 			$ids = get_posts(
 				array(
-					'post_type'        => $type,
-					'post_status'      => 'publish',
-					'has_password'     => false,
-					'numberposts'      => 1,
-					'fields'           => 'ids',
-					'orderby'          => 'date',
-					'order'            => 'DESC',
-					'suppress_filters' => true,
+					'post_type'    => $type,
+					'post_status'  => 'publish',
+					'has_password' => false,
+					'numberposts'  => 1,
+					'fields'       => 'ids',
+					'orderby'      => 'date',
+					'order'        => 'DESC',
 				)
 			);
 			$url = empty( $ids ) ? '' : (string) get_permalink( (int) $ids[0] );

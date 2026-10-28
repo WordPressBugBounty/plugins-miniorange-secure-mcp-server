@@ -203,6 +203,19 @@ class Core_Schema {
 	}
 
 	/**
+	 * One sentence for content inputs: write block markup, not plain HTML.
+	 *
+	 * Plain HTML is stored as a single "Classic" block, which the person (and the
+	 * block abilities) can then only edit as one lump. Saying so where the model
+	 * decides what to write is what makes it write blocks in the first place.
+	 *
+	 * @return string
+	 */
+	public static function block_content_hint() {
+		return __( 'On sites that use the block editor, write it as block markup, the format the editor saves (for example <!-- wp:heading --><h2 class="wp-block-heading">Title</h2><!-- /wp:heading --> then <!-- wp:paragraph --><p>Text</p><!-- /wp:paragraph -->), so each heading, paragraph or button can be edited on its own later. Plain HTML is saved as one "Classic" block. For a new page it is often simplest to create it with a title only and add the content with mosmcp/block-insert, which builds the blocks for you.', 'mosmcp-abilities' );
+	}
+
+	/**
 	 * Standard warnings array: non-fatal issues an ability wants to surface.
 	 *
 	 * @param string $description Description for the array.

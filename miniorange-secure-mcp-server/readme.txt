@@ -4,7 +4,7 @@ Tags: mcp, ai, mcp-server, chatgpt, claude
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.5.3
+Stable tag: 1.5.4
 License: Expat
 License URI: https://plugins.miniorange.com/mit-license
 
@@ -25,7 +25,9 @@ Unlike other WordPress MCP server plugins that give AI full admin access, we put
 
 Built security-first, so you can let AI work on a live site with confidence:
 
-* **426 MCP tools in 26 categories** – WordPress core, WooCommerce, Yoast SEO, Rank Math, Advanced Custom Fields, Elementor, Kadence, Contact Form 7, WPForms, Gravity Forms, Fluent Forms and more.
+* **464 MCP tools in 31 categories** – WordPress core, the block editor, menus and widgets, WooCommerce, Yoast SEO, Rank Math, Advanced Custom Fields, Elementor, Kadence, Contact Form 7, WPForms, Gravity Forms, Fluent Forms and more.
+* **Block-by-block page editing** – AI changes one heading, paragraph or button and leaves the rest of the page exactly as it was.
+* **Changes show straight away** – page caches are cleared automatically after every AI change, and drafts can be shared with an expiring preview link.
 * **Governed REST API access** – AI can use any WordPress REST endpoint, including those from your other plugins, with route-by-route, role-based permissions.
 * **Agent Registry** – decide, per WordPress role, exactly which tools an AI agent can use.
 * **Self-hosted OAuth 2.1 with PKCE** – the AI never sees your WordPress password.
@@ -34,7 +36,7 @@ Built security-first, so you can let AI work on a live site with confidence:
 * **Safe theme and code editing** – changes go to a draft, are syntax-checked and previewed, and publish with automatic backup and rollback.
 * **Built-in troubleshooting** – a Troubleshooting page finds out why an AI client can't connect and tells you what to fix.
 
-Everything runs on your own server. No third-party relay sits between your AI client and your site.
+Everything runs on your own server. No third-party relay sits between your AI client and your site. When you connect through the miniOrange Gateway, your AI client's requests pass through the gateway on their way to your site; the tools still run, and every permission is still checked, on your own WordPress site.
 
 
 ==How to Install the WordPress MCP Server (2 Minutes)==
@@ -87,7 +89,7 @@ Your MCP server endpoint:
 
 ==What Your AI Agent Can Do==
 
-426 tools in 26 categories. Integration tools appear only when the related plugin is active.
+464 tools in 31 categories. Integration tools appear only when the related plugin is active.
 
 **WordPress Content**
 
@@ -97,6 +99,8 @@ Your MCP server endpoint:
 * **Comments (21 tools)** – Moderate, reply, search, mark spam and view counts.
 * **Custom Post Types & Fields (19 tools)** – Discover any custom post type and edit its items, terms and fields.
 * **Content Find & Replace (6 tools)** – Change part of a post, custom field or setting without rewriting it.
+* **Block Editor (11 tools)** – Edit one block at a time: change its text or settings, insert, move, duplicate and delete blocks and patterns.
+* **Preview Links (2 tools)** – Expiring links to share a draft without signing in.
 
 **Users & Site Management**
 
@@ -104,6 +108,9 @@ Your MCP server endpoint:
 * **Settings, Plugins, Themes & Updates (34 tools)** – Site title, tagline, homepage, timezone, plugin activation and updates, auto-updates, site health.
 * **Maintenance (8 tools)** – Clear caches, refresh permalinks, run cron events, read the error log.
 * **Theme Editing (32 tools)** – Block templates, global styles, patterns and theme files, with draft, preview, publish and restore.
+* **Menus & Navigation (16 tools)** – Build and reorder menus, assign locations, and edit block-theme Navigation menus.
+* **Widgets & Sidebars (8 tools)** – Add, update, move and delete widgets, including block widgets.
+* **Site Overview (1 tool)** – Tells the AI how your site is built and which tools it may use.
 
 **Plugin Integrations**
 
@@ -112,7 +119,7 @@ Your MCP server endpoint:
 * **Yoast SEO & Rank Math (15 tools)** – SEO titles, meta descriptions, focus keywords, canonicals, schema, Open Graph.
 * **Forms & Leads (54 tools)** – Contact Form 7 (Flamingo), WPForms, Gravity Forms and Fluent Forms entries, with CSV export.
 * **Elementor (10 tools)** – Read, edit, style, move and duplicate Elementor elements
-* **Divi 4 & Divi 5** – Read and edit Divi Builder layouts, modules, text, images and styling.
+* **Divi 4 & Divi 5** – Read and edit Divi Builder layouts, modules, text, images and styling. Divi support is part of the Pro plan.
 * **Kadence Blocks (18 tools)** – Build Kadence pages, insert rows, columns, headings, buttons and images.
 
 **Governed REST API Access: Go Beyond Built-in Tools**
@@ -142,7 +149,7 @@ Read and update any ACF field value, in bulk or one at a time. Work with repeate
 
 
 
-**Divi 4 & Divi 5:** read Divi Builder layouts and update modules, text, images, links and styling through chat, without opening the visual builder.
+**Divi 4 & Divi 5:** read Divi Builder layouts and update modules, text, images, links and styling through chat, without opening the visual builder. (Pro plan.)
 
 **Kadence Blocks:** build new Kadence layout pages, insert rows, columns, headings, buttons, icons and images, update block text and styling, and set page layout options.
 
@@ -207,11 +214,12 @@ If an AI client can't reach your site or sees no tools, open the **Troubleshooti
 
 Plus:
 
-* **Per-tool on/off toggles** for every tool.
+* **Per-tool on/off toggles** for every tool. Tools are switched on or off per agent and per WordPress role in the Agent Registry.
 * **Prompt-injection detection** and **behavioral anomaly detection**.
-* **Rate limits and quotas** per AI client.
-* **Data rules & DLP** that mask emails, phone numbers and secrets.
-* **Human-in-the-loop approval** for sensitive actions.
+* **Rate limits and quotas** per AI client, enforced by the miniOrange Gateway.
+* **Data rules & DLP** that mask emails, phone numbers and secrets (Business plan; you define the rules).
+* **Human-in-the-loop approval** for sensitive actions (Business plan).
+* **Clear answers when a tool is off** – the AI is told the tool is switched off for the role, not that it does not exist.
 * **Destructive actions need confirmation**, and every tool tells the AI client whether it is read-only or destructive.
 * **Activity audit log** that records the user, AI identity, client, tool, outcome and time, filterable by agent, status, tool, user and date.
 
@@ -228,6 +236,8 @@ See active agents, executions, success rate and latency at a glance. Members can
 * "Change the footer text in my theme, preview it, then publish."
 * "Why aren't my scheduled posts publishing? Check cron and the error log."
 * "Use the REST API to list this week's bookings from my booking plugin."
+* "Change the heading in my homepage hero to 'Spring Collection'."
+* "Add our new Pricing page to the main menu, right after About."
 
 = Need Help? =
 
@@ -271,11 +281,11 @@ Claude, ChatGPT, Gemini, Cursor, Grok, Windsurf and any MCP-compatible client.
 
 = How many tools are included? =
 
-426 tools in 26 categories, covering WordPress core, WooCommerce, Yoast SEO, Rank Math, Advanced Custom Fields, Elementor, Divi, Kadence, Contact Form 7, WPForms, Gravity Forms, Fluent Forms, theme editing and site maintenance. Integration tools appear only when the related plugin is active.
+464 tools in 31 categories, covering WordPress core, the block editor, menus, widgets, WooCommerce, Yoast SEO, Rank Math, Advanced Custom Fields, Elementor, Divi, Kadence, Contact Form 7, WPForms, Gravity Forms, Fluent Forms, theme editing and site maintenance. Integration tools appear only when the related plugin is active.
 
 = Is it safe to give AI access to my WordPress site? =
 
-Yes. Access uses self-hosted OAuth 2.1 with PKCE, so the AI never sees your password. Every call is limited by role through the agent Registry, checked against WordPress capabilities, rate-limited and logged. You can require human approval for sensitive actions and mask sensitive data.
+Yes. Access uses self-hosted OAuth 2.1 with PKCE, so the AI never sees your password. Every call is limited by role through the agent Registry, checked against WordPress capabilities, rate-limited and logged. You can require human approval for sensitive actions and mask sensitive data. Rate limits are enforced by the miniOrange Gateway; human approval and data masking are part of the Business plan.
 
 = Can the AI do more than my WordPress user can? =
 
@@ -303,7 +313,19 @@ Yes. 25 ACF tools cover field values, repeaters, flexible content, relationships
 
 = Does it support Elementor, Divi and Kadence? =
 
-Yes. Elementor (10 tools), Divi 3 and Divi 4, and Kadence Blocks (18 tools) are supported, so AI can read, edit, style and build layouts.
+Yes. Elementor (10 tools), Divi 3 and Divi 4, and Kadence Blocks (18 tools) are supported, so AI can read, edit, style and build layouts. Divi support (Divi 4 and Divi 5 layouts) is part of the Pro plan.
+
+= Can AI edit just one part of a page? =
+
+Yes. For pages and posts made in the block editor, the AI can list the blocks on a page and change one heading, paragraph, button, image caption or setting, insert new blocks or patterns exactly where you ask, and move, duplicate or delete a block, while every other block stays exactly as it was. Each change saves a revision you can restore. Pages built with Elementor, Divi or another page builder are edited with that builder's own tools instead.
+
+= Can AI manage my menus and widgets? =
+
+Yes. The AI can create and rename menus, add pages, posts, categories and custom links, reorder and nest items, assign menus to your theme's locations, and edit the Navigation menus used by block themes. It can also add, update, move and delete sidebar and footer widgets.
+
+= Why don't I see the AI's change on my site? =
+
+Page caches are cleared automatically after each AI change, for the most common cache plugins, managed hosts and CDNs. If a cache the plugin does not recognise still shows the old page, clear it from that cache's settings, or ask the AI to clear the caches. A changed page is cleared straight away; to keep busy sites fast, the whole cache is cleared at most once a minute, so a site-wide change such as a menu edit can take up to a minute to show.
 
 = Which form plugins are supported? =
 
@@ -311,7 +333,7 @@ Contact Form 7 (with Flamingo for submissions), WPForms, Gravity Forms and Fluen
 
 = Can I disable specific tools? =
 
-Yes. Every tool has a global on/off toggle, and the agent Registry controls tools per role. Developers can also limit exposed tools with the `MOSMCP_EXPOSED_PREFIXES` constant.
+Yes. Every tool has a global on/off toggle, and the agent Registry controls tools per role. Developers can also limit exposed tools with the `MOSMCP_EXPOSED_PREFIXES` constant. Tools are switched on or off for each agent and WordPress role in the Agent Registry's role/ability matrix; a tool that is off for a user's role is hidden from their AI client, and the AI is told how it can be turned on.
 
 = How do I revoke an AI client's access? =
 
@@ -327,7 +349,7 @@ Page lock blocks edits to content that changed after the AI read it, post revisi
 
 = Does my data go through a third-party server? =
 
-No. The MCP server and OAuth server run on your own WordPress site. Your AI client connects directly to your site.
+No. The MCP server and OAuth server run on your own WordPress site. Your AI client connects directly to your site. If you connect through the miniOrange Gateway (gateway.miniorange.ai), your AI client's requests pass through the gateway on their way to your site; the tools still run, and every permission is still checked, on your own site.
 
 = Why does my AI client say it cannot reach my site? =
 
@@ -349,6 +371,23 @@ No. Install, follow the onboarding checklist, and paste one URL into your AI cli
 
 
 == Changelog ==
+
+= 1.5.4 =
+* Added block editor editing: 11 abilities to list, find and read the blocks of any page or post, change one block's text or settings, and insert, replace, move, duplicate and delete blocks, including patterns and synced patterns. Every other block stays exactly as it was, blocks are only placed where they are allowed, and every change saves a revision.
+* Added menus and navigation: 16 abilities to create, rename and delete menus, add, update, remove and reorder menu items, assign menu locations, and edit block-theme Navigation menus, with undo.
+* Added widgets and sidebars: 8 abilities to list widget areas and widgets, and add, update, move and delete widgets, including block widgets.
+* Added shareable preview links: an expiring link lets anyone view a draft without signing in, and can be cancelled at any time.
+* Added a site overview ability that tells the AI how the site is built (theme, page builder, plugins in use, caches) and which tools it may use.
+* Page caches, host caches and CDNs are now cleared automatically after every AI change, so changes show straight away.
+* To keep busy sites fast, the whole page cache is cleared at most once a minute; a changed page is always cleared straight away.
+* When a tool exists but is not switched on for a user's role, the AI is now told so, and how to turn it on, instead of "unknown tool".
+* The AI is now told when page content it writes would be saved as one Classic block, and how to write it as editable blocks instead.
+* Fixed REST routes that plugins such as Media File Renamer only offer to signed-in users not being available to AI clients.
+* Fixed write requests made through the REST API arriving without data in plugins that read the request body as JSON.
+* REST routes added by another plugin are now picked up without reactivating it, and a route that is not available to the current user is explained instead of returning "No route was found".
+* Fixed Kadence headings and buttons failing to insert into an empty column.
+* Fixed tools that take no inputs failing with "input is not of type object" when an AI client connected directly leaves the input out.
+* Minor bug fixes in the WordPress MCP Server.
 
 = 1.5.3 =
 * Fixed AI clients being disconnected when a token refresh was interrupted by a timeout or restart. A retried refresh now succeeds instead of forcing a reconnect.
@@ -501,6 +540,9 @@ Fixed: Object-level abilities no longer show false capability conflicts in the r
 * Initial release: read-only viewer for abilities registered through the WordPress Abilities API.
 
 == Upgrade Notice ==
+
+= 1.5.4 =
+Adds block-by-block page editing, menus, widgets, shareable draft previews and a site overview (38 new tools), and clears page caches after AI changes. Existing agents do not get the new tools automatically: enable them for each role under AI Agents.
 
 = 1.5.3 =
 Keeps AI clients connected when a token refresh is interrupted, stops other plugins' PHP notices from breaking AI replies, and always records failures in the Debug Log (without usernames or IP addresses) so connection problems are easier to trace. Minor bug fixes.

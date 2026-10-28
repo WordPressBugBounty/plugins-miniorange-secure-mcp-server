@@ -7,6 +7,7 @@
 
 namespace MoSMCP\Abilities;
 
+use MoSMCP\Abilities\Packs\Blocks\Blocks_Pack;
 use MoSMCP\Abilities\Packs\Core\Categories_Pack;
 use MoSMCP\Abilities\Packs\Core\Media_Pack;
 use MoSMCP\Abilities\Packs\Core\Pages_Pack;
@@ -19,14 +20,18 @@ use MoSMCP\Abilities\Packs\Editing\Editing_Pack;
 use MoSMCP\Abilities\Packs\Elementor\Elementor_Pack;
 use MoSMCP\Abilities\Packs\FluentForms\Fluent_Forms_Pack;
 use MoSMCP\Abilities\Packs\Maintenance\Maintenance_Pack;
+use MoSMCP\Abilities\Packs\Menus\Menus_Pack;
+use MoSMCP\Abilities\Packs\Previews\Previews_Pack;
 use MoSMCP\Abilities\Packs\Site\Health_Pack;
 use MoSMCP\Abilities\Packs\Site\Plugins_Pack;
+use MoSMCP\Abilities\Packs\Site\Site_Overview_Pack;
 use MoSMCP\Abilities\Packs\Site\Site_Settings_Pack;
 use MoSMCP\Abilities\Packs\Site\Themes_Pack;
 use MoSMCP\Abilities\Packs\Theming\Block_Theme_Pack;
 use MoSMCP\Abilities\Packs\Theming\Theme_Draft_Pack;
 use MoSMCP\Abilities\Packs\Theming\Theme_Files_Pack;
 use MoSMCP\Abilities\Packs\Users\Users_Pack;
+use MoSMCP\Abilities\Packs\Widgets\Widgets_Pack;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -48,7 +53,7 @@ class Pack_Registry {
 	 *
 	 * @return string[]
 	 */
-	private static function pack_classes() {
+	protected static function pack_classes() {
 		return array(
 			// Merge order: core, users, comments, woocommerce, acf, cpt, yoast, forms.
 			// Each is appended here once its abilities have been reviewed.
@@ -72,6 +77,11 @@ class Pack_Registry {
 			Block_Theme_Pack::class,
 			Theme_Files_Pack::class,
 			Theme_Draft_Pack::class,
+			Blocks_Pack::class,
+			Menus_Pack::class,
+			Widgets_Pack::class,
+			Previews_Pack::class,
+			Site_Overview_Pack::class,
 		);
 	}
 
@@ -94,6 +104,12 @@ class Pack_Registry {
 
 			$category = $pack->category();
 			if ( empty( $category['slug'] ) ) {
+				continue;
+			}
+
+			// A pack that adds to a category another pack already registered (pro
+			// Rank Math abilities joining the free Rank Math category) shares it.
+			if ( function_exists( 'wp_has_ability_category' ) && wp_has_ability_category( Naming::category( (string) $category['slug'] ) ) ) {
 				continue;
 			}
 
@@ -139,13 +155,14 @@ class Pack_Registry {
 	 * @return Ability_Pack[]
 	 */
 	private static function active_packs() {
-		if ( null !== self::$active_packs ) {
-			return self::$active_packs;
+		if ( null !== static::$active_packs ) {
+			return static::$active_packs;
 		}
 
 		$packs = array();
 
-		foreach ( self::pack_classes() as $class ) {
+		// static:: so a subclass registers its own manifest.
+		foreach ( static::pack_classes() as $class ) {
 			if ( ! class_exists( $class ) ) {
 				continue;
 			}
@@ -156,7 +173,7 @@ class Pack_Registry {
 			}
 		}
 
-		self::$active_packs = $packs;
+		static::$active_packs = $packs;
 
 		return $packs;
 	}
@@ -166,7 +183,7 @@ class Pack_Registry {
 	 *
 	 * @var Ability_Pack[]|null
 	 */
-	private static $active_packs = null;
+	protected static $active_packs = null;
 
 	/**
 	 * Returns (and memoizes) a pack's ability list.
@@ -182,11 +199,11 @@ class Pack_Registry {
 	private static function abilities_for( Ability_Pack $pack ) {
 		$key = spl_object_id( $pack );
 
-		if ( ! array_key_exists( $key, self::$abilities_cache ) ) {
-			self::$abilities_cache[ $key ] = $pack->abilities();
+		if ( ! array_key_exists( $key, static::$abilities_cache ) ) {
+			static::$abilities_cache[ $key ] = $pack->abilities();
 		}
 
-		return self::$abilities_cache[ $key ];
+		return static::$abilities_cache[ $key ];
 	}
 
 	/**
@@ -195,5 +212,5 @@ class Pack_Registry {
 	 *
 	 * @var array<int, Ability[]>
 	 */
-	private static $abilities_cache = array();
+	protected static $abilities_cache = array();
 }

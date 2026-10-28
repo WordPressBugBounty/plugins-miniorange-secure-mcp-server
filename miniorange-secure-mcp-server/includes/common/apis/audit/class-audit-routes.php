@@ -12,6 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use MoSMCP\Common\Controllers\Audit\Audit_Controller;
+use MoSMCP\Common\Repositories\Audit_Store;
 
 /**
  * Class Audit_Routes
@@ -63,7 +64,7 @@ class Audit_Routes {
 						),
 						'status'     => array(
 							'type' => 'string',
-							'enum' => array( '', 'success', 'failed', 'denied' ),
+							'enum' => array_merge( array( '' ), Audit_Store::statuses() ),
 						),
 						'date_from'  => array(
 							'type'    => 'string',

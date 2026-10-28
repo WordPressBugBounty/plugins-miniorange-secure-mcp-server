@@ -11,6 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use MoSMCP\Common\Repositories\Audit_Store;
 use MoSMCP\Common\Repositories\NHI_Store;
 use MoSMCP\Common\Repositories\Store;
 use MoSMCP\Common\Services\Logging\Audit_Logger;
@@ -76,6 +77,16 @@ class MCP_Server {
 	 * @var string[]
 	 */
 	private static $roles = array();
+
+	/**
+	 * The AI client this request authenticated as, for the tool-call filters.
+	 *
+	 * @var array{id: string, name: string}
+	 */
+	private static $client = array(
+		'id'   => '',
+		'name' => '',
+	);
 
 	/**
 	 * Per-request record of how the exposed tool list was narrowed, in order.
@@ -174,6 +185,13 @@ class MCP_Server {
 	const REGISTRY_SAMPLE_SIZE = 20;
 
 	/**
+	 * Names of the abilities this request may call, captured by tools/call.
+	 *
+	 * @var string[]|null
+	 */
+	private static $exposed_names = null;
+
+	/**
 	 * Restricts tool exposure to the given ability list for this request.
 	 * Pass null to lift all restrictions (the default).
 	 *
@@ -199,6 +217,11 @@ class MCP_Server {
 		$client_id = isset( $ctx['client_id'] ) ? (string) $ctx['client_id'] : '';
 
 		self::$roles = ( isset( $ctx['roles'] ) && is_array( $ctx['roles'] ) ) ? array_values( $ctx['roles'] ) : array();
+
+		self::$client = array(
+			'id'   => $client_id,
+			'name' => isset( $ctx['client_name'] ) ? (string) $ctx['client_name'] : '',
+		);
 
 		// Only direct connections carry the deprecation notice; the client id is used
 		// solely to build the per-client throttle key, so it is not kept beyond this.
@@ -598,40 +621,91 @@ class MCP_Server {
 		$abilities = self::exposed_abilities();
 		$ability   = null;
 
+		self::$exposed_names = array();
 		foreach ( $abilities as $candidate ) {
-			if ( self::encode_name( $candidate->get_name() ) === $tool_name ) {
+			self::$exposed_names[] = (string) $candidate->get_name();
+			if ( null === $ability && self::encode_name( $candidate->get_name() ) === $tool_name ) {
 				$ability = $candidate;
-				break;
 			}
 		}
 
 		if ( null === $ability ) {
 			// Log the denied call: best-effort decode the encoded name back to ability form.
 			$decoded_name = str_replace( '__', '/', $tool_name );
+			$unavailable  = self::unavailable_reason( $decoded_name );
 
 			Audit_Logger::record_tool_call(
 				$decoded_name,
 				'denied',
 				0,
-				'unknown_tool',
-				__( 'Unknown tool.', 'miniorange-secure-mcp-server' ),
+				$unavailable['code'],
+				$unavailable['message'],
 				$id
 			);
 
 			Debug_Logger::warning(
 				Debug_Logger::CHANNEL_MCP,
-				sprintf( 'Denied tools/call for unknown tool "%s".', $decoded_name ),
+				sprintf( 'Denied tools/call for unavailable tool "%s" (%s).', $decoded_name, $unavailable['code'] ),
 				array(
 					'tool_name'     => $decoded_name,
 					'raw_tool_name' => $tool_name,
+					'reason'        => $unavailable['code'],
 					'json_rpc_id'   => $id,
 				)
 			);
 
-			return self::error_response( $id, -32602, __( 'Unknown tool.', 'miniorange-secure-mcp-server' ) );
+			return self::error_response( $id, -32602, $unavailable['message'] );
 		}
 
+		// Lets the site-overview ability tell the AI which abilities this connection may use.
+		add_filter( 'mosmcp_overview_ability_access', array( __CLASS__, 'overview_access' ) );
+
 		$input = array_key_exists( 'input', $arguments ) ? $arguments['input'] : null;
+
+		/*
+		 * `input` is optional in the advertised schema, and a client calling an
+		 * ability that takes no parameters often leaves it out. The ability's own
+		 * schema is an object, so a missing input is an empty object, not null;
+		 * passing null fails validation with "input is not of type object".
+		 */
+		if ( null === $input ) {
+			$schema = $ability->get_input_schema();
+			if ( is_array( $schema ) && isset( $schema['type'] ) && 'object' === $schema['type'] ) {
+				$input = array();
+			}
+		}
+
+		$call_context = array(
+			'user_id'     => get_current_user_id(),
+			'roles'       => self::$roles,
+			'client_id'   => self::$client['id'],
+			'client_name' => self::$client['name'],
+		);
+
+		/**
+		 * Filters a tool call's input before the ability runs.
+		 *
+		 * Return the input, changed or not, for the call to go ahead with it, or a
+		 * WP_Error to refuse the call: the ability then never runs, the call is
+		 * logged as denied, and the error's message is what the AI client sees.
+		 * The error data may set `audit_status` to log the refusal under another
+		 * status registered through `mosmcp_audit_statuses`.
+		 *
+		 * @param mixed       $input        The ability input the AI client sent.
+		 * @param \WP_Ability $ability      The ability being called.
+		 * @param array       $call_context {
+		 *     The caller.
+		 *
+		 *     @type int      $user_id     The WordPress user the connection acts as.
+		 *     @type string[] $roles       That user's role slugs.
+		 *     @type string   $client_id   The AI client's id.
+		 *     @type string   $client_name The AI client's name.
+		 * }
+		 */
+		$input = apply_filters( 'mosmcp_tool_call_input', $input, $ability, $call_context );
+		if ( is_wp_error( $input ) ) {
+			return self::refuse_tool_call( $id, $ability, $input, 0, 'input' );
+		}
 
 		// Execute and measure wall-clock latency.
 		$start_us = microtime( true );
@@ -662,6 +736,23 @@ class MCP_Server {
 		$latency = (int) round( ( microtime( true ) - $start_us ) * 1000.0 );
 
 		if ( is_wp_error( $result ) ) {
+			/**
+			 * Filters a failed tool call's error before it is logged and sent to the AI client.
+			 *
+			 * An error's message and data reach the AI client just as a result does
+			 * (the data as a "Details" block), so callbacks that filter results usually
+			 * need to filter errors too. Return the error, changed or not, or a replacement
+			 * WP_Error; anything else is treated as a generic failure.
+			 *
+			 * @param WP_Error    $result       The ability's error.
+			 * @param \WP_Ability $ability      The ability that ran.
+			 * @param array       $call_context The caller; see `mosmcp_tool_call_input`.
+			 */
+			$result = apply_filters( 'mosmcp_tool_call_error', $result, $ability, $call_context );
+			if ( ! is_wp_error( $result ) ) {
+				$result = new WP_Error( 'mosmcp_tool_call_failed', __( 'The tool call failed.', 'miniorange-secure-mcp-server' ) );
+			}
+
 			Audit_Logger::record_tool_call(
 				$ability->get_name(),
 				'failed',
@@ -715,6 +806,23 @@ class MCP_Server {
 			);
 		}
 
+		/**
+		 * Filters a successful tool call's result before it goes back to the AI client.
+		 *
+		 * Return the result, changed or not, to send it, or a WP_Error to withhold
+		 * it: the call is logged as denied and the error's message is what the AI
+		 * client sees. The ability has already run by then, so a refusal here
+		 * withholds its response but does not undo what it did.
+		 *
+		 * @param mixed       $result       The ability's result.
+		 * @param \WP_Ability $ability      The ability that ran.
+		 * @param array       $call_context The caller; see `mosmcp_tool_call_input`.
+		 */
+		$result = apply_filters( 'mosmcp_tool_call_result', $result, $ability, $call_context );
+		if ( is_wp_error( $result ) ) {
+			return self::refuse_tool_call( $id, $ability, $result, $latency, 'result' );
+		}
+
 		Audit_Logger::record_tool_call(
 			$ability->get_name(),
 			'success',
@@ -752,6 +860,69 @@ class MCP_Server {
 		}
 
 		return self::success_response( $id, self::maybe_append_deprecation_notice( $tool_result ) );
+	}
+
+	/**
+	 * Logs and answers a tool call that a `mosmcp_tool_call_input` or
+	 * `mosmcp_tool_call_result` callback refused.
+	 *
+	 * Answered as a tool error rather than a protocol error, so the AI client reads
+	 * the reason and can tell the user, instead of treating the call as broken.
+	 *
+	 * @param mixed       $id      JSON-RPC id of the call.
+	 * @param \WP_Ability $ability The ability called.
+	 * @param WP_Error    $error   Why the call was refused.
+	 * @param int         $latency Milliseconds the ability ran for; 0 when it never ran.
+	 * @param string      $stage   'input' (refused before running) or 'result' (response withheld).
+	 * @return array<string, mixed>
+	 */
+	private static function refuse_tool_call( $id, $ability, $error, $latency, $stage ) {
+		$message = $error->get_error_message();
+		if ( '' === $message ) {
+			$message = __( 'This tool call was refused by the site\'s policy.', 'miniorange-secure-mcp-server' );
+		}
+
+		// The status the refusing callback asked for (see `mosmcp_tool_call_input`), else denied.
+		// A refusal is never logged as a success.
+		$data   = $error->get_error_data();
+		$asked  = is_array( $data ) && isset( $data['audit_status'] ) ? (string) $data['audit_status'] : '';
+		$status = 'success' !== $asked && in_array( $asked, Audit_Store::statuses(), true ) ? $asked : 'denied';
+
+		Audit_Logger::record_tool_call(
+			$ability->get_name(),
+			$status,
+			$latency,
+			$error->get_error_code(),
+			$message,
+			$id
+		);
+
+		Debug_Logger::warning(
+			Debug_Logger::CHANNEL_MCP,
+			sprintf( 'Tool call "%s" refused (%s): %s', $ability->get_name(), $stage, $error->get_error_code() ),
+			array(
+				'tool_name'   => $ability->get_name(),
+				'stage'       => $stage,
+				'error_code'  => $error->get_error_code(),
+				'latency_ms'  => $latency,
+				'json_rpc_id' => $id,
+			)
+		);
+
+		return self::success_response(
+			$id,
+			self::maybe_append_deprecation_notice(
+				array(
+					'content' => array(
+						array(
+							'type' => 'text',
+							'text' => $message,
+						),
+					),
+					'isError' => true,
+				)
+			)
+		);
 	}
 
 	/**
@@ -1073,6 +1244,29 @@ class MCP_Server {
 	}
 
 	/**
+	 * Whether an ability only reads, as far as this site can tell.
+	 *
+	 * For WordPress core and this plugin's own abilities, the same read-only hint
+	 * AI clients are given (declared, or from the verb). Any other ability counts
+	 * as read-only only when its author declared it so; when in doubt, it is
+	 * treated as one that can make changes.
+	 *
+	 * @param \WP_Ability $ability The ability.
+	 * @return bool
+	 */
+	public static function is_read_only( $ability ) {
+		$namespace = strtolower( (string) strstr( (string) $ability->get_name(), '/', true ) );
+		if ( in_array( $namespace, array( 'core', 'mosmcp' ), true ) ) {
+			$annotations = self::map_annotations( $ability );
+			return ! empty( $annotations['readOnlyHint'] );
+		}
+
+		$source = $ability->get_meta_item( 'annotations' );
+
+		return is_array( $source ) && isset( $source['readonly'] ) && true === $source['readonly'];
+	}
+
+	/**
 	 * Builds the MCP tool annotations for an ability.
 	 *
 	 * Only called for abilities we can vouch for (WordPress core + this plugin's own).
@@ -1144,6 +1338,65 @@ class MCP_Server {
 		}
 
 		return (bool) $fallback;
+	}
+
+	/**
+	 * Why a called tool is not available, in words the AI can relay.
+	 *
+	 * "Unknown tool" alone reads as "this site cannot do that", when often the
+	 * ability exists and is simply not switched on for the caller's role. Telling
+	 * the two apart turns a dead end into an instruction the person can act on.
+	 *
+	 * @param string $name Ability name the client asked for.
+	 * @return array{code:string,message:string}
+	 */
+	private static function unavailable_reason( $name ) {
+		$registered = function_exists( 'wp_get_ability' ) ? wp_get_ability( (string) $name ) : null;
+
+		if ( ! $registered ) {
+			return array(
+				'code'    => 'unknown_tool',
+				'message' => sprintf(
+					/* translators: %s: ability name. */
+					__( 'Unknown tool: this site has no ability named %s. List the abilities this connection can use, and use one of those names exactly.', 'miniorange-secure-mcp-server' ),
+					(string) $name
+				),
+			);
+		}
+
+		if ( null !== self::$allowed_abilities && ! in_array( (string) $name, self::$allowed_abilities, true ) ) {
+			return array(
+				'code'    => 'not_granted',
+				'message' => sprintf(
+					/* translators: 1: ability name, 2: comma-separated role names, 3: admin page URL. */
+					__( 'The ability %1$s exists on this site, but it is not switched on for this account\'s role (%2$s) in any active AI agent, so it cannot be used through this connection. Tell the person: a site administrator can turn it on in WordPress under Secure MCP Server, AI Agents, then the agent\'s Access tab: %3$s', 'miniorange-secure-mcp-server' ),
+					(string) $name,
+					empty( self::$roles ) ? __( 'no role', 'miniorange-secure-mcp-server' ) : implode( ', ', array_map( 'strval', self::$roles ) ),
+					admin_url( 'admin.php?page=' . Admin_App::PAGE_SLUG ) . '#/nhi'
+				),
+			);
+		}
+
+		return array(
+			'code'    => 'hidden_by_site',
+			'message' => sprintf(
+				/* translators: %s: ability name. */
+				__( 'The ability %s exists on this site, but the site\'s configuration hides it from AI clients (the MOSMCP_EXPOSED_PREFIXES setting or a developer filter). Only a site developer can change that.', 'miniorange-secure-mcp-server' ),
+				(string) $name
+			),
+		);
+	}
+
+	/**
+	 * Supplies the abilities this connection may use to the site-overview ability.
+	 *
+	 * Hooked to `mosmcp_overview_ability_access` for the duration of a tools/call.
+	 *
+	 * @param string[]|null $names Names supplied by an earlier filter, if any.
+	 * @return string[]|null
+	 */
+	public static function overview_access( $names ) {
+		return is_array( self::$exposed_names ) ? self::$exposed_names : $names;
 	}
 
 	/**

@@ -37,6 +37,12 @@ class Rest_Abilities {
 	const CAPABILITY = 'edit_posts';
 
 	/**
+	 * Name of the ability that calls a route. Governed by route grants as well as
+	 * its own ability grant; see {@see Rest_Bridge::agents_for_call()}.
+	 */
+	const CALL = 'mosmcp/rest-call';
+
+	/**
 	 * Hooks category and ability registration.
 	 *
 	 * @return void
@@ -183,7 +189,7 @@ class Rest_Abilities {
 	 */
 	private static function call() {
 		return new Ability(
-			'mosmcp/rest-call',
+			self::CALL,
 			array(
 				'label'        => __( 'Call REST Route', 'miniorange-secure-mcp-server' ),
 				'description'  => __( 'Calls a WordPress REST API route and returns its response. Can create, update and delete content, so confirm the route and parameters before calling it with a write method. The call is refused unless this connection has been granted that route and method, and the endpoint\'s own permission check also applies. Use "_fields" to keep responses small; large list responses are trimmed.', 'miniorange-secure-mcp-server' ),

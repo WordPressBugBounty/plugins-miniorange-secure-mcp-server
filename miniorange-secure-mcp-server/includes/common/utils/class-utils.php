@@ -22,6 +22,23 @@ use WP_REST_Request;
 class Utils {
 
 	/**
+	 * Whether the plugin's service surface runs: the MCP endpoint, the OAuth
+	 * server and discovery, AI agents, logs and the bundled abilities.
+	 *
+	 * True unless a plan switches it off through the `mosmcp_service_enabled`
+	 * filter. While it is off, common registers none of that surface — only the
+	 * support routes — and the plan that switched it off answers in its place.
+	 *
+	 * Read at hook time (plugins_loaded and later), never at file load, so every
+	 * plan loader has registered its filters before the first read.
+	 *
+	 * @return bool
+	 */
+	public static function service_enabled() {
+		return (bool) apply_filters( 'mosmcp_service_enabled', true );
+	}
+
+	/**
 	 * Returns the canonical resource URI of the MCP server.
 	 *
 	 * @return string The canonical MCP endpoint URL, without a trailing slash.
@@ -185,11 +202,15 @@ class Utils {
 	 * bearer token". Both end in the same 401 and the same "my AI client has no
 	 * abilities" symptom, so only the log can separate them.
 	 *
-	 * @param WP_REST_Request $request The request.
+	 * $request is optional: {@see \MoSMCP\Common\Controllers\MCP\REST_Controller::determine_user()}
+	 * runs on `determine_current_user`, before WordPress has parsed a WP_REST_Request, and so
+	 * has only the superglobal fallbacks below to work with.
+	 *
+	 * @param WP_REST_Request|null $request The request, when one exists yet.
 	 * @return string The raw header value, or an empty string when absent.
 	 */
-	public static function authorization_header( WP_REST_Request $request ) {
-		$header = (string) $request->get_header( 'authorization' );
+	public static function authorization_header( $request = null ) {
+		$header = $request instanceof WP_REST_Request ? (string) $request->get_header( 'authorization' ) : '';
 
 		if ( '' === $header && ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
 			$header = sanitize_text_field( wp_unslash( $_SERVER['HTTP_AUTHORIZATION'] ) );
@@ -234,14 +255,16 @@ class Utils {
 	 * fallback lives here rather than in {@see authorization_header()} so the latter still
 	 * reports whether Authorization itself arrived.
 	 *
-	 * @param WP_REST_Request $request The request.
+	 * $request is optional; see {@see authorization_header()} for why.
+	 *
+	 * @param WP_REST_Request|null $request The request, when one exists yet.
 	 * @return string The token, or an empty string when absent.
 	 */
-	public static function extract_bearer_token( WP_REST_Request $request ) {
+	public static function extract_bearer_token( $request = null ) {
 		$header = self::authorization_header( $request );
 
 		// Last resort: the gateway repeats the token here for hosts that strip Authorization but pass custom headers.
-		if ( '' === $header ) {
+		if ( '' === $header && $request instanceof WP_REST_Request ) {
 			$header = (string) $request->get_header( 'x_mo_authorization' );
 		}
 

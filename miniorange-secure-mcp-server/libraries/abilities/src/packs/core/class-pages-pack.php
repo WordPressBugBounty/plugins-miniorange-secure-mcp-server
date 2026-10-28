@@ -106,7 +106,7 @@ class Pages_Pack extends Ability_Pack {
 				'input_schema'  => Schema::object(
 					array(
 						'title'     => Schema::str( __( 'The title of the new draft page.', 'mosmcp-abilities' ), array( 'minLength' => 1 ) ),
-						'content'   => Schema::str( __( 'Optional content/body of the new draft page.', 'mosmcp-abilities' ) . ' ' . Html_Policy::rule_summary(), array( 'default' => '' ) ),
+						'content'   => Schema::str( __( 'Optional content/body of the new draft page.', 'mosmcp-abilities' ) . ' ' . Html_Policy::rule_summary() . ' ' . Schema::block_content_hint(), array( 'default' => '' ) ),
 						'parent_id' => Schema::int( __( 'Optional ID of a parent page, to create this as a sub-page.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
 						'slug'      => Schema::str( __( 'New URL slug. Omit to leave the address unchanged. Reduced to a URL-safe form, and a suffix is added if it is already taken.', 'mosmcp-abilities' ) ),
 					),
@@ -148,7 +148,7 @@ class Pages_Pack extends Ability_Pack {
 					array(
 						'id'      => Schema::int( __( 'The ID of the page to update.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
 						'title'   => Schema::str( __( 'New title for the page. Omit to keep the current title.', 'mosmcp-abilities' ) ),
-						'content' => Schema::str( __( 'New content for the page. Omit to keep the current content.', 'mosmcp-abilities' ) . ' ' . Html_Policy::rule_summary() ),
+						'content' => Schema::str( __( 'New content for the page. Omit to keep the current content.', 'mosmcp-abilities' ) . ' ' . Html_Policy::rule_summary() . ' ' . Schema::block_content_hint() ),
 						'excerpt' => Schema::str( __( 'New excerpt for the page. Omit to keep the current excerpt; pass an empty string to clear it.', 'mosmcp-abilities' ) ),
 						'slug'    => Schema::str( __( 'New URL slug. Omit to leave the address unchanged. Reduced to a URL-safe form, and a suffix is added if it is already taken.', 'mosmcp-abilities' ) ),
 					),
@@ -368,7 +368,7 @@ class Pages_Pack extends Ability_Pack {
 					array(
 						'id'      => Schema::int( __( 'The ID of the page to update.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
 						'title'   => Schema::str( __( 'New title for the page. Omit to keep the current title.', 'mosmcp-abilities' ) ),
-						'content' => Schema::str( __( 'New content for the page. Omit to keep the current content.', 'mosmcp-abilities' ) . ' ' . Html_Policy::rule_summary() ),
+						'content' => Schema::str( __( 'New content for the page. Omit to keep the current content.', 'mosmcp-abilities' ) . ' ' . Html_Policy::rule_summary() . ' ' . Schema::block_content_hint() ),
 						'excerpt' => Schema::str( __( 'New excerpt for the page. Omit to keep the current excerpt; pass an empty string to clear it.', 'mosmcp-abilities' ) ),
 						'slug'    => Schema::str( __( 'New URL slug. Omit to leave the address unchanged. Reduced to a URL-safe form, and a suffix is added if it is already taken.', 'mosmcp-abilities' ) ),
 					),

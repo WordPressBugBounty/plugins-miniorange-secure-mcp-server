@@ -11,6 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use MoSMCP\Common\Repositories\NHI_Store;
 use MoSMCP\Common\Services\Logging\Audit_Logger;
 use WP_Error;
 use WP_REST_Request;
@@ -63,6 +64,44 @@ class Rest_Bridge {
 		}
 
 		self::$allowed_routes = is_array( $grants ) ? array_values( $grants ) : array();
+	}
+
+	/**
+	 * Returns every enabled NHI whose REST route grants let these roles make a call.
+	 *
+	 * A rest-call is allowed by the union of every NHI's route grants, so policy
+	 * that NHIs attach to calls must consult each NHI granting the route, not
+	 * only those granting the rest-call ability itself. The route is resolved the
+	 * way the call itself resolves it.
+	 *
+	 * @param string   $route  Route template or concrete path, as the call names it.
+	 * @param string   $method HTTP method.
+	 * @param string[] $roles  The caller's role slugs.
+	 * @return list<array{id:int,uuid:string,name:string}>|null Oldest NHI first, or
+	 *                                                          null when the lookup failed.
+	 */
+	public static function agents_for_call( $route, $method, array $roles ) {
+		$entry  = self::find( (string) $route );
+		$method = strtoupper( (string) $method );
+
+		// A call that reaches no route is refused without touching one.
+		if ( null === $entry || ! isset( $entry['accepts'][ $method ] ) ) {
+			return array();
+		}
+
+		$grants = NHI_Store::route_grants_for_roles( $roles );
+		if ( null === $grants ) {
+			return null;
+		}
+
+		$agents = array();
+		foreach ( $grants as $grant ) {
+			if ( '*' === $grant['grant'] || self::grant_matches( $grant['grant'], $entry['template'], $entry['accepts'][ $method ] ) ) {
+				$agents[ $grant['nhi']['id'] ] = $grant['nhi'];
+			}
+		}
+
+		return array_values( $agents );
 	}
 
 	/**
@@ -231,6 +270,20 @@ class Rest_Bridge {
 			return $pre;
 		}
 
+		// A route some plugins only register for certain users or contexts is missing here even though it is listed elsewhere.
+		if ( null === Route_Registry::handler( $entry['pattern'], $method ) ) {
+			return new WP_Error(
+				'mosmcp_rest_route_unavailable',
+				sprintf(
+					/* translators: 1: HTTP method, 2: route template. */
+					__( '%1$s %2$s is not registered for this connection. The plugin that owns it may only expose it to certain users or contexts.', 'miniorange-secure-mcp-server' ),
+					$method,
+					$entry['template']
+				),
+				array( 'status' => 404 )
+			);
+		}
+
 		$request = new WP_REST_Request( $method, $path );
 		$query   = array();
 
@@ -242,6 +295,16 @@ class Rest_Bridge {
 			$query = array_merge( $query, $params );
 		} else {
 			$request->set_body_params( $params );
+
+			// Also set a real JSON body: WP_REST_Request::get_json_params() ignores body
+			// params entirely and only decodes this, gated on this content-type. A
+			// handler that reads $request->get_param() (the merged resolution, covering
+			// body params already) is unaffected either way; one that reads
+			// get_json_params() directly — common in endpoints built for a JS admin UI,
+			// which always posts JSON — got null for every write through this bridge
+			// without this, regardless of what the agent sent.
+			$request->set_header( 'content-type', 'application/json' );
+			$request->set_body( (string) wp_json_encode( $params ) );
 		}
 
 		if ( 'GET' === $method && ! isset( $query['per_page'] ) ) {

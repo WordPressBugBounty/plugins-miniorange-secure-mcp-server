@@ -283,9 +283,19 @@ class NHI_Store {
 					'error'          => $wpdb->last_error,
 				)
 			);
+
+			return false;
 		}
 
-		return $ok;
+		/**
+		 * Fires after an NHI and its grants have been deleted, so data kept per NHI
+		 * elsewhere can go with it.
+		 *
+		 * @param int $id The deleted NHI's id.
+		 */
+		do_action( 'mosmcp_nhi_deleted', (int) $id );
+
+		return true;
 	}
 
 	/**
@@ -596,6 +606,84 @@ class NHI_Store {
 		}
 
 		return array_values( $by_user );
+	}
+
+	/**
+	 * Returns every enabled NHI through which the given role(s) hold an ability.
+	 *
+	 * Unlike {@see owner_for_ability()}, which picks one NHI to attribute a call
+	 * to, this is the full set that grants the call: grants to the role(s) or to
+	 * any role ('*'), of the ability itself or of all abilities ('*'). Policy that
+	 * an NHI attaches to the calls it grants must consult all of them.
+	 *
+	 * @param string   $ability Ability name (e.g. 'mosmcp/post-create-draft').
+	 * @param string[] $roles   The user's role slugs.
+	 * @return list<array{id:int,uuid:string,name:string}>|null Oldest NHI first, or
+	 *                                                          null when the lookup failed.
+	 */
+	public static function agents_for_ability( $ability, array $roles ) {
+		global $wpdb;
+
+		list( $role_args, $role_ph ) = self::role_args_and_placeholders( $roles );
+
+		$sql  = "SELECT DISTINCT n.id, n.uuid, n.name
+				 FROM %i g
+				 INNER JOIN %i n ON n.id = g.nhi_id
+				 WHERE n.is_enabled    = 1
+				   AND g.resource_type = %s
+				   AND g.resource IN ( %s, '*' )
+				   AND g.role IN ( {$role_ph} )
+				 ORDER BY n.id ASC";
+		$args = array_merge( array( self::grants_table(), self::table(), self::RESOURCE_TYPE_ABILITY, (string) $ability ), $role_args );
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A );
+
+		// A failed query reads as "no rows"; only last_error tells the two apart.
+		if ( ! is_array( $rows ) || '' !== $wpdb->last_error ) {
+			return null;
+		}
+
+		return array_map( array( __CLASS__, 'shape_nhi_ref' ), $rows );
+	}
+
+	/**
+	 * Returns the REST route grants of every enabled NHI for the given role(s) or
+	 * any role ('*'), each with the NHI holding it.
+	 *
+	 * @param string[] $roles The user's role slugs.
+	 * @return list<array{grant:string, nhi:array{id:int,uuid:string,name:string}}>|null
+	 *         Oldest NHI first, or null when the lookup failed.
+	 */
+	public static function route_grants_for_roles( array $roles ) {
+		global $wpdb;
+
+		list( $role_args, $role_ph ) = self::role_args_and_placeholders( $roles );
+
+		$sql  = "SELECT n.id, n.uuid, n.name, g.resource
+				 FROM %i g
+				 INNER JOIN %i n ON n.id = g.nhi_id
+				 WHERE n.is_enabled = 1 AND g.resource_type = %s AND g.role IN ( {$role_ph} )
+				 ORDER BY n.id ASC";
+		$args = array_merge( array( self::grants_table(), self::table(), self::RESOURCE_TYPE_REST_ROUTE ), $role_args );
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $args ), ARRAY_A );
+
+		// A failed query reads as "no rows"; only last_error tells the two apart.
+		if ( ! is_array( $rows ) || '' !== $wpdb->last_error ) {
+			return null;
+		}
+
+		$out = array();
+		foreach ( $rows as $row ) {
+			$out[] = array(
+				'grant' => (string) $row['resource'],
+				'nhi'   => self::shape_nhi_ref( $row ),
+			);
+		}
+
+		return $out;
 	}
 
 	/**

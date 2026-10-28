@@ -13,6 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use MoSMCP\Common\Controllers\Debug\Debug_Controller;
 use MoSMCP\Common\Migration\Migration;
+use MoSMCP\Common\Plans\Plan_Registry;
 use MoSMCP\Common\Repositories\NHI_Store;
 use MoSMCP\Common\Repositories\Store;
 use MoSMCP\Common\Utils\Utils;
@@ -216,13 +217,20 @@ class Admin_App {
 	/**
 	 * Builds the bootstrap payload injected into `window.MOSMCP_BOOTSTRAP`.
 	 *
+	 * Plans add their own keys through the `mosmcp_admin_bootstrap` filter; the
+	 * keys set here are always present and keep their shape.
+	 *
 	 * @return array<string, mixed>
 	 */
 	private static function build_bootstrap() {
 		$user     = wp_get_current_user();
 		$is_admin = current_user_can( 'manage_options' );
 
-		return array(
+		// While the service is off the SPA renders no page that reads abilities,
+		// packs or connections, so none of that is computed or sent.
+		$service = Utils::service_enabled();
+
+		$bootstrap = array(
 			'restRoot'               => esc_url_raw( rest_url() ),
 			'siteUrl'                => esc_url_raw( Utils::issuer_url() ),
 			'restNamespace'          => MOSMCP_REST_NAMESPACE,
@@ -231,6 +239,9 @@ class Admin_App {
 			'version'                => MOSMCP_VERSION,
 			'mcpEndpoint'            => Utils::resource_url(),
 			'isLocalhost'            => Utils::is_localhost_site(),
+			'serviceEnabled'         => $service,
+			// Plans loaded on this request, in load order; the app runs only their screens.
+			'plans'                  => Plan_Registry::active_ids(),
 			'migratedVersion'        => $is_admin ? (string) get_option( Migration::MIGRATED_VERSION_OPTION, '' ) : '',
 			'adminPostUrl'           => $is_admin ? esc_url_raw( admin_url( 'admin-post.php' ) ) : '',
 			'downloadDebugLogsNonce' => $is_admin ? wp_create_nonce( Debug_Controller::DOWNLOAD_NONCE_ACTION ) : '',
@@ -240,18 +251,23 @@ class Admin_App {
 				'isAdmin'     => $is_admin,
 				'roles'       => array_values( (array) $user->roles ),
 			),
-			'abilities'              => self::get_abilities_payload( $user, $is_admin ),
+			'abilities'              => $service ? self::get_abilities_payload( $user, $is_admin ) : array(),
 			// Bundled ability sets whose companion plugin is inactive, for the
 			// in-app discovery callout. Admin-only; empty for members.
-			'dormantPacks'           => $is_admin ? Dormant_Abilities_Provider::packs() : array(),
+			'dormantPacks'           => $service && $is_admin ? Dormant_Abilities_Provider::packs() : array(),
 			// The provider-gated sets that are active here, so the SPA can name them
 			// inside the ready-to-use total. Admin-only; empty for members.
-			'activePacks'            => $is_admin ? Dormant_Abilities_Provider::active_packs() : array(),
+			'activePacks'            => $service && $is_admin ? Dormant_Abilities_Provider::active_packs() : array(),
 			// Direct-connection deprecation notice. Admin-only, and absent entirely
 			// for sites with no direct connection — so a gateway-only install never
 			// sees the notice.
-			'directConnection'       => $is_admin ? self::direct_connection_payload() : null,
+			'directConnection'       => $service && $is_admin ? self::direct_connection_payload() : null,
 		);
+
+		$filtered = apply_filters( 'mosmcp_admin_bootstrap', $bootstrap, $user, $is_admin );
+
+		// Plans may add keys, never remove or retype the ones above.
+		return is_array( $filtered ) ? array_merge( $filtered, $bootstrap ) : $bootstrap;
 	}
 
 	/**

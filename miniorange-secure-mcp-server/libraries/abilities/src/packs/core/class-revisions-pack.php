@@ -316,7 +316,7 @@ class Revisions_Pack extends Ability_Pack {
 			'mosmcp/revision-restore',
 			array(
 				'label'         => __( 'Restore Revision', 'mosmcp-abilities' ),
-				'description'   => __( 'Restores a post or page to a chosen revision, replacing its current title, content, and excerpt with that revision\'s. This itself creates a new revision capturing what the post looked like just before the restore, so the restore can always be undone.', 'mosmcp-abilities' ),
+				'description'   => __( 'Restores a post or page to a chosen revision, replacing its current title, content, and excerpt with that revision\'s. This itself creates a new revision capturing what the post looked like just before the restore, so the restore can always be undone. To undo an edit made with the block or content abilities, restore the revision_id that edit returned. Also known as: undo, undo the change, undo last edit, revert page, revert post, roll back, restore previous version, bring it back.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::parent_args(),

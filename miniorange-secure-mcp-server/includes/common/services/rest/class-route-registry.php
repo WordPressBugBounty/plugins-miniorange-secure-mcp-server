@@ -111,16 +111,49 @@ class Route_Registry {
 	 * @return list<array<string, mixed>> Entries of template, pattern, namespace, methods, accepts.
 	 */
 	public static function routes() {
-		$cached = get_transient( self::CACHE_KEY );
+		$signature = self::signature();
+		$cached    = get_transient( self::CACHE_KEY );
 
-		if ( is_array( $cached ) ) {
-			return $cached;
+		// Rebuild when the live route set differs, so a route added without an activation flush still shows up.
+		if ( is_array( $cached ) && isset( $cached['signature'], $cached['entries'] ) && $cached['signature'] === $signature ) {
+			return $cached['entries'];
 		}
 
 		$entries = self::build();
-		set_transient( self::CACHE_KEY, $entries, HOUR_IN_SECONDS );
+		set_transient(
+			self::CACHE_KEY,
+			array(
+				'signature' => $signature,
+				'entries'   => $entries,
+			),
+			HOUR_IN_SECONDS
+		);
 
 		return $entries;
+	}
+
+	/**
+	 * Fingerprints the live route table: each pattern with the verbs its handlers answer to.
+	 *
+	 * @return string
+	 */
+	private static function signature() {
+		$map = array();
+
+		foreach ( rest_get_server()->get_routes() as $pattern => $handlers ) {
+			$verbs = array();
+
+			foreach ( $handlers as $handler ) {
+				$verbs = array_merge( $verbs, array_keys( (array) $handler['methods'] ) );
+			}
+
+			sort( $verbs );
+			$map[ $pattern ] = $verbs;
+		}
+
+		ksort( $map );
+
+		return md5( (string) wp_json_encode( $map ) );
 	}
 
 	/**

@@ -8,6 +8,7 @@
 namespace MoSMCP\Abilities\Packs\Maintenance;
 
 use MoSMCP\Abilities\Packs\Site\Site_Support;
+use MoSMCP\Abilities\Support\Cache_Purger;
 use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -592,57 +593,16 @@ class Maintenance_Provider {
 	 * @return array<string, callable>
 	 */
 	private static function cache_engines() {
+		// Every cache is about to be cleared in full; the automatic clear-up that
+		// follows a writing ability would only repeat it.
+		Cache_Purger::mark_purged();
+
 		$engines = array();
 
-		if ( function_exists( 'rocket_clean_domain' ) ) {
-			$engines['WP Rocket'] = static function () {
-				rocket_clean_domain();
-				return true;
-			};
-		}
-
-		if ( class_exists( '\LiteSpeed\Purge' ) ) {
-			$engines['LiteSpeed Cache'] = static function () {
-				// LiteSpeed Cache's own published action; this is how that plugin
-				// documents clearing its cache from third-party code.
-				do_action( 'litespeed_purge_all' ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
-				return true;
-			};
-		}
-
-		if ( function_exists( 'wp_cache_clear_cache' ) ) {
-			$engines['WP Super Cache'] = static function () {
-				wp_cache_clear_cache();
-				return true;
-			};
-		}
-
-		if ( function_exists( 'w3tc_flush_all' ) ) {
-			$engines['W3 Total Cache'] = static function () {
-				w3tc_flush_all();
-				return true;
-			};
-		}
-
-		if ( class_exists( '\Breeze_PurgeCache' ) ) {
-			$engines['Breeze'] = static function () {
-				\Breeze_PurgeCache::breeze_cache_flush();
-				return true;
-			};
-		}
-
-		if ( class_exists( '\SiteGround_Optimizer\Supercacher\Supercacher' ) ) {
-			$engines['SiteGround Optimizer'] = static function () {
-				\SiteGround_Optimizer\Supercacher\Supercacher::purge_cache();
-				return true;
-			};
-		}
-
-		if ( class_exists( '\Elementor\Plugin' ) ) {
-			$engines['Elementor generated CSS'] = static function () {
-				\Elementor\Plugin::$instance->files_manager->clear_cache();
-				return true;
-			};
+		foreach ( Cache_Purger::engines( true ) as $name => $engine ) {
+			if ( isset( $engine['all'] ) && is_callable( $engine['all'] ) ) {
+				$engines[ (string) $name ] = $engine['all'];
+			}
 		}
 
 		return $engines;

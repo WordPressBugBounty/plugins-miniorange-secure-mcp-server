@@ -7,6 +7,7 @@
 
 namespace MoSMCP\Abilities;
 
+use MoSMCP\Abilities\Support\Cache_Purger;
 use MoSMCP\Abilities\Support\Permissions;
 use WP_Error;
 
@@ -395,8 +396,10 @@ class Ability_Registrar {
 	private static function wrap_execute( Ability $ability ) {
 		$execute    = $ability->get_execute();
 		$guard_keys = $ability->get_guard_meta_keys();
+		$writer     = $ability->is_writer();
+		$has_notes  = self::declares_text_notes( $ability->get_output_schema() );
 
-		return static function ( $input = array() ) use ( $execute, $guard_keys ) {
+		return static function ( $input = array() ) use ( $execute, $guard_keys, $writer, $has_notes ) {
 			$input = is_array( $input ) ? $input : array();
 
 			if ( ! empty( $guard_keys ) ) {
@@ -406,8 +409,47 @@ class Ability_Registrar {
 				}
 			}
 
-			return call_user_func( $execute, $input );
+			if ( ! $writer ) {
+				return call_user_func( $execute, $input );
+			}
+
+			/*
+			 * A writing ability's change is recorded while it runs, and the cached
+			 * pages it affects are cleared once it succeeds, so the person checking
+			 * the site sees the change rather than a stale page.
+			 */
+			$result = null;
+			Cache_Purger::begin();
+			try {
+				$result = call_user_func( $execute, $input );
+			} finally {
+				Cache_Purger::end( null !== $result && ! is_wp_error( $result ) );
+			}
+
+			// When a full cache clear was queued rather than run, say so where the reply has room for notes.
+			$note = Cache_Purger::take_note();
+			if ( '' !== $note && $has_notes && is_array( $result ) ) {
+				$result['notes']   = isset( $result['notes'] ) && is_array( $result['notes'] ) ? array_values( $result['notes'] ) : array();
+				$result['notes'][] = $note;
+			}
+
+			return $result;
 		};
+	}
+
+	/**
+	 * Whether an output schema has a "notes" list of plain strings.
+	 *
+	 * Output is checked against the schema, so a note can only be added where
+	 * the ability already declares one.
+	 *
+	 * @param mixed $schema Output schema.
+	 * @return bool
+	 */
+	private static function declares_text_notes( $schema ) {
+		$notes = is_array( $schema ) && isset( $schema['properties']['notes'] ) && is_array( $schema['properties']['notes'] ) ? $schema['properties']['notes'] : array();
+
+		return isset( $notes['type'], $notes['items']['type'] ) && 'array' === $notes['type'] && 'string' === $notes['items']['type'];
 	}
 
 	/**

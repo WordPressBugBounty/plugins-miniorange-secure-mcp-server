@@ -20,6 +20,7 @@ use MoSMCP\Common\Apis\NHI\NHI_Routes;
 use MoSMCP\Common\Apis\OAuth\OAuth_Routes;
 use MoSMCP\Common\Apis\Rest\Rest_Bridge_Routes;
 use MoSMCP\Common\Apis\Stats\Stats_Routes;
+use MoSMCP\Common\Utils\Utils;
 
 /**
  * Class Rest_Routes
@@ -36,12 +37,20 @@ class Rest_Routes {
 	/**
 	 * Registers all REST routes by delegating to resource-specific classes.
 	 *
+	 * While the service is off (see {@see Utils::service_enabled()}) only the
+	 * support routes register, so the site can still reach support.
+	 *
 	 * @return void
 	 */
 	public static function register() {
+		Contact_Routes::register();
+
+		if ( ! Utils::service_enabled() ) {
+			return;
+		}
+
 		MCP_Routes::register();
 		OAuth_Routes::register();
-		Contact_Routes::register();
 		Stats_Routes::register();
 		NHI_Routes::register();
 		Audit_Routes::register();

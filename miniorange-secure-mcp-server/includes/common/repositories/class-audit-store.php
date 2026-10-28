@@ -16,11 +16,19 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * Owns the wp_mosmcp_audit_log table: one row per tools/call invocation, storing
  * the acting user, owning NHI, client, tool, execution status, and wall-clock
- * latency. Sensitive fields are stripped before insertion by {@see Audit_Logger}.
+ * latency.
  *
  * Schema lifecycle lives in {@see \MoSMCP\Common\Migration\Migration}.
  */
 class Audit_Store {
+
+	/**
+	 * Outcomes any tool call can have. Plans may add statuses of their own; see {@see statuses()}.
+	 */
+	const STATUSES = array( 'success', 'failed', 'denied' );
+
+	/** Longest status the `status` column holds. */
+	const STATUS_MAX_LENGTH = 16;
 
 	/**
 	 * WP-Cron hook that runs purge() daily. Scheduled/unscheduled from Hooks.
@@ -151,9 +159,31 @@ class Audit_Store {
 	}
 
 	/**
+	 * Every status an entry can carry: {@see STATUSES} plus any a plan adds
+	 * through the `mosmcp_audit_statuses` filter.
+	 *
+	 * @return string[]
+	 */
+	public static function statuses() {
+		$filtered = apply_filters( 'mosmcp_audit_statuses', self::STATUSES );
+		$extra    = array();
+
+		foreach ( is_array( $filtered ) ? $filtered : array() as $status ) {
+			$status = sanitize_key( (string) $status );
+			if ( '' !== $status && strlen( $status ) <= self::STATUS_MAX_LENGTH ) {
+				$extra[] = $status;
+			}
+		}
+
+		return array_values( array_unique( array_merge( self::STATUSES, $extra ) ) );
+	}
+
+	/**
 	 * Returns aggregate statistics for the admin summary cards.
 	 *
-	 * @return array{total:int, success:int, failed:int, denied:int, avg_latency_ms:int|null, top_tools: list<array{tool:string,count:int}>}
+	 * `by_status` counts every status recorded, including any a plan adds.
+	 *
+	 * @return array{total:int, success:int, failed:int, denied:int, by_status:array<string,int>, avg_latency_ms:int|null, top_tools: list<array{tool:string,count:int}>}
 	 */
 	public static function summary() {
 		global $wpdb;
@@ -172,11 +202,7 @@ class Audit_Store {
 
 		$total     = 0;
 		$avg       = null;
-		$by_status = array(
-			'success' => 0,
-			'failed'  => 0,
-			'denied'  => 0,
-		);
+		$by_status = array_fill_keys( self::statuses(), 0 );
 		foreach ( (array) $status_rows as $row ) {
 			$s               = (string) $row['status'];
 			$cnt             = (int) $row['cnt'];
@@ -202,6 +228,7 @@ class Audit_Store {
 			'success'        => $by_status['success'],
 			'failed'         => $by_status['failed'],
 			'denied'         => $by_status['denied'],
+			'by_status'      => $by_status,
 			'avg_latency_ms' => $avg,
 			'top_tools'      => is_array( $top )
 				? array_map(

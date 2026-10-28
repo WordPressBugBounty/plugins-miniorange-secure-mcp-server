@@ -3,7 +3,7 @@
  * Plugin Name:       Secure MCP Server for Claude, ChatGPT, Gemini and other AI providers
  * Plugin URI:        https://plugins.miniorange.com/
  * Description:       AI governance and policy enforcement for WordPress, built on the Abilities API. Exposes a secure, OAuth-protected MCP server so AI clients such as ChatGPT and Claude can connect.
- * Version:           1.5.3
+ * Version:           1.5.4
  * Requires at least: 6.9
  * Requires PHP:      7.4
  * Author:            miniOrange
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MOSMCP_VERSION', '1.5.3' );
+define( 'MOSMCP_VERSION', '1.5.4' );
 define( 'MOSMCP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'MOSMCP_PLUGIN_FILE', __FILE__ );
 
@@ -56,6 +56,8 @@ require_once MOSMCP_PLUGIN_DIR . 'vendor/autoload.php';
 // See libraries/abilities/bootstrap.php.
 require_once MOSMCP_PLUGIN_DIR . 'libraries/abilities/bootstrap.php';
 
-// Bootstrap the shared (plan-independent) hooks. When plan-specific code is
-// added, the matching plans/<plan>/loader.php will be required here too.
+// Bootstrap the shared (plan-independent) hooks.
 require_once MOSMCP_PLUGIN_DIR . 'includes/common/loader.php';
+
+// Then every plan this build ships, in the order their manifests declare.
+\MoSMCP\Common\Plans\Plan_Registry::load();

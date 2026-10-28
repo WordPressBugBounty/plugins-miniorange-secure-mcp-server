@@ -51,28 +51,6 @@ class Kadence_Insert_Engine {
 	const CONTAINERS = array( 'kadence/rowlayout', 'kadence/column', 'kadence/pane', 'kadence/tab' );
 
 	/**
-	 * Containers whose body is pure InnerBlocks and which bake chrome into markup:
-	 * appending into them is only markup-safe when they already hold a child to
-	 * anchor the insert position.
-	 *
-	 * Why ALL containers, not just pane/tab: a container built by this engine in the
-	 * same request holds its wrapper as two separate innerContent chunks (lead,
-	 * trail) with no children between them, so this class's own splice logic can
-	 * find the seam. But once that markup round-trips through a save and is
-	 * re-parsed from the database, WordPress's real parse_blocks() sees no comment
-	 * boundary inside an empty wrapper and returns it as ONE combined chunk — there
-	 * is no reliable, block-agnostic way to know where inside that raw HTML string
-	 * the wrapper's own closing tags begin, so guessing produces content placed
-	 * outside the wrapper's own divs (verified live: a heading inserted into an
-	 * empty, previously-saved column landed after the column's closing tags
-	 * instead of inside them). Requiring an existing child avoids the guess
-	 * entirely, since a real child's own comment gives an unambiguous split point.
-	 *
-	 * @var string[]
-	 */
-	const REQUIRE_ANCHOR = array( 'kadence/rowlayout', 'kadence/column', 'kadence/pane', 'kadence/tab' );
-
-	/**
 	 * Builds a parsed-block node with correct innerContent structure.
 	 *
 	 * A block is "container-shaped" whenever lead or trail markup is given, even
@@ -331,7 +309,10 @@ class Kadence_Insert_Engine {
 
 			$count = isset( $parent['innerBlocks'] ) && is_array( $parent['innerBlocks'] ) ? count( $parent['innerBlocks'] ) : 0;
 
-			if ( 0 === $count && in_array( $name, self::REQUIRE_ANCHOR, true ) ) {
+			// An empty container read back from the database holds its wrapper as one
+			// chunk; the child goes into its empty inner element. Without one there is
+			// no safe place, and guessing would put the child outside the wrapper.
+			if ( 0 === $count && ! Kadence_Write_Engine::has_child_slot( $parent ) ) {
 				return Kadence_Write_Engine::error(
 					'unsupported_container',
 					__( 'This container is empty, so an insert cannot be placed correctly in its saved markup. Add one block to it in the editor first, or clone a populated one, then insert.', 'mosmcp-abilities' )

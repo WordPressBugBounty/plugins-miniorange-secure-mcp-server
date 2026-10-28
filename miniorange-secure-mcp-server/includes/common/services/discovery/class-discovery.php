@@ -115,22 +115,12 @@ class Discovery {
 	 * @return void
 	 */
 	public static function maybe_serve_wellknown() {
-		$which = '';
-
-		if ( isset( $GLOBALS['wp'] ) && ! empty( $GLOBALS['wp']->query_vars['mosmcp_wellknown'] ) ) {
-			$which = (string) $GLOBALS['wp']->query_vars['mosmcp_wellknown'];
+		// While the service is off there are no endpoints to advertise.
+		if ( ! Utils::service_enabled() ) {
+			return;
 		}
 
-		if ( '' === $which && ! empty( $_SERVER['REQUEST_URI'] ) ) {
-			$uri  = sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) );
-			$path = (string) wp_parse_url( $uri, PHP_URL_PATH );
-
-			if ( preg_match( '#/\.well-known/oauth-protected-resource(/.*)?$#', $path ) ) {
-				$which = 'prs';
-			} elseif ( preg_match( '#/\.well-known/oauth-authorization-server(/.*)?$#', $path ) ) {
-				$which = 'as';
-			}
-		}
+		$which = self::requested_document();
 
 		// Which document a client fetched, and what it was told, is the start of the
 		// connection trail: a client that never reached discovery never got as far as
@@ -167,21 +157,50 @@ class Discovery {
 	}
 
 	/**
+	 * Which discovery document the current request targets — via the rewrite
+	 * query var, or a raw path match as fallback.
+	 *
+	 * @return string 'prs' (protected resource), 'as' (authorization server), or '' for neither.
+	 */
+	public static function requested_document() {
+		if ( isset( $GLOBALS['wp'] ) && ! empty( $GLOBALS['wp']->query_vars['mosmcp_wellknown'] ) ) {
+			return (string) $GLOBALS['wp']->query_vars['mosmcp_wellknown'];
+		}
+
+		if ( empty( $_SERVER['REQUEST_URI'] ) ) {
+			return '';
+		}
+
+		$uri  = sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+		$path = (string) wp_parse_url( $uri, PHP_URL_PATH );
+
+		if ( preg_match( '#/\.well-known/oauth-protected-resource(/.*)?$#', $path ) ) {
+			return 'prs';
+		}
+		if ( preg_match( '#/\.well-known/oauth-authorization-server(/.*)?$#', $path ) ) {
+			return 'as';
+		}
+
+		return '';
+	}
+
+	/**
 	 * Emits a JSON document with no-cache and CORS headers, then exits.
 	 *
 	 * Never cached: the documents embed scheme- and host-derived URLs, and a cached
 	 * copy served from a CDN or LiteSpeed outlives a change of site address or HTTPS
 	 * setting and points clients at the wrong endpoints.
 	 *
-	 * @param array<string, mixed> $data The discovery document.
+	 * @param array<string, mixed> $data   The discovery document (or error object).
+	 * @param int                  $status HTTP status code.
 	 * @return void
 	 */
-	private static function send_json( array $data ) {
+	public static function send_json( array $data, $status = 200 ) {
 		if ( ! headers_sent() ) {
 			header( 'Access-Control-Allow-Origin: *' );
 		}
 		No_Cache::send_headers();
 
-		wp_send_json( $data, 200 );
+		wp_send_json( $data, $status );
 	}
 }

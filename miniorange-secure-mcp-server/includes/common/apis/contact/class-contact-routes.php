@@ -12,7 +12,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use MoSMCP\Common\Controllers\Contact\Contact_Controller;
-use MoSMCP\Common\Controllers\Contact\Deactivation_Controller;
 use WP_REST_Server;
 
 /**
@@ -37,17 +36,6 @@ class Contact_Routes {
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => array( Contact_Controller::class, 'submit' ),
 				'permission_callback' => array( Contact_Controller::class, 'check_permission' ),
-			)
-		);
-
-		// Deactivation feedback — forwards reason + comments to miniOrange support.
-		register_rest_route(
-			MOSMCP_REST_NAMESPACE,
-			'/deactivation-feedback',
-			array(
-				'methods'             => WP_REST_Server::CREATABLE,
-				'callback'            => array( Deactivation_Controller::class, 'submit' ),
-				'permission_callback' => array( Deactivation_Controller::class, 'check_permission' ),
 			)
 		);
 	}

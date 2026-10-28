@@ -509,9 +509,15 @@ class Kadence_Write_Engine {
 				return null !== $chunk;
 			} ) );
 
+			$split = 1 === count( $non_null ) && $count > 0 ? self::split_empty_container( $non_null[0] ) : null;
+
 			if ( count( $non_null ) >= 2 ) {
 				$lead  = array( $non_null[0] );
 				$trail = array( $non_null[ count( $non_null ) - 1 ] );
+			} elseif ( null !== $split ) {
+				// An empty container read back from the database: one combined chunk.
+				$lead  = array( $split[0] );
+				$trail = array( $split[1] );
 			} elseif ( 1 === count( $non_null ) ) {
 				$lead  = array( $non_null[0] );
 				$trail = array();
@@ -524,5 +530,53 @@ class Kadence_Write_Engine {
 		$middle = $count > 0 ? array_fill( 0, $count, null ) : array();
 
 		$node['innerContent'] = array_merge( $lead, $middle, $trail );
+	}
+
+	/**
+	 * Whether children can be placed into a container that has none yet.
+	 *
+	 * True when the container has no wrapper markup (InnerBlocks only), when it was
+	 * built in this request (separate lead and trail chunks), or when its single
+	 * saved chunk has an identifiable slot (see split_empty_container()).
+	 *
+	 * @param array<string, mixed> $node Container block node.
+	 * @return bool
+	 */
+	public static function has_child_slot( array $node ) {
+		$ic = isset( $node['innerContent'] ) && is_array( $node['innerContent'] ) ? $node['innerContent'] : array();
+		if ( in_array( null, $ic, true ) ) {
+			return true;
+		}
+
+		$chunks = array_values( array_filter( $ic, 'is_string' ) );
+		if ( 1 !== count( $chunks ) ) {
+			return true;
+		}
+
+		return '' === trim( $chunks[0] ) || null !== self::split_empty_container( $chunks[0] );
+	}
+
+	/**
+	 * Splits the single saved chunk of an empty container where its children belong.
+	 *
+	 * WordPress's parse_blocks() returns an empty container's wrapper as one string, with no
+	 * null marker to split on. InnerBlocks.Content renders nothing, so the element
+	 * that wraps it is left empty: the last empty element in the markup (for a
+	 * column, <div class="kt-inside-inner-col"></div>) is the slot. The block
+	 * abilities place children in empty containers the same way.
+	 *
+	 * @param string $html The container's saved markup.
+	 * @return array{0: string, 1: string}|null [ lead, trail ], or null when there is no empty element.
+	 */
+	public static function split_empty_container( $html ) {
+		$html = (string) $html;
+		if ( ! preg_match_all( '/<([a-zA-Z][a-zA-Z0-9-]*)\b[^>]*>(\s*)<\/\1>/', $html, $matches, PREG_OFFSET_CAPTURE ) ) {
+			return null;
+		}
+
+		$slot   = end( $matches[2] );
+		$offset = (int) $slot[1];
+
+		return array( substr( $html, 0, $offset ), substr( $html, $offset + strlen( (string) $slot[0] ) ) );
 	}
 }

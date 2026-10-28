@@ -85,7 +85,7 @@ class Audit_Logger {
 	 *
 	 * @param string      $ability_name  Ability name with `/` separator (e.g. mosmcp/post-create-draft).
 	 *                                   For unknown tools, the best-effort decoded tool name.
-	 * @param string      $status        One of 'success', 'failed', 'denied'.
+	 * @param string      $status        One of {@see Audit_Store::statuses()}.
 	 * @param int|null    $latency_ms    Wall-clock execution time in milliseconds, or null.
 	 * @param string|null $error_code   WP_Error code on failure, or null.
 	 * @param string|null $error_message Human-readable error detail, or null.

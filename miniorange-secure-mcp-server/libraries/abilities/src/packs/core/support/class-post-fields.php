@@ -223,7 +223,48 @@ class Post_Fields {
 			);
 		}
 
+		if ( array_key_exists( 'post_content', $sent ) ) {
+			$classic = self::classic_content_warning( $post, (string) $post->post_content );
+			if ( null !== $classic ) {
+				$warnings[] = $classic;
+			}
+		}
+
 		return $warnings;
+	}
+
+	/**
+	 * Warns when content was saved without blocks on a site that edits this type
+	 * with the block editor.
+	 *
+	 * Plain HTML is stored as one "Classic" block: it displays fine, but the
+	 * person can no longer edit a single heading or button in the editor, and
+	 * the block abilities cannot change one part of it either. Telling the AI
+	 * right away lets it rewrite the content as blocks before anyone builds on it.
+	 * Sites that use the classic editor for this type on purpose are left alone.
+	 *
+	 * @param WP_Post $post    Post as stored.
+	 * @param string  $content Stored content.
+	 * @return array<string, string>|null
+	 */
+	public static function classic_content_warning( WP_Post $post, $content ) {
+		if ( '' === trim( (string) $content ) || false !== strpos( (string) $content, '<!-- wp:' ) ) {
+			return null;
+		}
+
+		if ( ! function_exists( 'use_block_editor_for_post' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/post.php';
+		}
+
+		if ( ! use_block_editor_for_post( $post ) ) {
+			return null;
+		}
+
+		return array(
+			'code'    => 'saved_as_classic_block',
+			'message' => __( 'The content was saved without block markup, so the block editor shows it as one "Classic" block: each heading, paragraph or button can no longer be edited on its own, in the editor or with the mosmcp/block-* abilities. To fix it, save the content again as block markup (for example <!-- wp:paragraph --><p>Text</p><!-- /wp:paragraph -->), or clear it and add the parts with mosmcp/block-insert, which builds the blocks for you.', 'mosmcp-abilities' ),
+			'context' => 'post_id=' . (int) $post->ID,
+		);
 	}
 
 	/**

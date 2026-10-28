@@ -197,6 +197,117 @@ class REST_Controller {
 	}
 
 	/**
+	 * `determine_current_user` filter: resolves the MCP bearer token's user before
+	 * WordPress runs any `rest_api_init` callback, so a third-party plugin whose own
+	 * `current_user_can()` check decides whether to register a route at all sees the
+	 * connecting agent's real user, not an anonymous visitor. Without this, a plugin
+	 * that gates registration on the current user (as several admin-tool plugins do)
+	 * never registers that route for an MCP request, even though {@see authorize()}'s
+	 * grant would otherwise allow it — the route is simply missing from the live
+	 * server, and the bridge call fails with "no route" instead of a grant error.
+	 *
+	 * Deliberately minimal: this never grants or denies an MCP call by itself.
+	 * {@see authenticate()} remains the sole permission_callback for `/mcp` and
+	 * re-validates the same token in full (expiry, deletion, audience, logging)
+	 * regardless of what this filter decided. A token this filter accepts but
+	 * authenticate() later rejects just leaves WordPress briefly aware of a user for
+	 * route-registration purposes — the call itself still gets authenticate()'s 401.
+	 *
+	 * Scoped to POST /mcp only, and only when nothing has already resolved a user
+	 * (same precedence convention core's own cookie and Application Password
+	 * filters use): letting a bearer token establish the current user for any other
+	 * request would turn an agent credential into a general WordPress login, and
+	 * overriding an existing session would be a surprising thing for a REST token to do.
+	 *
+	 * @param int|false $user_id The user ID resolved so far, or false.
+	 * @return int|false
+	 */
+	public static function determine_user( $user_id ) {
+		if ( $user_id || ! Utils::service_enabled() || ! self::is_mcp_endpoint_request() ) {
+			return $user_id;
+		}
+
+		$token = Utils::extract_bearer_token();
+
+		if ( '' === $token ) {
+			return $user_id;
+		}
+
+		$resolved = self::resolve_token_user_id( $token );
+
+		return $resolved ? $resolved : $user_id;
+	}
+
+	/**
+	 * Whether the current raw HTTP request is a POST to this plugin's MCP endpoint.
+	 *
+	 * Checked straight from superglobals: {@see determine_user()} runs on
+	 * `determine_current_user`, which fires before WordPress has parsed the request
+	 * into a WP_REST_Request, so there is no request object yet to ask. Matching on
+	 * the path suffix alone (rather than also requiring a specific REST prefix)
+	 * keeps this correct under a subdirectory install, a language-prefixed URL, or
+	 * a renamed REST prefix, without needing to enumerate any of them.
+	 *
+	 * @return bool
+	 */
+	private static function is_mcp_endpoint_request() {
+		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.Recommended -- Only compared, never stored or output.
+		$method = isset( $_SERVER['REQUEST_METHOD'] ) ? strtoupper( (string) wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
+
+		if ( 'POST' !== $method ) {
+			return false;
+		}
+
+		$target = '/' . MOSMCP_REST_NAMESPACE . '/mcp';
+
+		$route = isset( $_GET['rest_route'] ) && is_string( $_GET['rest_route'] ) ? wp_unslash( $_GET['rest_route'] ) : '';
+		if ( '' !== $route ) {
+			return $target === untrailingslashit( '/' . ltrim( $route, '/' ) );
+		}
+
+		$uri  = isset( $_SERVER['REQUEST_URI'] ) && is_string( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+		$path = untrailingslashit( (string) strtok( (string) strtok( $uri, '#' ), '?' ) );
+		// phpcs:enable
+
+		return $target === substr( $path, -strlen( $target ) );
+	}
+
+	/**
+	 * Minimal, side-effect-free token lookup used only by {@see determine_user()}.
+	 *
+	 * Deliberately independent of {@see authenticate()}, which remains the sole
+	 * authority on whether an MCP call is authorized and always re-validates and
+	 * logs in full when the request reaches its permission_callback. This lookup
+	 * never deletes an expired token or touches the debug log — it only decides
+	 * what `wp_get_current_user()` reports while route registration runs, mirroring
+	 * the same checks authenticate() makes (type, expiry, audience, known client)
+	 * without any of its side effects.
+	 *
+	 * @param string $token Bearer token.
+	 * @return int The token's user ID, or 0 when it is not a valid, current access token.
+	 */
+	private static function resolve_token_user_id( $token ) {
+		$row = Store::get_token( Tokens::hash( $token ) );
+
+		if ( ! $row || Tokens::TYPE_ACCESS !== $row['type'] || (int) $row['expires'] < time() ) {
+			return 0;
+		}
+
+		$strip_scheme = static function ( $u ) {
+			return preg_replace( '#^https?://#i', '', untrailingslashit( (string) $u ) );
+		};
+		if ( $strip_scheme( $row['resource'] ) !== $strip_scheme( Utils::resource_url() ) ) {
+			return 0;
+		}
+
+		if ( ! Store::get_client( $row['client_id'] ) ) {
+			return 0;
+		}
+
+		return (int) $row['user_id'];
+	}
+
+	/**
 	 * Processes the JSON-RPC request body.
 	 *
 	 * @param WP_REST_Request $request The request.

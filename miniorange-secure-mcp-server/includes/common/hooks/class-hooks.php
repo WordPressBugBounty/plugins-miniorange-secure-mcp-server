@@ -14,7 +14,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 use MoSMCP\Abilities\Abilities_Library;
 use MoSMCP\Common\Apis\Rest_Routes;
 use MoSMCP\Common\Controllers\Debug\Debug_Controller;
+use MoSMCP\Common\Controllers\MCP\REST_Controller;
 use MoSMCP\Common\Migration\Migration;
+use MoSMCP\Common\Plans\Plan_Registry;
 use MoSMCP\Common\Repositories\Audit_Store;
 use MoSMCP\Common\Repositories\Debug_Store;
 use MoSMCP\Common\Services\Discovery\Discovery;
@@ -26,7 +28,6 @@ use MoSMCP\Common\Services\Rest\Rest_Abilities;
 use MoSMCP\Common\Services\Rest\Route_Registry;
 use MoSMCP\Common\Utils\Utils;
 use MoSMCP\Common\Views\Admin\Admin_App;
-use MoSMCP\Common\Views\Admin\Deactivation_Feedback;
 
 /**
  * Class Hooks
@@ -38,6 +39,9 @@ class Hooks {
 
 	/** Plugin version the well-known rewrite rules were last flushed for. */
 	const REWRITE_VERSION_OPTION = 'mosmcp_rewrite_version';
+
+	/** Version and plan set the plugin's cron events were last reconciled for. */
+	const CRON_RECONCILED_OPTION = 'mosmcp_cron_reconciled';
 
 	/**
 	 * Registers all hooks. Invoked from the common loader.
@@ -60,8 +64,19 @@ class Hooks {
 		add_action( Audit_Store::CRON_HOOK, array( Audit_Store::class, 'purge' ) );
 		add_action( Debug_Store::CRON_HOOK, array( Debug_Store::class, 'purge' ) );
 
+		// Drop events a plan scheduled in a build this site no longer runs.
+		add_action( 'wp_loaded', array( __CLASS__, 'clear_orphaned_cron_events' ) );
+
 		// REST routes (MCP transport + OAuth server).
 		add_action( 'rest_api_init', array( Rest_Routes::class, 'register' ) );
+
+		// Resolve the MCP bearer token's user before rest_api_init runs, so a third-party
+		// plugin's own current_user_can() check (deciding whether to register a route at
+		// all) sees the connecting agent rather than an anonymous visitor. Priority 30: after
+		// core's cookie (10) and Application Password (20) filters, so either still wins if
+		// it already resolved a user. See REST_Controller::determine_user() for why this is
+		// safe alongside authenticate(), which remains the sole authority on the MCP call itself.
+		add_filter( 'determine_current_user', array( REST_Controller::class, 'determine_user' ), 30 );
 
 		// Keep every mosmcp/v1 response out of page, server and edge caches (live agent
 		// state, client registrations, tokens). Late priority so a cache plugin's own
@@ -104,8 +119,8 @@ class Hooks {
 		// normal cookie session (and is_user_logged_in()) applies; both the logged-in
 		// and logged-out actions point at the same handler, which redirects to login
 		// when needed.
-		add_action( 'admin_post_mosmcp_authorize', array( OAuth_Server::class, 'authorize' ) );
-		add_action( 'admin_post_nopriv_mosmcp_authorize', array( OAuth_Server::class, 'authorize' ) );
+		add_action( 'admin_post_mosmcp_authorize', array( __CLASS__, 'authorize' ) );
+		add_action( 'admin_post_nopriv_mosmcp_authorize', array( __CLASS__, 'authorize' ) );
 
 		// Serve the OAuth discovery documents from the site root well-known paths.
 		// Rewrite rules (flushed on activation) let WordPress own these paths; the
@@ -121,9 +136,6 @@ class Hooks {
 		add_action( 'deactivated_plugin', array( Route_Registry::class, 'flush' ) );
 		add_action( 'switch_theme', array( Route_Registry::class, 'flush' ) );
 		add_action( 'upgrader_process_complete', array( Route_Registry::class, 'flush' ) );
-
-		// Deactivation feedback modal (plugins.php only).
-		add_action( 'admin_footer', array( Deactivation_Feedback::class, 'maybe_render' ) );
 
 		// "Settings" link on the plugin's row on the Plugins screen.
 		add_filter( 'plugin_action_links_' . plugin_basename( MOSMCP_PLUGIN_FILE ), array( __CLASS__, 'add_action_links' ) );
@@ -145,6 +157,12 @@ class Hooks {
 	 * @return void
 	 */
 	public static function init_abilities_library() {
+		// No abilities while the service is off: nothing could call them, and the
+		// admin screens that list them are not shown either.
+		if ( ! Utils::service_enabled() ) {
+			return;
+		}
+
 		Abilities_Library::init(
 			array(
 				'prefix'      => 'mosmcp',
@@ -157,6 +175,48 @@ class Hooks {
 		// because they read this plugin's NHI route grants; they still register through the
 		// library's registrar, so they are governed and audited like every other ability.
 		Rest_Abilities::init();
+	}
+
+	/**
+	 * The OAuth authorization endpoint (admin-post.php?action=mosmcp_authorize).
+	 *
+	 * Hands over to {@see OAuth_Server::authorize()} while the service runs.
+	 *
+	 * @return void
+	 */
+	public static function authorize() {
+		if ( ! Utils::service_enabled() ) {
+			return;
+		}
+
+		OAuth_Server::authorize();
+	}
+
+	/**
+	 * Unschedules every `mosmcp_` cron event that nothing handles any more.
+	 *
+	 * Swapping one build for another never runs the old build's deactivation
+	 * hook, so a plan it no longer ships leaves its events firing into nothing.
+	 * Every handler is registered while the plugin loads, so by wp_loaded an
+	 * unhandled event is orphaned. Runs once per version and plan set.
+	 *
+	 * @return void
+	 */
+	public static function clear_orphaned_cron_events() {
+		$fingerprint = MOSMCP_VERSION . '|' . implode( ',', Plan_Registry::active_ids() );
+		if ( get_option( self::CRON_RECONCILED_OPTION ) === $fingerprint ) {
+			return;
+		}
+
+		foreach ( (array) _get_cron_array() as $events ) {
+			foreach ( array_keys( (array) $events ) as $hook ) {
+				if ( 0 === strpos( (string) $hook, 'mosmcp_' ) && ! has_action( $hook ) ) {
+					wp_clear_scheduled_hook( $hook );
+				}
+			}
+		}
+
+		update_option( self::CRON_RECONCILED_OPTION, $fingerprint, true );
 	}
 
 	/**
