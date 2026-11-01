@@ -9,6 +9,12 @@
  * outside all of them. WordPress capabilities still enforce per-type access, so a
  * generic ability grants nothing the connected account could not already do.
  *
+ * Abilities whose runtime capability is a meta cap set required_cap to an empty
+ * string. The post type is an argument of the call, so the primitive
+ * (delete_posts, delete_products, …) is not knowable here. An explicit
+ * non-empty required_cap would still gate that one ability. Abilities that
+ * already use a primitive, such as edit_posts, omit the key and stay gated.
+ *
  * @package Mosmcp_Abilities_Library
  */
 
@@ -237,6 +243,7 @@ class Cpt_Pack extends Ability_Pack {
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
+				'required_cap'  => '',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Cpt_Provider::class, 'get_item' ),
 				'input_schema'  => Schema::object(
@@ -323,6 +330,7 @@ class Cpt_Pack extends Ability_Pack {
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
+				'required_cap'  => '',
 				'annotations'   => self::annotations( false, false, true, true ),
 				'execute'       => array( Cpt_Provider::class, 'update_item' ),
 				'input_schema'  => Schema::object(
@@ -369,6 +377,7 @@ class Cpt_Pack extends Ability_Pack {
 				'category'         => self::CATEGORY,
 				'capability'       => 'edit_post',
 				'cap_args'         => self::source_id_args(),
+				'required_cap'     => '',
 				'permission_extra' => self::can_create_any(),
 				'annotations'      => self::annotations( false, false, false, false ),
 				'execute'          => array( Cpt_Provider::class, 'duplicate_item' ),
@@ -432,6 +441,7 @@ class Cpt_Pack extends Ability_Pack {
 				'category'        => self::CATEGORY,
 				'capability'      => 'edit_post',
 				'cap_args'        => self::id_args(),
+				'required_cap'    => '',
 				'annotations'     => self::annotations( false, false, true, false ),
 				'execute'         => array( Cpt_Provider::class, 'set_field' ),
 				'guard_meta_keys' => array( 'field' ),
@@ -476,6 +486,7 @@ class Cpt_Pack extends Ability_Pack {
 				'category'        => self::CATEGORY,
 				'capability'      => 'edit_post',
 				'cap_args'        => self::id_args(),
+				'required_cap'    => '',
 				'annotations'     => self::annotations( false, true, true, false ),
 				'execute'         => array( Cpt_Provider::class, 'delete_field' ),
 				'guard_meta_keys' => array( 'field' ),
@@ -518,6 +529,7 @@ class Cpt_Pack extends Ability_Pack {
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
+				'required_cap'  => '',
 				'annotations'   => self::annotations( false, false, true, false ),
 				'execute'       => array( Cpt_Provider::class, 'assign_terms' ),
 				'input_schema'  => Schema::object(
@@ -550,6 +562,7 @@ class Cpt_Pack extends Ability_Pack {
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
+				'required_cap'  => '',
 				'annotations'   => self::annotations( false, false, true, false ),
 				'execute'       => array( Cpt_Provider::class, 'remove_terms' ),
 				'input_schema'  => Schema::object(
@@ -582,6 +595,7 @@ class Cpt_Pack extends Ability_Pack {
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
+				'required_cap'  => '',
 				'annotations'   => self::annotations( false, false, true, true ),
 				'execute'       => array( Cpt_Provider::class, 'set_featured_image' ),
 				'input_schema'  => Schema::object(
@@ -611,6 +625,7 @@ class Cpt_Pack extends Ability_Pack {
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
+				'required_cap'  => '',
 				'annotations'   => self::annotations( false, false, true, false ),
 				'execute'       => array( Cpt_Provider::class, 'set_parent' ),
 				'input_schema'  => Schema::object(
@@ -652,6 +667,7 @@ class Cpt_Pack extends Ability_Pack {
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
+				'required_cap'  => '',
 				'annotations'   => self::annotations( false, false, true, true ),
 				'execute'       => array( Cpt_Provider::class, 'set_status' ),
 				'input_schema'  => Schema::object(
@@ -691,6 +707,7 @@ class Cpt_Pack extends Ability_Pack {
 				'category'      => self::CATEGORY,
 				'capability'    => 'delete_post',
 				'cap_args'      => self::id_args(),
+				'required_cap'  => '',
 				'annotations'   => self::annotations( false, true, true, false ),
 				'execute'       => array( Cpt_Provider::class, 'trash_item' ),
 				'input_schema'  => Schema::object(
@@ -719,6 +736,7 @@ class Cpt_Pack extends Ability_Pack {
 				'category'      => self::CATEGORY,
 				'capability'    => 'delete_post',
 				'cap_args'      => self::id_args(),
+				'required_cap'  => '',
 				'annotations'   => self::annotations( false, false, true, false ),
 				'execute'       => array( Cpt_Provider::class, 'restore_item' ),
 				'input_schema'  => Schema::object(
@@ -747,6 +765,7 @@ class Cpt_Pack extends Ability_Pack {
 				'category'      => self::CATEGORY,
 				'capability'    => 'delete_post',
 				'cap_args'      => self::id_args(),
+				'required_cap'  => '',
 				'annotations'   => self::annotations( false, true, false, false ),
 				'execute'       => array( Cpt_Provider::class, 'delete_item' ),
 				'input_schema'  => Schema::object(
@@ -787,6 +806,7 @@ class Cpt_Pack extends Ability_Pack {
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
+				'required_cap'  => '',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Cpt_Provider::class, 'template_get' ),
 				'input_schema'  => Schema::object(
@@ -815,6 +835,7 @@ class Cpt_Pack extends Ability_Pack {
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
+				'required_cap'  => '',
 				'annotations'   => self::annotations( false, false, true, true ),
 				'execute'       => array( Cpt_Provider::class, 'template_set' ),
 				'input_schema'  => Schema::object(

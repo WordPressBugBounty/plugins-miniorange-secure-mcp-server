@@ -8,6 +8,7 @@
 namespace MoSMCP\Abilities\Packs\Menus;
 
 use MoSMCP\Abilities\Packs\Site\Site_Support;
+use MoSMCP\Abilities\Packs\Theming\Display_Check;
 use WP_Error;
 use WP_Term;
 
@@ -1378,6 +1379,14 @@ class Menus_Provider {
 				__( 'It replaced "%s" in that location; that menu still exists, it is just no longer shown there.', 'mosmcp-abilities' ),
 				$previous['name']
 			);
+		}
+
+		// Assigned is not visible: the theme's layout decides whether the location prints.
+		if ( $new_id > 0 ) {
+			$hidden = Display_Check::menu_note( $location, isset( $labels[ $location ] ) ? $labels[ $location ] : $location );
+			if ( '' !== $hidden ) {
+				$notes[] = $hidden;
+			}
 		}
 
 		return array(

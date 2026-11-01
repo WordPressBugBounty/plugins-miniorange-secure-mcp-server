@@ -17,6 +17,8 @@
 
 namespace MoSMCP\Abilities;
 
+use MoSMCP\Abilities\Support\Cache_Purger;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -63,15 +65,25 @@ class Naming {
 	/**
 	 * Registers an ability, re-prefixing its name and its declared category.
 	 *
-	 * Drop-in wrapper for wp_register_ability().
+	 * Drop-in wrapper for wp_register_ability(). An ability not annotated
+	 * read-only has its execute callback wrapped so the pages it changes are
+	 * cleared from page caches once it succeeds. The integration packs
+	 * (WooCommerce, ACF, Yoast, forms, Kadence) register through here directly;
+	 * Ability_Registrar does its own wrapping and passes $track_writes false.
 	 *
-	 * @param string               $name Authored ability name.
-	 * @param array<string, mixed> $args Ability registration args.
+	 * @param string               $name         Authored ability name.
+	 * @param array<string, mixed> $args         Ability registration args.
+	 * @param bool                 $track_writes Whether to clear caches after a successful write.
 	 * @return mixed The value returned by wp_register_ability().
 	 */
-	public static function register_ability( $name, $args ) {
+	public static function register_ability( $name, $args, $track_writes = true ) {
 		if ( is_array( $args ) && isset( $args['category'] ) ) {
 			$args['category'] = self::category( (string) $args['category'] );
+		}
+
+		if ( $track_writes && is_array( $args ) && isset( $args['execute_callback'] ) && is_callable( $args['execute_callback'] )
+			&& empty( $args['meta']['annotations']['readonly'] ) ) {
+			$args['execute_callback'] = Cache_Purger::wrap( $args['execute_callback'] );
 		}
 
 		return wp_register_ability( self::name( $name ), $args );

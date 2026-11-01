@@ -1368,6 +1368,13 @@ class Menus_Support {
 			return;
 		}
 
+		// A link to a section of a page ("/services/#pricing") cannot be a page link:
+		// menu items that link a page carry no "#section" part.
+		$fragment = wp_parse_url( $url, PHP_URL_FRAGMENT );
+		if ( is_string( $fragment ) && '' !== $fragment ) {
+			return;
+		}
+
 		$home_host = wp_parse_url( home_url(), PHP_URL_HOST );
 		$host      = wp_parse_url( $url, PHP_URL_HOST );
 

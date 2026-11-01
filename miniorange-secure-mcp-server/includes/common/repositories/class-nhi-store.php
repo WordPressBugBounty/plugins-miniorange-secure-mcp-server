@@ -754,7 +754,8 @@ class NHI_Store {
 	 *
 	 * Exclusivity is enforced at the (ability, role) level: the same ability may be
 	 * assigned to the same role by at most one NHI, but it may exist under a different
-	 * role in another NHI simultaneously.
+	 * role in another NHI simultaneously. A disabled NHI keeps what it owns, so
+	 * enabling it again can never give a pair a second owner.
 	 *
 	 * Pass $nhi_id = 0 when checking for a new NHI that has no id yet.
 	 *
@@ -789,7 +790,7 @@ class NHI_Store {
 		$all_abilities = array_values( array_unique( $all_abilities ) );
 		$ph            = self::placeholders( count( $all_abilities ) );
 
-		// Fetch all grants from other enabled NHIs for abilities appearing in our map.
+		// Fetch all grants from other NHIs, enabled or not, for abilities appearing in our map.
 		// Role-level filtering is done in PHP to avoid dynamic tuple IN clauses.
 		$args = array_merge( array( self::grants_table(), self::table(), self::RESOURCE_TYPE_ABILITY ), $all_abilities, array( $nhi_id ) );
 		$sql  = "SELECT g.role, g.resource AS ability, n.uuid, n.name
@@ -799,7 +800,6 @@ class NHI_Store {
 				   AND g.resource     != '*'
 				   AND g.resource      IN ( {$ph} )
 				   AND g.nhi_id        != %d
-				   AND n.is_enabled    = 1
 				 ORDER BY n.id ASC";
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
@@ -826,7 +826,7 @@ class NHI_Store {
 
 	/**
 	 * Returns a map of every explicitly-granted, non-wildcard (ability, role) pair to
-	 * the enabled NHI that owns it, keyed as "ability::role".
+	 * the NHI that owns it, enabled or not, keyed as "ability::role".
 	 *
 	 * Exclusivity is per (ability, role): the same ability may appear under a different
 	 * role in another NHI without conflict. The frontend uses this map to lock
@@ -845,7 +845,6 @@ class NHI_Store {
 				 INNER JOIN %i n ON n.id = g.nhi_id
 				 WHERE g.resource_type = %s
 				   AND g.resource     != '*'
-				   AND n.is_enabled    = 1
 				 GROUP BY g.resource, g.role
 				 ORDER BY n.id ASC",
 				self::grants_table(),

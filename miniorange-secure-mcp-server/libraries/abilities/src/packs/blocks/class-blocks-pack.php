@@ -75,6 +75,7 @@ class Blocks_Pack extends Ability_Pack {
 			$this->block_move(),
 			$this->block_duplicate(),
 			$this->block_delete(),
+			$this->block_detach_pattern(),
 		);
 	}
 
@@ -595,6 +596,46 @@ class Blocks_Pack extends Ability_Pack {
 						'block'     => Schema::str(),
 					),
 					array( 'path', 'from_path' )
+				),
+			)
+		);
+	}
+
+	/**
+	 * Defines the mosmcp/block-detach-pattern ability.
+	 *
+	 * @return Ability
+	 */
+	private function block_detach_pattern() {
+		return new Ability(
+			'mosmcp/block-detach-pattern',
+			array(
+				'label'         => __( 'Detach Synced Pattern', 'mosmcp-abilities' ),
+				'description'   => __( 'Turns one synced pattern on a page into ordinary blocks, the same as Detach in the editor: the page keeps exactly what it shows now, but that copy can then be edited on its own and no longer changes when the pattern changes. Page-specific pattern overrides are carried over, or the detach is refused when they cannot be. Other pages using the pattern are not affected. Saved as a revision, so it can be undone with mosmcp/revision-restore. The block at path must be a pattern block ("core/block"); find them with mosmcp/block-find. Also known as: detach pattern, unsync this section, convert to regular blocks, edit just this copy, make this section editable here.', 'mosmcp-abilities' ),
+				'category'      => self::CATEGORY,
+				'capability'    => 'edit_post',
+				'cap_args'      => self::id_args(),
+				'annotations'   => Site_Support::annotations( false, false, false, false ),
+				'execute'       => array( Blocks_Provider::class, 'detach_pattern' ),
+				'input_schema'  => Schema::object(
+					array_merge(
+						array(
+							'id'   => self::id_prop(),
+							'path' => self::path_prop( __( 'Path of the pattern block ("core/block") to detach.', 'mosmcp-abilities' ) ),
+						),
+						self::guard_props()
+					),
+					array( 'id', 'path' )
+				),
+				'output_schema' => self::write_output(
+					array(
+						'path'          => Schema::str(),
+						'block'         => Schema::str(),
+						'pattern_id'    => Schema::int(),
+						'pattern_title' => Schema::str(),
+						'paths'         => Schema::arr( Schema::str(), __( 'Paths of the blocks that replaced the pattern.', 'mosmcp-abilities' ) ),
+					),
+					array( 'path', 'pattern_id' )
 				),
 			)
 		);

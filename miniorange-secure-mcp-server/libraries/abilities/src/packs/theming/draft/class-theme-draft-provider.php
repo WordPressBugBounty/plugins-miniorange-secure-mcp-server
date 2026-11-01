@@ -6,10 +6,13 @@
  * @package Mosmcp_Abilities_Library
  */
 
-namespace MoSMCP\Abilities\Packs\Theming;
+namespace MoSMCP\Abilities\Packs\Theming\Draft;
 
 use MoSMCP\Abilities\Packs\Site\Site_Support;
 use WP_Error;
+use MoSMCP\Abilities\Packs\Theming\Blocktheme\Block_Templates;
+use MoSMCP\Abilities\Packs\Theming\Identity\Site_Identity;
+use MoSMCP\Abilities\Packs\Theming\Theme_Support;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -59,29 +62,32 @@ class Theme_Draft_Provider {
 		$backups = array();
 		foreach ( Theme_Publisher::backups() as $backup ) {
 			$backups[] = array(
-				'id'            => (string) $backup['id'],
-				'created'       => gmdate( 'Y-m-d H:i:s', (int) $backup['created_gmt'] ) . ' UTC',
-				'files'         => array_keys( (array) $backup['files'] ),
-				'templates'     => array_map(
+				'id'             => (string) $backup['id'],
+				'created'        => gmdate( 'Y-m-d H:i:s', (int) $backup['created_gmt'] ) . ' UTC',
+				'files'          => array_keys( (array) $backup['files'] ),
+				'templates'      => array_map(
 					static function ( $entry ) {
 						return (string) $entry['slug'];
 					},
 					(array) $backup['templates']
 				),
-				'global_styles' => is_array( $backup['styles'] ),
-				'patterns'      => array_map(
+				'global_styles'  => is_array( $backup['styles'] ),
+				'patterns'       => array_map(
 					static function ( $entry ) {
 						$title = get_the_title( (int) $entry['id'] );
 						return sprintf(
 							'%1$s #%2$d (%3$s)',
 							'' !== $title ? $title : __( 'pattern', 'mosmcp-abilities' ),
 							(int) $entry['id'],
-							'create' === $entry['action'] ? __( 'created by that publish', 'mosmcp-abilities' ) : __( 'updated', 'mosmcp-abilities' )
+							'create' === $entry['action'] ? __( 'created by that publish', 'mosmcp-abilities' ) : ( 'delete' === $entry['action'] ? __( 'deleted', 'mosmcp-abilities' ) : __( 'updated', 'mosmcp-abilities' ) )
 						);
 					},
 					isset( $backup['patterns'] ) ? (array) $backup['patterns'] : array()
 				),
-				'restored'      => ! empty( $backup['restored'] ),
+				'site_identity'  => Theme_Publisher::identity_labels( $backup ),
+				'custom_css'     => isset( $backup['css'] ) && is_string( $backup['css'] ),
+				'theme_settings' => Theme_Publisher::settings_labels( $backup ),
+				'restored'       => ! empty( $backup['restored'] ),
 			);
 		}
 
@@ -112,17 +118,21 @@ class Theme_Draft_Provider {
 		$token = Theme_Draft::ensure_token( $draft );
 		Theme_Draft::save( $draft );
 
-		$path = isset( $input['path'] ) ? '/' . ltrim( (string) wp_parse_url( (string) $input['path'], PHP_URL_PATH ), '/' ) : '/';
+		$path  = isset( $input['path'] ) ? '/' . ltrim( (string) wp_parse_url( (string) $input['path'], PHP_URL_PATH ), '/' ) : '/';
+		$notes = array(
+			__( 'Open the link in a browser where you are signed in to this site as an administrator. The preview follows you as you click around, including into wp-admin, until you choose "Exit preview" in the toolbar.', 'mosmcp-abilities' ),
+			__( 'The link only works for signed-in administrators, and visitors keep seeing the live site throughout.', 'mosmcp-abilities' ),
+		);
+		if ( null !== Site_Identity::entry( $draft, 'icon' ) ) {
+			$notes[] = __( 'Browsers keep site icons for a while, so the tab may still show the old icon in the preview; a private window shows the new one.', 'mosmcp-abilities' );
+		}
 
 		return array(
 			'url'          => Theme_Preview::url( $token, $path ),
 			'expires'      => gmdate( 'Y-m-d H:i:s', (int) $draft['token_expires'] ) . ' UTC',
 			'change_count' => Theme_Draft::change_count( $draft ),
 			'draft'        => Theme_Draft::summary( $draft ),
-			'notes'        => array(
-				__( 'Open the link in a browser where you are signed in to this site as an administrator. The preview follows you as you click around, including into wp-admin, until you choose "Exit preview" in the toolbar.', 'mosmcp-abilities' ),
-				__( 'The link only works for signed-in administrators, and visitors keep seeing the live site throughout.', 'mosmcp-abilities' ),
-			),
+			'notes'        => $notes,
 		);
 	}
 
@@ -146,6 +156,11 @@ class Theme_Draft_Provider {
 		$health['conflicts'] = Theme_Publisher::conflicts( $draft );
 		// A page can load without a fatal and still lose a whole area.
 		$health['warnings'] = Block_Templates::deleted_pattern_warnings( $draft );
+		$logo               = Site_Identity::entry( $draft, 'logo' );
+		$hidden             = null !== $logo && (int) $logo['value'] > 0 ? Site_Identity::hidden_logo_note( Site_Identity::logo_display( $draft ) ) : '';
+		if ( '' !== $hidden ) {
+			$health['warnings'][] = $hidden;
+		}
 
 		return $health;
 	}
@@ -173,6 +188,9 @@ class Theme_Draft_Provider {
 				'template_parts' => __( 'template parts', 'mosmcp-abilities' ),
 				'patterns'       => __( 'patterns', 'mosmcp-abilities' ),
 				'files'          => __( 'theme files', 'mosmcp-abilities' ),
+				'site_identity'  => __( 'logo and site icon', 'mosmcp-abilities' ),
+				'custom_css'     => __( 'Additional CSS', 'mosmcp-abilities' ),
+				'theme_settings' => __( 'theme settings', 'mosmcp-abilities' ),
 			) as $key => $noun ) {
 				if ( ! empty( $summary[ $key ] ) ) {
 					$lines[] = $noun . ': ' . implode( ', ', $summary[ $key ] );

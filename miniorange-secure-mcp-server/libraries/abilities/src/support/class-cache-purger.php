@@ -113,6 +113,30 @@ class Cache_Purger {
 	}
 
 	/**
+	 * Wraps a writing ability's execute callback so what it changes is cleared
+	 * from page caches once it succeeds.
+	 *
+	 * The callback receives exactly the arguments the Abilities API passes, so a
+	 * callback written for no input still gets none.
+	 *
+	 * @param callable $execute Execute callback.
+	 * @return callable
+	 */
+	public static function wrap( callable $execute ) {
+		return static function () use ( $execute ) {
+			$args   = func_get_args();
+			$result = null;
+			self::begin();
+			try {
+				$result = call_user_func_array( $execute, $args );
+			} finally {
+				self::end( null !== $result && ! is_wp_error( $result ) );
+			}
+			return $result;
+		};
+	}
+
+	/**
 	 * Whether automatic purging after writes is on.
 	 *
 	 * @return bool

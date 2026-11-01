@@ -15,13 +15,17 @@ namespace MoSMCP\Abilities;
 
 use MoSMCP\Abilities\Packs\Woocommerce\WooCommerce_Abilities_Loader;
 use MoSMCP\Abilities\Packs\Acf\ACFA_Helpers;
+use MoSMCP\Abilities\Packs\Astra\Astra_Customizer_Adapter;
+use MoSMCP\Abilities\Packs\Core\Support\Upload_Requests;
 use MoSMCP\Abilities\Packs\Yoast\YSOA_Helpers;
 use MoSMCP\Abilities\Packs\Forms\Forms_Abilities;
 use MoSMCP\Abilities\Packs\Kadence\Kadence_Block_Guard;
 use MoSMCP\Abilities\Packs\Kadence\Kadence_Helpers;
 use MoSMCP\Abilities\Packs\Previews\Preview_Links;
 use MoSMCP\Abilities\Packs\Rankmath\Rankmath_Loader;
-use MoSMCP\Abilities\Packs\Theming\Theme_Preview;
+use MoSMCP\Abilities\Packs\Theming\Customize\Customizer_Bridge;
+use MoSMCP\Abilities\Packs\Theming\Display_Check;
+use MoSMCP\Abilities\Packs\Theming\Draft\Theme_Preview;
 use MoSMCP\Abilities\Support\Cache_Purger;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -97,6 +101,18 @@ class Abilities_Library {
 		 */
 		if ( self::enabled( 'core' ) ) {
 			Theme_Preview::boot();
+
+			// Theme settings run the Customizer in a loopback to wp-admin; this answers it.
+			Customizer_Bridge::boot();
+
+			// Astra keeps most of its Customizer settings in JavaScript; this hands them to theme settings.
+			Astra_Customizer_Adapter::boot();
+
+			// After a menu or widget goes somewhere, a loopback page reports whether it shows.
+			Display_Check::boot();
+
+			// The wp-admin page where a person uploads a file their AI asked for.
+			Upload_Requests::boot();
 
 			// Shareable draft links: hooks are only added when the request carries a token.
 			Preview_Links::boot();

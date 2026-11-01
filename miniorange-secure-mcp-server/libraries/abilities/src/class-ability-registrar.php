@@ -93,7 +93,8 @@ class Ability_Registrar {
 			return false;
 		}
 
-		Naming::register_ability( $ability->get_name(), self::build_args( $ability ) );
+		// wrap_execute() already clears caches after a write, so Naming must not wrap again.
+		Naming::register_ability( $ability->get_name(), self::build_args( $ability ), false );
 		return true;
 	}
 

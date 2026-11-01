@@ -103,14 +103,14 @@ class Post_Meta_Diff {
 		);
 
 		return array(
-			'post_a'                    => self::describe( $a ),
-			'post_b'                    => self::describe( $b ),
-			'identical_keys'            => $identical,
-			'only_in_a'                 => $only_a,
-			'only_in_b'                 => $only_b,
-			'different'                 => $different,
-			'likely_layout_difference'  => $layout_keys,
-			'summary'                   => self::summary_line( $a, $b, $only_a, $only_b, $different, $layout_keys ),
+			'post_a'                   => self::describe( $a ),
+			'post_b'                   => self::describe( $b ),
+			'identical_keys'           => $identical,
+			'only_in_a'                => $only_a,
+			'only_in_b'                => $only_b,
+			'different'                => $different,
+			'likely_layout_difference' => $layout_keys,
+			'summary'                  => self::summary_line( $a, $b, $only_a, $only_b, $different, $layout_keys ),
 		);
 	}
 

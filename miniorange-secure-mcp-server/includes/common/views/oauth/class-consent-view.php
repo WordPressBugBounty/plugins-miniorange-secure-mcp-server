@@ -59,29 +59,39 @@ class Consent_View {
 		$nhi_enabled  = NHI_Store::count_enabled();
 
 		$ability_labels = array();
+		$groups         = array();
 		$unregistered   = 0;
 		if ( function_exists( 'wp_get_abilities' ) ) {
 			$label_map = array();
+			$cat_map   = array();
 			foreach ( wp_get_abilities() as $ab ) {
 				$label_map[ $ab->get_name() ] = $ab->get_label();
+				$cat_map[ $ab->get_name() ]   = $ab->get_category();
 			}
-			if ( $unrestricted ) {
-				$ability_labels = array_values( $label_map );
-			} else {
-				foreach ( (array) $allowed as $name ) {
-					if ( isset( $label_map[ $name ] ) ) {
-						$ability_labels[] = $label_map[ $name ];
-						continue;
-					}
-
+			$cat_labels = array();
+			if ( function_exists( 'wp_get_ability_categories' ) ) {
+				foreach ( wp_get_ability_categories() as $category ) {
+					$cat_labels[ $category->get_slug() ] = $category->get_label();
+				}
+			}
+			$names = $unrestricted ? array_keys( $label_map ) : (array) $allowed;
+			foreach ( $names as $name ) {
+				if ( isset( $label_map[ $name ] ) ) {
+					$label = $label_map[ $name ];
+					$group = isset( $cat_labels[ $cat_map[ $name ] ] ) ? $cat_labels[ $cat_map[ $name ] ] : __( 'Other abilities', 'miniorange-secure-mcp-server' );
+				} else {
 					// No registry entry behind this grant, so the raw name stands in as the
 					// label. The row renders identically to a real one, which is how this
 					// screen can show a full, reassuring list of tools that tools/list will
 					// never carry. Counted so the divergence is visible in the log.
-					$ability_labels[] = $name;
+					$label = $name;
+					$group = __( 'Other abilities', 'miniorange-secure-mcp-server' );
 					++$unregistered;
 				}
+				$ability_labels[]   = $label;
+				$groups[ $group ][] = $label;
 			}
+			ksort( $groups, SORT_NATURAL | SORT_FLAG_CASE );
 		}
 
 		$has_abilities = $unrestricted || ! empty( $allowed );
@@ -148,21 +158,59 @@ class Consent_View {
 	</p>
 
 	<div class="mosmcp-scope<?php echo $has_abilities ? '' : ' mosmcp-scope--warn'; ?>">
-		<?php if ( $unrestricted ) : ?>
-			<div class="mosmcp-all"><?php echo $check_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static SVG literal. ?><span><?php esc_html_e( 'All registered abilities are available to your role.', 'miniorange-secure-mcp-server' ); ?></span></div>
-			<?php if ( ! empty( $ability_labels ) ) : ?>
-			<ul class="mosmcp-abilities">
-				<?php foreach ( $ability_labels as $label ) : ?>
-				<li class="mosmcp-ability"><?php echo $check_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static SVG literal. ?><span class="mosmcp-ability__name"><?php echo esc_html( $label ); ?></span></li>
-				<?php endforeach; ?>
-			</ul>
+		<div class="mosmcp-scope__head">
+			<span class="mosmcp-scope__title">
+				<?php
+				printf(
+					/* translators: 1: the signed-in person's name, 2: their WordPress role name(s). */
+					esc_html__( 'Connecting as %1$s (%2$s)', 'miniorange-secure-mcp-server' ),
+					'<strong>' . esc_html( $person ) . '</strong>',
+					esc_html( $roles_label )
+				);
+				?>
+			</span>
+			<?php if ( $has_abilities ) : ?>
+			<span class="mosmcp-scope__meta">
+				<?php
+				echo esc_html(
+					sprintf(
+						/* translators: %d: number of abilities. */
+						_n( '%d ability', '%d abilities', $ability_count, 'miniorange-secure-mcp-server' ),
+						$ability_count
+					)
+				);
+				?>
+			</span>
 			<?php endif; ?>
-		<?php elseif ( $has_abilities ) : ?>
-			<ul class="mosmcp-abilities">
-				<?php foreach ( $ability_labels as $label ) : ?>
-				<li class="mosmcp-ability"><?php echo $check_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static SVG literal. ?><span class="mosmcp-ability__name"><?php echo esc_html( $label ); ?></span></li>
+		</div>
+		<?php if ( $has_abilities ) : ?>
+			<p class="mosmcp-scope__lead">
+				<?php
+				echo $unrestricted
+					? esc_html__( 'Every ability on this site is available to your role. Your AI can use these, and only as far as your own WordPress permissions allow:', 'miniorange-secure-mcp-server' )
+					: esc_html(
+						sprintf(
+							/* translators: %s: WordPress role name(s). */
+							__( 'Your site administrator allows these abilities for the %s role. Your AI can use them, and only as far as your own WordPress permissions allow:', 'miniorange-secure-mcp-server' ),
+							$roles_label
+						)
+					);
+				?>
+			</p>
+			<?php if ( ! empty( $groups ) ) : ?>
+			<div class="mosmcp-groups">
+				<?php foreach ( $groups as $group_label => $labels ) : ?>
+				<details class="mosmcp-group">
+					<summary><span class="mosmcp-group__name"><?php echo esc_html( $group_label ); ?></span><span class="mosmcp-group__count"><?php echo esc_html( (string) count( $labels ) ); ?></span></summary>
+					<ul class="mosmcp-abilities">
+						<?php foreach ( $labels as $label ) : ?>
+						<li class="mosmcp-ability"><?php echo $check_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static SVG literal. ?><span class="mosmcp-ability__name"><?php echo esc_html( $label ); ?></span></li>
+						<?php endforeach; ?>
+					</ul>
+				</details>
 				<?php endforeach; ?>
-			</ul>
+			</div>
+			<?php endif; ?>
 		<?php else : ?>
 			<div class="mosmcp-empty">
 				<?php echo $warn_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static SVG literal. ?>
@@ -173,13 +221,13 @@ class Consent_View {
 						<?php
 						printf(
 							/* translators: %s: the signed-in user's role name(s). */
-							esc_html__( 'This site has no enabled NHI, so no tools are available to your role (%s). Please contact your site administrator to request access before connecting.', 'miniorange-secure-mcp-server' ),
+							esc_html__( 'This site has no AI agent switched on yet, so no abilities are available to your role (%s). Please contact your site administrator to request access before connecting.', 'miniorange-secure-mcp-server' ),
 							esc_html( $roles_label )
 						);
 						?>
 					</p>
 					<?php else : ?>
-					<strong><?php esc_html_e( 'No tools for your role', 'miniorange-secure-mcp-server' ); ?></strong>
+					<strong><?php esc_html_e( 'No abilities for your role', 'miniorange-secure-mcp-server' ); ?></strong>
 					<p>
 						<?php esc_html_e( 'You don’t have any abilities assigned. Please contact your Site Administrator to request access before connecting.', 'miniorange-secure-mcp-server' ); ?>
 					</p>
@@ -190,7 +238,7 @@ class Consent_View {
 	</div>
 
 	<p class="mosmcp-note">
-		<?php esc_html_e( 'Every action runs as you and is limited to your role’s capabilities. Access tokens are stored encrypted and expire automatically.', 'miniorange-secure-mcp-server' ); ?>
+		<?php esc_html_e( 'Your AI works as you: every action runs under your own login and is limited to your role. Everyone on this site connects their own AI the same way, each with their own access. Access tokens are stored encrypted and expire automatically.', 'miniorange-secure-mcp-server' ); ?>
 	</p>
 
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">

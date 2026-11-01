@@ -187,13 +187,13 @@ class Post_Display {
 		}
 
 		return array(
-			'id'            => (int) $post->ID,
-			'previous'      => $previous,
-			'current'       => $stored,
-			'label'         => isset( $available[ $stored ] ) ? $available[ $stored ] : '',
-			'changed'       => $previous !== $stored,
-			'view_url'      => (string) get_permalink( $post->ID ),
-			'warnings'      => $warnings,
+			'id'       => (int) $post->ID,
+			'previous' => $previous,
+			'current'  => $stored,
+			'label'    => isset( $available[ $stored ] ) ? $available[ $stored ] : '',
+			'changed'  => $previous !== $stored,
+			'view_url' => (string) get_permalink( $post->ID ),
+			'warnings' => $warnings,
 		);
 	}
 
@@ -291,14 +291,14 @@ class Post_Display {
 	 */
 	private static function featured_result( WP_Post $post, $previous, $current ) {
 		return array(
-			'id'           => (int) $post->ID,
-			'previous_id'  => (int) $previous,
-			'current_id'   => (int) $current,
-			'changed'      => (int) $previous !== (int) $current,
-			'image_url'    => $current > 0 ? (string) wp_get_attachment_image_url( $current, 'full' ) : '',
-			'alt_text'     => $current > 0 ? (string) get_post_meta( $current, '_wp_attachment_image_alt', true ) : '',
-			'edit_url'     => (string) get_edit_post_link( $post->ID, 'raw' ),
-			'warnings'     => array(),
+			'id'          => (int) $post->ID,
+			'previous_id' => (int) $previous,
+			'current_id'  => (int) $current,
+			'changed'     => (int) $previous !== (int) $current,
+			'image_url'   => $current > 0 ? (string) wp_get_attachment_image_url( $current, 'full' ) : '',
+			'alt_text'    => $current > 0 ? (string) get_post_meta( $current, '_wp_attachment_image_alt', true ) : '',
+			'edit_url'    => (string) get_edit_post_link( $post->ID, 'raw' ),
+			'warnings'    => array(),
 		);
 	}
 

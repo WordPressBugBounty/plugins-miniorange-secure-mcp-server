@@ -700,6 +700,74 @@ class Blocks_Provider {
 	}
 
 	/**
+	 * Turns one synced pattern on a page into ordinary blocks.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	public static function detach_pattern( $input = array() ) {
+		$input = is_array( $input ) ? $input : array();
+
+		return self::write(
+			$input,
+			static function ( array &$tree, WP_Post $post, array &$warnings ) use ( $input ) {
+				unset( $post, $warnings );
+
+				$indices = self::target( $tree, $input );
+				if ( $indices instanceof WP_Error ) {
+					return $indices;
+				}
+
+				$node = Block_Tree::node_at( $tree, $indices );
+				if ( ! Block_Patterns::is_reference( $node ) ) {
+					return Site_Support::error(
+						'mosmcp_block_not_pattern',
+						sprintf(
+							/* translators: 1: block path, 2: block name. */
+							__( 'The block at %1$s is %2$s, not a synced pattern, so there is nothing to detach. Pattern blocks are "core/block"; find them with mosmcp/block-find.', 'mosmcp-abilities' ),
+							Block_Tree::path_string( $indices ),
+							isset( $node['blockName'] ) ? (string) $node['blockName'] : __( 'classic content', 'mosmcp-abilities' )
+						),
+						Site_Support::CAUSE_INVALID_INPUT,
+						true,
+						array( 'use_instead' => 'mosmcp/block-find' )
+					);
+				}
+
+				$ref     = (int) $node['attrs']['ref'];
+				$pattern = get_post( $ref );
+				if ( ! $pattern || 'wp_block' !== $pattern->post_type || 'trash' === $pattern->post_status || ! current_user_can( 'read_post', $ref ) ) {
+					return Site_Support::error(
+						'mosmcp_pattern_missing',
+						sprintf(
+							/* translators: %d: pattern ID. */
+							__( 'The pattern this block points to (ID %d) no longer exists or cannot be read, so the block shows nothing and there is nothing to copy. Remove the block with mosmcp/block-delete instead.', 'mosmcp-abilities' ),
+							$ref
+						),
+						Site_Support::CAUSE_NOT_FOUND,
+						false,
+						array( 'use_instead' => 'mosmcp/block-delete' )
+					);
+				}
+
+				$count = Block_Patterns::detach_at( $tree, $indices, (string) $pattern->post_content );
+				if ( $count instanceof WP_Error ) {
+					return $count;
+				}
+
+				return array(
+					'_changed'      => true,
+					'path'          => Block_Tree::path_string( $indices ),
+					'block'         => 'core/block',
+					'pattern_id'    => $ref,
+					'pattern_title' => (string) get_the_title( $pattern ),
+					'paths'         => self::sibling_paths( array_slice( $indices, 0, -1 ), (int) end( $indices ), (int) $count ),
+				);
+			}
+		);
+	}
+
+	/**
 	 * Deletes a block and its inner blocks.
 	 *
 	 * @param array<string, mixed> $input Ability input.

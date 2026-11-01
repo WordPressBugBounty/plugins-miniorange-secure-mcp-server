@@ -1,0 +1,33 @@
+/* "miniOrange Secure MCP Server" widget on a team member's WordPress dashboard. Every rule is scoped to the widget. */
+
+#mosmcp_connect_your_ai .inside{margin:0;padding:0}
+#mosmcp_connect_your_ai .mosmcp-dw{color:#3c434a;font-size:13px;line-height:1.5}
+#mosmcp_connect_your_ai .mosmcp-dw__body{padding:16px}
+
+/* Logo and headline. */
+#mosmcp_connect_your_ai .mosmcp-dw__hero{display:flex;align-items:center;gap:14px}
+#mosmcp_connect_your_ai .mosmcp-dw__logo{flex:none;width:48px;height:48px;box-sizing:border-box;border:1px solid #e8e8ea;border-radius:12px;
+	background:#fff url(../../assets/images/logo-128.png) center/42px 42px no-repeat;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+#mosmcp_connect_your_ai .mosmcp-dw__intro{min-width:0}
+#mosmcp_connect_your_ai .mosmcp-dw__title{margin:0 0 3px;padding:0;color:#1d2327;font-size:15px;font-weight:600;line-height:1.35}
+#mosmcp_connect_your_ai .mosmcp-dw__text{margin:0;color:#50575e;font-size:13px;line-height:1.5}
+
+/* What the person's AI may do. */
+#mosmcp_connect_your_ai .mosmcp-dw__facts{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 0;padding:0;list-style:none}
+#mosmcp_connect_your_ai .mosmcp-dw__facts li{display:inline-flex;align-items:center;gap:5px;margin:0;padding-block:3px;padding-inline:7px 10px;
+	border:1px solid #e2e4e7;border-radius:999px;background:#f6f7f7;color:#2c3338;font-size:12px;line-height:18px}
+#mosmcp_connect_your_ai .mosmcp-dw__facts .dashicons{width:16px;height:16px;font-size:16px;line-height:1;color:#787c82}
+
+/* How to connect. */
+#mosmcp_connect_your_ai .mosmcp-dw__label{margin:16px 0 10px;padding:14px 0 0;border-top:1px solid #f0f0f1;color:#646970;
+	font-size:11px;font-weight:600;letter-spacing:.06em;line-height:1.4;text-transform:uppercase}
+#mosmcp_connect_your_ai .mosmcp-dw__steps{counter-reset:mosmcp-dw-step;display:grid;gap:10px;margin:0;padding:0;list-style:none}
+#mosmcp_connect_your_ai .mosmcp-dw__steps li{counter-increment:mosmcp-dw-step;position:relative;min-height:22px;margin:0;padding-inline-start:32px;color:#3c434a;line-height:22px}
+#mosmcp_connect_your_ai .mosmcp-dw__steps li::before{content:counter(mosmcp-dw-step);position:absolute;top:0;inset-inline-start:0;width:22px;height:22px;border-radius:50%;
+	background:#fdf0e6;color:#a04a15;font-size:12px;font-weight:600;line-height:22px;text-align:center}
+#mosmcp_connect_your_ai .mosmcp-dw__steps strong{color:#1d2327;font-weight:600}
+#mosmcp_connect_your_ai .mosmcp-dw__steps code{margin:0;padding:2px 6px;border-radius:4px;background:#f0f0f1;color:#1d2327;font-size:12px;overflow-wrap:anywhere}
+
+/* Actions. */
+#mosmcp_connect_your_ai .mosmcp-dw__footer{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid #dcdcde;background:#f6f7f7}
+#mosmcp_connect_your_ai .mosmcp-dw__footer .button{margin:0}

@@ -192,6 +192,7 @@ class Pages_Pack extends Ability_Pack {
 				'category'         => self::CATEGORY,
 				'capability'       => 'edit_post',
 				'cap_args'         => self::source_id_args(),
+				'required_cap'     => 'edit_pages',
 				'permission_extra' => self::can_create_pages(),
 				'annotations'      => self::annotations( false, false, false, false ),
 				'execute'          => array( Pages_Provider::class, 'duplicate' ),
@@ -277,6 +278,7 @@ class Pages_Pack extends Ability_Pack {
 				'category'         => self::CATEGORY,
 				'capability'       => 'edit_post',
 				'cap_args'         => self::id_args(),
+				'required_cap'     => 'edit_pages',
 				'permission_extra' => self::can_edit_page(),
 				'annotations'      => self::annotations( false, false, true, true ),
 				'execute'          => array( Pages_Provider::class, 'set_featured_image' ),
@@ -306,6 +308,10 @@ class Pages_Pack extends Ability_Pack {
 				'category'      => self::CATEGORY,
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
+				// Read-only tool, but the permission callback is edit_post on this page.
+				// For a page that resolves to edit_pages, not read. Gating on read would
+				// offer the checkbox to roles the call would refuse.
+				'required_cap'  => 'edit_pages',
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Pages_Provider::class, 'template_get' ),
 				'input_schema'  => Schema::object(
@@ -333,6 +339,7 @@ class Pages_Pack extends Ability_Pack {
 				'category'         => self::CATEGORY,
 				'capability'       => 'edit_post',
 				'cap_args'         => self::id_args(),
+				'required_cap'     => 'edit_pages',
 				'permission_extra' => self::can_edit_page(),
 				'annotations'      => self::annotations( false, false, true, true ),
 				'execute'          => array( Pages_Provider::class, 'template_set' ),

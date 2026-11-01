@@ -6,7 +6,7 @@
  * @package Mosmcp_Abilities_Library
  */
 
-namespace MoSMCP\Abilities\Packs\Theming;
+namespace MoSMCP\Abilities\Packs\Theming\Blocktheme;
 
 use MoSMCP\Abilities\Ability;
 use MoSMCP\Abilities\Ability_Pack;
@@ -71,6 +71,7 @@ class Block_Theme_Pack extends Ability_Pack {
 			$this->variation_list(),
 			$this->pattern_list(),
 			$this->pattern_get(),
+			$this->pattern_usage(),
 			$this->template_update(),
 			$this->template_reset(),
 			$this->part_update(),
@@ -79,6 +80,7 @@ class Block_Theme_Pack extends Ability_Pack {
 			$this->styles_reset(),
 			$this->variation_apply(),
 			$this->pattern_save(),
+			$this->pattern_delete(),
 			$this->text_find(),
 			$this->text_replace(),
 		);
@@ -367,9 +369,91 @@ class Block_Theme_Pack extends Ability_Pack {
 		);
 	}
 
+	/**
+	 * Defines mosmcp/theme-pattern-usage.
+	 *
+	 * @return Ability
+	 */
+	private function pattern_usage() {
+		$place = Schema::object(
+			array(
+				'type'       => Schema::str( __( 'Post type, such as "page" or "wp_template_part", or "widget".', 'mosmcp-abilities' ) ),
+				'type_label' => Schema::str(),
+				'id'         => Schema::int( __( 'Post ID, or 0 for a widget.', 'mosmcp-abilities' ) ),
+				'widget_id'  => Schema::str(),
+				'title'      => Schema::str(),
+				'status'     => Schema::str(),
+				'count'      => Schema::int( __( 'How many times the pattern appears there.', 'mosmcp-abilities' ) ),
+				'edit_url'   => Schema::str(),
+				'view_url'   => Schema::str(),
+			)
+		);
+
+		return $this->ability(
+			'mosmcp/theme-pattern-usage',
+			__( 'Find Where a Pattern Is Used', 'mosmcp-abilities' ),
+			__( 'Lists every place a saved pattern is used: pages and posts, templates and template parts, Navigation menus, other patterns and block widgets, with links to edit or view each, plus places pending in the theme draft. Read-only. Use it before changing or deleting a synced pattern, to tell the person exactly what will change. Also known as: where is this pattern used, pattern usage, which pages use this reusable block.', 'mosmcp-abilities' ),
+			array( Block_Theme_Provider::class, 'pattern_usage' ),
+			Site_Support::annotations( true, false, true, false ),
+			Schema::object(
+				array(
+					'id' => Schema::int( __( 'Saved pattern ID, from mosmcp/theme-pattern-list.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
+				),
+				array( 'id' )
+			),
+			Schema::object(
+				array(
+					'id'        => Schema::int(),
+					'title'     => Schema::str(),
+					'synced'    => Schema::boolean(),
+					'total'     => Schema::int(),
+					'truncated' => Schema::boolean(),
+					'places'    => Schema::arr( $place ),
+					'pending'   => Schema::arr( Schema::str(), __( 'Templates, parts or patterns in the theme draft that place it.', 'mosmcp-abilities' ) ),
+					'notes'     => Schema::arr( Schema::str() ),
+				),
+				array( 'id', 'total', 'places' )
+			)
+		);
+	}
+
 	/*
 	 * Draft edits
 	 */
+
+	/**
+	 * Defines mosmcp/theme-pattern-delete.
+	 *
+	 * @return Ability
+	 */
+	private function pattern_delete() {
+		return $this->ability(
+			'mosmcp/theme-pattern-delete',
+			__( 'Delete Pattern', 'mosmcp-abilities' ),
+			__( 'Stages deleting a saved pattern in the theme draft. While pages still use it, deleting is refused unless on_usage is "detach": then, when the draft is published, every place using it first gets the pattern\'s blocks as ordinary blocks — so no page is left showing "This block has been deleted or is unavailable" — and the pattern is moved to the trash. Publishing can be undone with mosmcp/theme-restore-backup. Check mosmcp/theme-pattern-usage and tell the person what will change first. Registered patterns from the theme or plugins cannot be deleted. Also known as: delete reusable block, remove pattern, delete synced pattern.', 'mosmcp-abilities' ),
+			array( Block_Theme_Provider::class, 'pattern_delete' ),
+			Site_Support::annotations( false, false, true, false ),
+			Schema::object(
+				array(
+					'id'       => Schema::int( __( 'Saved pattern ID, from mosmcp/theme-pattern-list.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
+					'on_usage' => Schema::str(
+						__( 'What to do while pages use it: "refuse" (the default) stages nothing, "detach" turns each use into ordinary blocks when the draft is published.', 'mosmcp-abilities' ),
+						array(
+							'enum'    => array( 'refuse', 'detach' ),
+							'default' => 'refuse',
+						)
+					),
+				),
+				array( 'id' )
+			),
+			self::staged_output(
+				array(
+					'usage_count' => Schema::int(),
+					'used_in'     => Schema::arr( Schema::str() ),
+				)
+			)
+		);
+	}
 
 	/**
 	 * Defines mosmcp/theme-template-update.
@@ -513,15 +597,16 @@ class Block_Theme_Pack extends Ability_Pack {
 		return $this->ability(
 			'mosmcp/theme-pattern-save',
 			__( 'Save Pattern', 'mosmcp-abilities' ),
-			__( 'Creates a new saved pattern, or updates a saved one by ID, staged in the theme draft. A synced pattern shows the same content everywhere it is used, so updating one changes every page that includes it — which is why it waits for the draft to be published. Returns insert_markup to place the pattern in a template or part within the same draft. Registered patterns from the theme or plugins cannot be changed. Also known as: reusable block, reusable section, banner, call to action.', 'mosmcp-abilities' ),
+			__( 'Creates a new saved pattern, or updates a saved one by ID — its content, title, categories, or whether it is synced — staged in the theme draft. A synced pattern shows the same content everywhere it is used, so updating one changes every page that includes it (mosmcp/theme-pattern-usage lists them) — which is why it waits for the draft to be published. Returns insert_markup to place the pattern in a template or part within the same draft. Registered patterns from the theme or plugins cannot be changed. Also known as: reusable block, reusable section, banner, call to action, unsync pattern, pattern category.', 'mosmcp-abilities' ),
 			array( Block_Theme_Provider::class, 'pattern_save' ),
 			Site_Support::annotations( false, false, false, false ),
 			Schema::object(
 				array(
-					'id'      => Schema::int( __( 'ID of the saved pattern to update. Omit to create a new one.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
-					'title'   => Schema::str( __( 'Pattern title. Required for a new pattern.', 'mosmcp-abilities' ) ),
-					'content' => Schema::str( __( 'Block markup. Required for a new pattern; omit to keep the current content when only renaming.', 'mosmcp-abilities' ) ),
-					'synced'  => Schema::boolean( __( 'For a new pattern: whether it stays in sync everywhere it is used.', 'mosmcp-abilities' ), array( 'default' => true ) ),
+					'id'         => Schema::int( __( 'ID of the saved pattern to update. Omit to create a new one.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
+					'title'      => Schema::str( __( 'Pattern title. Required for a new pattern.', 'mosmcp-abilities' ) ),
+					'content'    => Schema::str( __( 'Block markup. Required for a new pattern; omit to keep the current content when only renaming, recategorising or switching sync.', 'mosmcp-abilities' ) ),
+					'synced'     => Schema::boolean( __( 'Whether the pattern stays in sync everywhere it is used. A new pattern is synced unless this is false; for an existing one, omit it to keep its current setting.', 'mosmcp-abilities' ) ),
+					'categories' => Schema::arr( Schema::str(), __( 'Pattern category names, replacing its current ones; categories that do not exist yet are created on publish. An empty list removes them all; omit to keep them.', 'mosmcp-abilities' ) ),
 				)
 			),
 			self::staged_output(
@@ -792,6 +877,9 @@ class Block_Theme_Pack extends Ability_Pack {
 				'global_styles'  => Schema::str(),
 				'patterns'       => Schema::arr( Schema::str() ),
 				'files'          => Schema::arr( Schema::str() ),
+				'site_identity'  => Schema::arr( Schema::str(), __( 'Pending logo and site icon changes.', 'mosmcp-abilities' ) ),
+				'custom_css'     => Schema::arr( Schema::str(), __( 'Pending change to the Customizer\'s Additional CSS. A block theme\'s Additional CSS is part of global styles.', 'mosmcp-abilities' ) ),
+				'theme_settings' => Schema::arr( Schema::str(), __( 'Pending theme (Customizer) settings.', 'mosmcp-abilities' ) ),
 				'created'        => Schema::str(),
 				'updated'        => Schema::str(),
 				'preview_ready'  => Schema::boolean(),

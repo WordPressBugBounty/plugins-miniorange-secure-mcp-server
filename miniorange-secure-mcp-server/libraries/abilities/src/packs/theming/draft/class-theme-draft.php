@@ -5,10 +5,12 @@
  * @package Mosmcp_Abilities_Library
  */
 
-namespace MoSMCP\Abilities\Packs\Theming;
+namespace MoSMCP\Abilities\Packs\Theming\Draft;
 
 use MoSMCP\Abilities\Packs\Site\Site_Support;
 use WP_Error;
+use MoSMCP\Abilities\Packs\Theming\Identity\Site_Identity;
+use MoSMCP\Abilities\Packs\Theming\Theme_Support;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -71,7 +73,15 @@ class Theme_Draft {
 	 */
 	public static function raw() {
 		$draft = get_option( self::OPTION, null );
-		return is_array( $draft ) && ! empty( $draft['id'] ) ? $draft : null;
+		if ( ! is_array( $draft ) || empty( $draft['id'] ) ) {
+			return null;
+		}
+		// A draft saved before a kind of change existed has no entry for it.
+		return $draft + array(
+			'identity' => array(),
+			'css'      => null,
+			'settings' => array(),
+		);
 	}
 
 	/**
@@ -148,6 +158,9 @@ class Theme_Draft {
 			'styles'        => null,
 			'patterns'      => array(),
 			'files'         => null,
+			'identity'      => array(),
+			'css'           => null,
+			'settings'      => array(),
 		);
 	}
 
@@ -165,13 +178,24 @@ class Theme_Draft {
 	}
 
 	/**
-	 * Deletes the draft and its file workspace.
+	 * Deletes the draft and its file workspace, and the images it added to the
+	 * media library unless they were just published.
 	 *
+	 * @param bool $published Whether the draft was just published.
 	 * @return array{discarded:bool,files_removed:bool}
 	 */
-	public static function discard() {
+	public static function discard( $published = false ) {
 		$draft   = self::raw();
 		$removed = true;
+
+		if ( null !== $draft && ! $published ) {
+			$created = array();
+			foreach ( (array) $draft['identity'] as $entry ) {
+				$created = array_merge( $created, (array) $entry['created'] );
+			}
+			// Judged against no draft at all, so only live use keeps an image.
+			Site_Identity::remove_unused( $created, null );
+		}
 
 		if ( null !== $draft && ! empty( $draft['files']['root'] ) ) {
 			$root = (string) $draft['files']['root'];
@@ -214,6 +238,9 @@ class Theme_Draft {
 		$count += count( (array) $draft['patterns'] );
 		$count += empty( $draft['styles'] ) ? 0 : 1;
 		$count += empty( $draft['files']['touched'] ) ? 0 : count( (array) $draft['files']['touched'] );
+		$count += empty( $draft['identity'] ) ? 0 : count( (array) $draft['identity'] );
+		$count += empty( $draft['css'] ) ? 0 : 1;
+		$count += empty( $draft['settings'] ) ? 0 : count( (array) $draft['settings'] );
 
 		return $count;
 	}
@@ -263,6 +290,9 @@ class Theme_Draft {
 				'global_styles'  => '',
 				'patterns'       => array(),
 				'files'          => array(),
+				'site_identity'  => array(),
+				'custom_css'     => array(),
+				'theme_settings' => array(),
 				'created'        => '',
 				'updated'        => '',
 				'preview_ready'  => false,
@@ -314,6 +344,9 @@ class Theme_Draft {
 			'global_styles'  => $styles,
 			'patterns'       => $patterns,
 			'files'          => $files,
+			'site_identity'  => array_values( wp_list_pluck( (array) ( $draft['identity'] ?? array() ), 'label' ) ),
+			'custom_css'     => empty( $draft['css'] ) ? array() : array( (string) $draft['css']['label'] ),
+			'theme_settings' => array_values( wp_list_pluck( (array) ( $draft['settings'] ?? array() ), 'summary' ) ),
 			'created'        => gmdate( 'Y-m-d H:i:s', (int) $draft['created_gmt'] ) . ' UTC',
 			'updated'        => gmdate( 'Y-m-d H:i:s', (int) $draft['updated_gmt'] ) . ' UTC',
 			'preview_ready'  => ! empty( $draft['token'] ) && (int) $draft['token_expires'] > time(),

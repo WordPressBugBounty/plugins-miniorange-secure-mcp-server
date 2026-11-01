@@ -6,12 +6,16 @@
  * @package Mosmcp_Abilities_Library
  */
 
-namespace MoSMCP\Abilities\Packs\Theming;
+namespace MoSMCP\Abilities\Packs\Theming\Files;
 
 use MoSMCP\Abilities\Packs\Editing\Content_Matcher;
 use MoSMCP\Abilities\Packs\Editing\Editing_Support;
 use MoSMCP\Abilities\Packs\Site\Site_Support;
 use WP_Error;
+use MoSMCP\Abilities\Packs\Theming\Blocktheme\Block_Templates;
+use MoSMCP\Abilities\Packs\Theming\Blocktheme\Block_Theme_Provider;
+use MoSMCP\Abilities\Packs\Theming\Draft\Theme_Draft;
+use MoSMCP\Abilities\Packs\Theming\Theme_Support;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

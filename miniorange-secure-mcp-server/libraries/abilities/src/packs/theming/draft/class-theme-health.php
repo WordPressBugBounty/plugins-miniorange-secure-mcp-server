@@ -6,10 +6,11 @@
  * @package Mosmcp_Abilities_Library
  */
 
-namespace MoSMCP\Abilities\Packs\Theming;
+namespace MoSMCP\Abilities\Packs\Theming\Draft;
 
 use WP_Error;
-use WP_Session_Tokens;
+use MoSMCP\Abilities\Packs\Theming\Loopback_Session;
+use MoSMCP\Abilities\Packs\Theming\Theme_Support;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -36,8 +37,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *  - it must test a draft, which is not the active theme, so core's editor would
  *    skip the check entirely;
  *  - it runs inside an API request that has no browser cookies, so it signs the
- *    loopback in with a short-lived session for the same user and removes that
- *    session afterwards.
+ *    loopback in with a short-lived session for the same user (Loopback_Session),
+ *    sent only to this site's own pages and removed afterwards.
  */
 class Theme_Health {
 
@@ -66,8 +67,8 @@ class Theme_Health {
 			);
 		}
 
-		$user_id = get_current_user_id();
-		if ( $user_id < 1 ) {
+		$session = Loopback_Session::start( 5 * MINUTE_IN_SECONDS );
+		if ( null === $session ) {
 			return array(
 				'ok'         => false,
 				'conclusive' => false,
@@ -81,55 +82,49 @@ class Theme_Health {
 			set_time_limit( 5 * MINUTE_IN_SECONDS ); // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- Two loopback requests must finish before this request does.
 		}
 
-		$expiration = time() + 5 * MINUTE_IN_SECONDS;
-		$manager    = WP_Session_Tokens::get_instance( $user_id );
-		$session    = $manager->create( $expiration );
-
-		$cookies = array(
-			LOGGED_IN_COOKIE   => wp_generate_auth_cookie( $user_id, $expiration, 'logged_in', $session ),
-			AUTH_COOKIE        => wp_generate_auth_cookie( $user_id, $expiration, 'auth', $session ),
-			SECURE_AUTH_COOKIE => wp_generate_auth_cookie( $user_id, $expiration, 'secure_auth', $session ),
-		);
-		if ( '' !== $token ) {
-			$cookies[ Theme_Preview::COOKIE ] = $token;
-		}
-
 		$scrape_key   = md5( wp_generate_password( 32, false, false ) );
 		$scrape_nonce = wp_generate_password( 32, false, false );
-		set_transient( 'scrape_key_' . $scrape_key, $scrape_nonce, 2 * MINUTE_IN_SECONDS );
+		$checks       = array();
 
-		$query = array(
-			'wp_scrape_key'   => $scrape_key,
-			'wp_scrape_nonce' => $scrape_nonce,
-		);
-		if ( '' !== $token ) {
-			$query[ Theme_Preview::QUERY_VAR ] = $token;
-		}
+		try {
+			set_transient( 'scrape_key_' . $scrape_key, $scrape_nonce, 2 * MINUTE_IN_SECONDS );
 
-		// Each page as the signed-in administrator; on the live site also as a
-		// visitor, since a draft cannot be shown to visitors before it is live.
-		$as_visitor = ( '' === $token );
-		$pages      = array();
-		foreach ( self::pages() as $label => $url ) {
-			$pages[ $label ] = array(
-				'url'     => add_query_arg( $query, $url ),
-				'cookies' => $cookies,
+			$query = array(
+				'wp_scrape_key'   => $scrape_key,
+				'wp_scrape_nonce' => $scrape_nonce,
 			);
-			if ( $as_visitor && in_array( $label, array( 'home page', 'newest post' ), true ) ) {
-				$pages[ $label . ' (logged out)' ] = array(
-					'url'     => add_query_arg( $query, $url ),
-					'cookies' => array(),
-				);
+			if ( '' !== $token ) {
+				$query[ Theme_Preview::QUERY_VAR ] = $token;
 			}
-		}
 
-		$checks = array();
-		foreach ( self::fetch_all( $pages ) as $label => $response ) {
-			$checks[] = self::interpret( $label, $response, $scrape_key );
-		}
+			// Each page as the signed-in administrator; on the live site also as a
+			// visitor, since a draft cannot be shown to visitors before it is live.
+			$as_visitor = ( '' === $token );
+			$pages      = array();
+			foreach ( self::pages() as $label => $url ) {
+				$cookies = $session->cookies( $url );
+				if ( '' !== $token && ! empty( $cookies ) ) {
+					$cookies[ Theme_Preview::COOKIE ] = $token;
+				}
+				$pages[ $label ] = array(
+					'url'     => add_query_arg( $query, $url ),
+					'cookies' => $cookies,
+				);
+				if ( $as_visitor && in_array( $label, array( 'home page', 'newest post' ), true ) ) {
+					$pages[ $label . ' (logged out)' ] = array(
+						'url'     => add_query_arg( $query, $url ),
+						'cookies' => array(),
+					);
+				}
+			}
 
-		delete_transient( 'scrape_key_' . $scrape_key );
-		$manager->destroy( $session );
+			foreach ( self::fetch_all( $pages ) as $label => $response ) {
+				$checks[] = self::interpret( $label, $response, $scrape_key );
+			}
+		} finally {
+			delete_transient( 'scrape_key_' . $scrape_key );
+			$session->end();
+		}
 
 		$ok         = true;
 		$conclusive = true;
@@ -191,8 +186,9 @@ class Theme_Health {
 				)
 			);
 			$url = empty( $ids ) ? '' : (string) get_permalink( (int) $ids[0] );
-			// The front page is already covered by "home page".
-			if ( '' !== $url && untrailingslashit( $url ) !== untrailingslashit( home_url( '/' ) ) ) {
+			// The front page is already covered by "home page", and a post whose address
+			// points at another site is not this site's page to check.
+			if ( '' !== $url && untrailingslashit( $url ) !== untrailingslashit( home_url( '/' ) ) && Loopback_Session::is_own_url( $url ) ) {
 				$pages[ $label ] = $url;
 			}
 		}

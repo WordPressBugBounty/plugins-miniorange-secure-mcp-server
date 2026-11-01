@@ -6,11 +6,22 @@
  * @package Mosmcp_Abilities_Library
  */
 
-namespace MoSMCP\Abilities\Packs\Theming;
+namespace MoSMCP\Abilities\Packs\Theming\Draft;
 
+use MoSMCP\Abilities\Packs\Blocks\Block_Patterns;
+use MoSMCP\Abilities\Packs\Blocks\Block_Tree;
 use MoSMCP\Abilities\Packs\Site\Site_Support;
+use MoSMCP\Abilities\Support\Cache_Purger;
 use WP_Error;
 use WP_REST_Request;
+use MoSMCP\Abilities\Packs\Theming\Blocktheme\Block_Templates;
+use MoSMCP\Abilities\Packs\Theming\Blocktheme\Block_Theme_Provider;
+use MoSMCP\Abilities\Packs\Theming\Blocktheme\Pattern_Usage;
+use MoSMCP\Abilities\Packs\Theming\Customize\Customizer_Bridge;
+use MoSMCP\Abilities\Packs\Theming\Customize\Site_Css;
+use MoSMCP\Abilities\Packs\Theming\Customize\Theme_Settings;
+use MoSMCP\Abilities\Packs\Theming\Identity\Site_Identity;
+use MoSMCP\Abilities\Packs\Theming\Theme_Support;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -48,6 +59,12 @@ class Theme_Publisher {
 	 * Option listing recent backups, newest first. Never autoloaded.
 	 */
 	const BACKUPS_OPTION = 'mosmcp_theme_backups';
+
+	/**
+	 * Prefix of the option, one per backup, holding the content of every page and
+	 * widget a pattern delete rewrote. Kept apart so the backup list stays small.
+	 */
+	const USAGE_OPTION = 'mosmcp_theme_backup_usage_';
 
 	/**
 	 * Folder under wp-content holding backed-up files.
@@ -122,16 +139,67 @@ class Theme_Publisher {
 		}
 
 		foreach ( (array) $draft['patterns'] as $entry ) {
-			if ( 'update' !== $entry['action'] ) {
+			if ( 'create' === $entry['action'] ) {
 				continue;
 			}
 			$post = get_post( (int) $entry['id'] );
-			$now  = $post ? Theme_Draft::fingerprint( $post->post_title . '|' . $post->post_content ) : 'missing';
+			$now  = $post && 'trash' !== $post->post_status ? Theme_Draft::fingerprint( $post->post_title . '|' . $post->post_content ) : 'missing';
 			if ( $now !== (string) $entry['baseline'] ) {
 				$conflicts[] = sprintf(
 					/* translators: %s: pattern title. */
 					__( 'The pattern "%s" was changed or deleted on the live site after the draft was made.', 'mosmcp-abilities' ),
 					(string) $entry['title']
+				);
+				continue;
+			}
+
+			// A delete that may not detach must still find the pattern unused.
+			if ( 'delete' === $entry['action'] && 'detach' !== ( isset( $entry['on_usage'] ) ? $entry['on_usage'] : 'refuse' ) ) {
+				$usage = Pattern_Usage::find( (int) $entry['id'] );
+				$count = (int) $usage['total'] + count( Block_Theme_Provider::draft_places( $draft, (int) $entry['id'] ) );
+				if ( $count > 0 ) {
+					$conflicts[] = sprintf(
+						/* translators: 1: pattern title, 2: number of places. */
+						_n(
+							'The pattern "%1$s" is now used in %2$d place, but the draft deletes it without detaching, which would leave that place empty.',
+							'The pattern "%1$s" is now used in %2$d places, but the draft deletes it without detaching, which would leave those places empty.',
+							$count,
+							'mosmcp-abilities'
+						),
+						(string) $entry['title'],
+						$count
+					);
+				}
+			}
+		}
+
+		foreach ( (array) $draft['identity'] as $kind => $entry ) {
+			$noun = 'logo' === $kind ? __( 'site logo', 'mosmcp-abilities' ) : __( 'site icon', 'mosmcp-abilities' );
+			if ( (string) Site_Identity::live( $kind ) !== (string) $entry['baseline'] ) {
+				$conflicts[] = sprintf(
+					/* translators: %s: "site logo" or "site icon". */
+					__( 'The %s was changed on the live site, probably in the Customizer or the Site Editor, after the draft was made.', 'mosmcp-abilities' ),
+					$noun
+				);
+			} elseif ( (int) $entry['value'] > 0 && ! get_post( (int) $entry['value'] ) ) {
+				$conflicts[] = sprintf(
+					/* translators: %s: "site logo" or "site icon". */
+					__( 'The image the draft uses as the %s was deleted from the media library.', 'mosmcp-abilities' ),
+					$noun
+				);
+			}
+		}
+
+		if ( ! empty( $draft['css'] ) && Theme_Draft::fingerprint( Site_Css::live( 'customizer' ) ) !== (string) $draft['css']['baseline'] ) {
+			$conflicts[] = __( 'The Customizer\'s Additional CSS was changed on the live site after the draft was made.', 'mosmcp-abilities' );
+		}
+
+		foreach ( (array) $draft['settings'] as $id => $entry ) {
+			if ( Theme_Draft::fingerprint( Theme_Settings::stored( $entry['type'], $entry['base'], (array) $entry['keys'] ) ) !== (string) $entry['baseline'] ) {
+				$conflicts[] = sprintf(
+					/* translators: %s: setting name. */
+					__( 'The theme setting "%s" was changed on the live site, probably in the Customizer, after the draft was made.', 'mosmcp-abilities' ),
+					'' !== (string) $entry['label'] ? (string) $entry['label'] : (string) $id
 				);
 			}
 		}
@@ -181,6 +249,16 @@ class Theme_Publisher {
 				),
 				Site_Support::CAUSE_INVALID_INPUT,
 				true
+			);
+		}
+
+		// WordPress strips CSS saved by someone who may not edit it, silently.
+		if ( ! current_user_can( 'edit_css' ) && ( ! empty( $draft['css'] ) || Site_Css::pending( $draft, 'global_styles' ) ) ) {
+			return Site_Support::error(
+				'mosmcp_css_publish_forbidden',
+				__( 'Nothing was published: the draft changes the Additional CSS, and saving CSS needs permission to edit CSS, which this account does not have (WordPress would quietly drop the CSS). Someone with that permission, usually an administrator, can publish it.', 'mosmcp-abilities' ),
+				Site_Support::CAUSE_CAPABILITY,
+				false
 			);
 		}
 
@@ -297,12 +375,23 @@ class Theme_Publisher {
 			$notes[] = __( 'This site cannot request its own pages, so the check after publishing could not run. Open the site to confirm it looks right; the backup can be restored with mosmcp/theme-restore-backup.', 'mosmcp-abilities' );
 		}
 
+		foreach ( (array) $backup['patterns'] as $item ) {
+			if ( 'delete' === $item['action'] && ! empty( $item['used_in'] ) ) {
+				$notes[] = sprintf(
+					/* translators: 1: pattern title, 2: list of places. */
+					__( 'The places that used the deleted pattern "%1$s" now hold its blocks as ordinary blocks, looking the same as before: %2$s.', 'mosmcp-abilities' ),
+					(string) $item['title'],
+					(string) $item['used_in']
+				);
+			}
+		}
+
 		if ( Theme_Draft::touches_files( $draft ) && Theme_Support::receives_updates() ) {
 			$notes[] = __( 'This theme receives updates. The next theme update will replace its files, including the ones just changed; templates, template parts and global styles are unaffected because they are stored in the database.', 'mosmcp-abilities' );
 		}
 
 		$summary = Theme_Draft::summary( $draft );
-		Theme_Draft::discard();
+		Theme_Draft::discard( true );
 
 		return array(
 			'published'      => true,
@@ -312,6 +401,9 @@ class Theme_Publisher {
 			'global_styles'  => $summary['global_styles'],
 			'patterns'       => $summary['patterns'],
 			'files'          => $summary['files'],
+			'site_identity'  => $summary['site_identity'],
+			'custom_css'     => $summary['custom_css'],
+			'theme_settings' => $summary['theme_settings'],
 			'backup_id'      => (string) $backup['id'],
 			'checked_before' => is_array( $before ) ? (string) $before['note'] : '',
 			'checked_after'  => is_array( $after ) ? (string) $after['note'] : '',
@@ -406,8 +498,70 @@ class Theme_Publisher {
 			'templates'   => array(),
 			'styles'      => null,
 			'patterns'    => array(),
+			'identity'    => array(),
+			'css'         => null,
+			'settings'    => array(),
 			'restored'    => false,
 		);
+
+		foreach ( array_keys( (array) $draft['identity'] ) as $kind ) {
+			$backup['identity'][ $kind ] = Site_Identity::live( $kind );
+		}
+		if ( ! empty( $draft['css'] ) ) {
+			$backup['css'] = Site_Css::live( 'customizer' );
+		}
+		foreach ( (array) $draft['settings'] as $id => $entry ) {
+			$backup['settings'][ $id ] = array(
+				'value'   => Theme_Settings::stored( $entry['type'], $entry['base'], (array) $entry['keys'] ),
+				'default' => $entry['default'],
+				'label'   => (string) $entry['label'],
+				'type'    => (string) $entry['type'],
+				'base'    => (string) $entry['base'],
+				'keys'    => (array) $entry['keys'],
+			);
+		}
+
+		// Every page, template and widget a detaching delete will rewrite, gathered
+		// before anything is written so a refusal leaves nothing behind.
+		$usage    = array();
+		$snapshot = array(
+			'posts'   => array(),
+			'widgets' => null,
+		);
+		foreach ( (array) $draft['patterns'] as $entry ) {
+			if ( 'delete' !== $entry['action'] || 'detach' !== ( isset( $entry['on_usage'] ) ? $entry['on_usage'] : 'refuse' ) ) {
+				continue;
+			}
+			$pattern_id = (int) $entry['id'];
+			$found      = Pattern_Usage::find( $pattern_id );
+			$detachable = Pattern_Usage::detachable( (string) $entry['title'], $found );
+			if ( is_wp_error( $detachable ) ) {
+				return Site_Support::error(
+					(string) $detachable->get_error_code(),
+					__( 'Nothing was published: ', 'mosmcp-abilities' ) . lcfirst( $detachable->get_error_message() ),
+					Site_Support::CAUSE_CONFLICT,
+					false,
+					array( 'use_instead' => 'mosmcp/block-detach-pattern' )
+				);
+			}
+			$usage[ $pattern_id ] = array(
+				'posts'   => array(),
+				'widgets' => false,
+				'used_in' => Pattern_Usage::describe( $found['places'] ),
+			);
+			foreach ( $found['places'] as $place ) {
+				if ( 'widget' === $place['type'] ) {
+					$usage[ $pattern_id ]['widgets'] = true;
+					$snapshot['widgets']             = get_option( 'widget_block', array() );
+					continue;
+				}
+				$used = get_post( (int) $place['id'] );
+				if ( $used ) {
+					$usage[ $pattern_id ]['posts'][]      = (int) $used->ID;
+					$snapshot['posts'][ (int) $used->ID ] = $used->post_content;
+				}
+			}
+		}
 
 		if ( Theme_Draft::touches_files( $draft ) ) {
 			$base = untrailingslashit( wp_normalize_path( WP_CONTENT_DIR ) ) . '/' . self::BACKUP_DIR;
@@ -459,13 +613,43 @@ class Theme_Publisher {
 		}
 
 		foreach ( (array) $draft['patterns'] as $key => $entry ) {
-			if ( 'update' === $entry['action'] ) {
-				$post                 = get_post( (int) $entry['id'] );
-				$backup['patterns'][] = array(
-					'action'  => 'update',
-					'id'      => (int) $entry['id'],
-					'title'   => $post ? $post->post_title : '',
-					'content' => $post ? $post->post_content : '',
+			if ( 'create' === $entry['action'] ) {
+				continue;
+			}
+			$id   = (int) $entry['id'];
+			$post = get_post( $id );
+			$item = array(
+				'action'     => $entry['action'],
+				'id'         => $id,
+				'title'      => $post ? $post->post_title : '',
+				'content'    => $post ? $post->post_content : '',
+				'status'     => $post ? $post->post_status : 'publish',
+				'categories' => wp_get_object_terms( $id, 'wp_pattern_category', array( 'fields' => 'names' ) ),
+				'sync'       => (string) get_post_meta( $id, 'wp_pattern_sync_status', true ),
+				'usage'      => isset( $usage[ $id ] ) ? $usage[ $id ]['posts'] : array(),
+				'widgets'    => isset( $usage[ $id ] ) && $usage[ $id ]['widgets'],
+				'used_in'    => isset( $usage[ $id ] ) ? $usage[ $id ]['used_in'] : '',
+			);
+			if ( is_wp_error( $item['categories'] ) ) {
+				$item['categories'] = array();
+			}
+
+			$backup['patterns'][] = $item;
+		}
+
+		// A single write that either holds every rewritten place or fails before
+		// anything goes live, rather than a publish that cannot be undone.
+		if ( ! empty( $snapshot['posts'] ) || null !== $snapshot['widgets'] ) {
+			if ( ! add_option( self::USAGE_OPTION . $backup['id'], $snapshot, '', false ) ) {
+				if ( '' !== $backup['dir'] ) {
+					Theme_Support::delete_path( $backup['dir'] );
+				}
+				return Site_Support::error(
+					'mosmcp_theme_backup_failed',
+					__( 'Nothing was published: the pages that use the deleted pattern could not be backed up first, so turning them into ordinary blocks could not be undone. The database refused the backup, possibly because it is too large; detach the pattern in some places first with mosmcp/block-detach-pattern.', 'mosmcp-abilities' ),
+					Site_Support::CAUSE_HOST_ENVIRONMENT,
+					false,
+					array( 'use_instead' => 'mosmcp/block-detach-pattern' )
 				);
 			}
 		}
@@ -489,6 +673,7 @@ class Theme_Publisher {
 			if ( ! empty( $old['dir'] ) && 0 === strpos( wp_normalize_path( (string) $old['dir'] ), $base ) ) {
 				Theme_Support::delete_path( (string) $old['dir'] );
 			}
+			delete_option( self::USAGE_OPTION . $old['id'] );
 		}
 		$list = array_slice( $list, 0, self::KEEP );
 
@@ -503,6 +688,40 @@ class Theme_Publisher {
 	public static function backups() {
 		$list = get_option( self::BACKUPS_OPTION, array() );
 		return is_array( $list ) ? array_values( $list ) : array();
+	}
+
+	/**
+	 * What restoring a backup does to the logo and site icon, in words.
+	 *
+	 * @param array<string, mixed> $backup Backup.
+	 * @return string[]
+	 */
+	public static function identity_labels( array $backup ) {
+		$labels = array();
+		foreach ( (array) ( isset( $backup['identity'] ) ? $backup['identity'] : array() ) as $kind => $value ) {
+			$labels[] = Site_Identity::label( (string) $kind, (int) $value );
+		}
+		return $labels;
+	}
+
+	/**
+	 * What restoring a backup does to theme settings, in words.
+	 *
+	 * @param array<string, mixed> $backup Backup.
+	 * @return string[]
+	 */
+	public static function settings_labels( array $backup ) {
+		$labels = array();
+		foreach ( (array) ( isset( $backup['settings'] ) ? $backup['settings'] : array() ) as $id => $saved ) {
+			$labels[] = Theme_Settings::label(
+				array(
+					'id'    => (string) $id,
+					'label' => (string) $saved['label'],
+					'value' => null === $saved['value'] ? $saved['default'] : $saved['value'],
+				)
+			);
+		}
+		return $labels;
 	}
 
 	/**
@@ -579,6 +798,9 @@ class Theme_Publisher {
 			if ( empty( $entry['synced'] ) ) {
 				update_post_meta( (int) $id, 'wp_pattern_sync_status', 'unsynced' );
 			}
+			if ( ! empty( $entry['categories'] ) ) {
+				wp_set_object_terms( (int) $id, array_map( 'strval', (array) $entry['categories'] ), 'wp_pattern_category' );
+			}
 			$backup['patterns'][]         = array(
 				'action' => 'create',
 				'id'     => (int) $id,
@@ -587,9 +809,15 @@ class Theme_Publisher {
 		}
 
 		foreach ( (array) $draft['patterns'] as $key => $entry ) {
-			$content = Theme_Draft::resolve_placeholders( (string) $entry['content'], $created );
+			if ( 'delete' === $entry['action'] ) {
+				continue;
+			}
+			$content = self::detach_deleted( Theme_Draft::resolve_placeholders( (string) $entry['content'], $created ), $draft );
+			if ( is_wp_error( $content ) ) {
+				return $content;
+			}
 			if ( 'create' === $entry['action'] ) {
-				// A new pattern that places another new one.
+				// A new pattern that places another new one, or one being deleted.
 				if ( $content !== (string) $entry['content'] ) {
 					wp_update_post(
 						wp_slash(
@@ -615,12 +843,23 @@ class Theme_Publisher {
 			if ( is_wp_error( $updated ) ) {
 				return $updated;
 			}
+			if ( isset( $entry['sync_status'] ) && 'unsynced' === $entry['sync_status'] ) {
+				update_post_meta( (int) $entry['id'], 'wp_pattern_sync_status', 'unsynced' );
+			} elseif ( isset( $entry['sync_status'] ) && 'synced' === $entry['sync_status'] ) {
+				delete_post_meta( (int) $entry['id'], 'wp_pattern_sync_status' );
+			}
+			if ( isset( $entry['categories'] ) && is_array( $entry['categories'] ) ) {
+				wp_set_object_terms( (int) $entry['id'], array_map( 'strval', $entry['categories'] ), 'wp_pattern_category' );
+			}
 		}
 
 		foreach ( (array) $draft['templates'] as $entry ) {
-			$result = 'reset' === $entry['action']
-				? self::reset_template( $entry['type'], $entry['slug'] )
-				: self::save_template( $entry['type'], $entry['slug'], Theme_Draft::resolve_placeholders( (string) $entry['content'], $created ) );
+			if ( 'reset' === $entry['action'] ) {
+				$result = self::reset_template( $entry['type'], $entry['slug'] );
+			} else {
+				$content = self::detach_deleted( Theme_Draft::resolve_placeholders( (string) $entry['content'], $created ), $draft );
+				$result  = is_wp_error( $content ) ? $content : self::save_template( $entry['type'], $entry['slug'], $content );
+			}
 			if ( is_wp_error( $result ) ) {
 				return $result;
 			}
@@ -630,6 +869,161 @@ class Theme_Publisher {
 			$result = self::save_styles( (array) $draft['styles']['user_data'] );
 			if ( is_wp_error( $result ) ) {
 				return $result;
+			}
+		}
+
+		$deleted = self::apply_pattern_deletes( $draft, $backup );
+		if ( is_wp_error( $deleted ) ) {
+			return $deleted;
+		}
+
+		foreach ( (array) $draft['identity'] as $kind => $entry ) {
+			Site_Identity::apply( $kind, (int) $entry['value'] );
+		}
+
+		if ( ! empty( $draft['css'] ) ) {
+			$saved = wp_update_custom_css_post( (string) $draft['css']['value'], array( 'stylesheet' => Theme_Support::stylesheet() ) );
+			if ( is_wp_error( $saved ) ) {
+				return $saved;
+			}
+		}
+
+		// Last: it runs in its own request through the Customizer, so it is the step most likely to fail.
+		if ( ! empty( $draft['settings'] ) ) {
+			$published = Customizer_Bridge::publish( wp_list_pluck( (array) $draft['settings'], 'value' ) );
+			// That request's changes are invisible to this one's cache tracking.
+			Cache_Purger::on_site_wide();
+			if ( is_wp_error( $published ) ) {
+				return $published;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Patterns the draft deletes while detaching their uses: ID => the content
+	 * each use gets instead.
+	 *
+	 * @param array<string, mixed> $draft Draft.
+	 * @return array<int, string>
+	 */
+	private static function detaching_deletes( array $draft ) {
+		$out = array();
+		foreach ( (array) $draft['patterns'] as $entry ) {
+			if ( 'delete' === $entry['action'] && 'detach' === ( isset( $entry['on_usage'] ) ? $entry['on_usage'] : 'refuse' ) ) {
+				$out[ (int) $entry['id'] ] = (string) $entry['content'];
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Turns every use of a pattern the draft deletes into ordinary blocks.
+	 *
+	 * @param string               $content Block markup.
+	 * @param array<string, mixed> $draft   Draft.
+	 * @return string|WP_Error
+	 */
+	private static function detach_deleted( $content, array $draft ) {
+		$deleting = self::detaching_deletes( $draft );
+		$found    = false;
+		foreach ( array_keys( $deleting ) as $id ) {
+			// Exact ID, so "ref":12 does not send a page using pattern 123 through a rewrite.
+			if ( preg_match( '/"ref":' . (int) $id . '(?![0-9])/', (string) $content ) ) {
+				$found = true;
+				break;
+			}
+		}
+		if ( ! $found ) {
+			return (string) $content;
+		}
+
+		$tree = Block_Tree::parse( $content );
+		foreach ( $deleting as $id => $pattern ) {
+			$done = Block_Patterns::detach_all( $tree, $id, $pattern );
+			if ( is_wp_error( $done ) ) {
+				return $done;
+			}
+		}
+		return Block_Tree::serialize( $tree );
+	}
+
+	/**
+	 * Applies the draft's pattern deletes: rewrites every use recorded in the
+	 * backup into ordinary blocks, then moves each pattern to the trash.
+	 *
+	 * @param array<string, mixed> $draft  Draft.
+	 * @param array<string, mixed> $backup Backup taken before publishing.
+	 * @return true|WP_Error
+	 */
+	private static function apply_pattern_deletes( array $draft, array $backup ) {
+		$posts   = array();
+		$widgets = false;
+		foreach ( (array) $backup['patterns'] as $item ) {
+			if ( 'delete' !== $item['action'] ) {
+				continue;
+			}
+			foreach ( (array) $item['usage'] as $post_id ) {
+				$posts[ (int) $post_id ] = true;
+			}
+			$widgets = $widgets || ! empty( $item['widgets'] );
+		}
+
+		foreach ( array_keys( $posts ) as $post_id ) {
+			$post = get_post( (int) $post_id );
+			if ( ! $post ) {
+				continue;
+			}
+			$content = self::detach_deleted( $post->post_content, $draft );
+			if ( is_wp_error( $content ) ) {
+				return $content;
+			}
+			if ( $content === $post->post_content ) {
+				continue;
+			}
+			$saved = wp_update_post(
+				wp_slash(
+					array(
+						'ID'           => (int) $post->ID,
+						'post_content' => $content,
+					)
+				),
+				true
+			);
+			if ( is_wp_error( $saved ) ) {
+				return $saved;
+			}
+		}
+
+		if ( $widgets ) {
+			$instances = get_option( 'widget_block', array() );
+			if ( is_array( $instances ) ) {
+				foreach ( $instances as $number => $instance ) {
+					if ( is_numeric( $number ) && is_array( $instance ) && ! empty( $instance['content'] ) ) {
+						$content = self::detach_deleted( (string) $instance['content'], $draft );
+						if ( is_wp_error( $content ) ) {
+							return $content;
+						}
+						$instances[ $number ]['content'] = $content;
+					}
+				}
+				update_option( 'widget_block', $instances );
+			}
+		}
+
+		foreach ( (array) $draft['patterns'] as $entry ) {
+			if ( 'delete' === $entry['action'] && ! wp_trash_post( (int) $entry['id'] ) ) {
+				return Site_Support::error(
+					'mosmcp_pattern_trash_failed',
+					sprintf(
+						/* translators: %s: pattern title. */
+						__( 'the pattern "%s" could not be moved to the trash.', 'mosmcp-abilities' ),
+						(string) $entry['title']
+					),
+					Site_Support::CAUSE_WP_CORE,
+					false
+				);
 			}
 		}
 
@@ -699,18 +1093,88 @@ class Theme_Publisher {
 		foreach ( array_reverse( (array) $backup['patterns'] ) as $entry ) {
 			if ( 'create' === $entry['action'] ) {
 				$ok = (bool) wp_delete_post( (int) $entry['id'], true ) && $ok;
-			} else {
+				continue;
+			}
+
+			if ( 'delete' === $entry['action'] ) {
+				$post = get_post( (int) $entry['id'] );
+				if ( $post && 'trash' === $post->post_status ) {
+					// Back to the exact status it had: core would otherwise restore it as a
+					// draft, and a draft pattern renders nothing where it is used.
+					add_filter( 'wp_untrash_post_status', 'wp_untrash_post_set_previous_status', 10, 3 );
+					$ok = (bool) wp_untrash_post( (int) $entry['id'] ) && $ok;
+					remove_filter( 'wp_untrash_post_status', 'wp_untrash_post_set_previous_status', 10 );
+				}
+				continue;
+			}
+
+			$result = wp_update_post(
+				wp_slash(
+					array(
+						'ID'           => (int) $entry['id'],
+						'post_title'   => (string) $entry['title'],
+						'post_content' => (string) $entry['content'],
+					)
+				),
+				true
+			);
+			$ok     = ! is_wp_error( $result ) && $ok;
+			if ( isset( $entry['sync'] ) ) {
+				if ( 'unsynced' === $entry['sync'] ) {
+					update_post_meta( (int) $entry['id'], 'wp_pattern_sync_status', 'unsynced' );
+				} else {
+					delete_post_meta( (int) $entry['id'], 'wp_pattern_sync_status' );
+				}
+			}
+			if ( isset( $entry['categories'] ) && is_array( $entry['categories'] ) ) {
+				wp_set_object_terms( (int) $entry['id'], $entry['categories'], 'wp_pattern_category' );
+			}
+		}
+
+		foreach ( (array) ( isset( $backup['identity'] ) ? $backup['identity'] : array() ) as $kind => $value ) {
+			Site_Identity::apply( (string) $kind, (int) $value );
+		}
+
+		if ( isset( $backup['css'] ) && is_string( $backup['css'] ) ) {
+			$ok = ! is_wp_error( wp_update_custom_css_post( $backup['css'], array( 'stylesheet' => (string) $backup['stylesheet'] ) ) ) && $ok;
+		}
+
+		if ( ! empty( $backup['settings'] ) ) {
+			$values = array();
+			foreach ( (array) $backup['settings'] as $id => $saved ) {
+				$values[ $id ] = null === $saved['value'] ? $saved['default'] : $saved['value'];
+			}
+			// Through the Customizer, so the theme regenerates what depends on them...
+			$published = Customizer_Bridge::publish( $values );
+			$ok        = ! is_wp_error( $published ) && $ok;
+			// ...then a setting nothing was stored for has nothing stored again.
+			if ( ! is_wp_error( $published ) ) {
+				foreach ( (array) $backup['settings'] as $saved ) {
+					if ( null === $saved['value'] && isset( $saved['base'] ) ) {
+						Theme_Settings::forget( (string) $saved['type'], (string) $saved['base'], (array) $saved['keys'] );
+					}
+				}
+			}
+			Cache_Purger::on_site_wide();
+		}
+
+		// Pages and widgets a pattern delete turned into ordinary blocks get the pattern back.
+		$snapshot = get_option( self::USAGE_OPTION . $backup['id'], null );
+		if ( is_array( $snapshot ) ) {
+			foreach ( (array) $snapshot['posts'] as $post_id => $content ) {
 				$result = wp_update_post(
 					wp_slash(
 						array(
-							'ID'           => (int) $entry['id'],
-							'post_title'   => (string) $entry['title'],
-							'post_content' => (string) $entry['content'],
+							'ID'           => (int) $post_id,
+							'post_content' => (string) $content,
 						)
 					),
 					true
 				);
 				$ok     = ! is_wp_error( $result ) && $ok;
+			}
+			if ( is_array( $snapshot['widgets'] ) ) {
+				update_option( 'widget_block', $snapshot['widgets'] );
 			}
 		}
 
@@ -777,19 +1241,22 @@ class Theme_Publisher {
 		$health = true === Theme_Support::loopback() ? Theme_Health::run( '' ) : null;
 
 		return array(
-			'restored'      => $ok,
-			'backup_id'     => (string) $target['id'],
-			'backup_taken'  => gmdate( 'Y-m-d H:i:s', (int) $target['created_gmt'] ) . ' UTC',
-			'files'         => array_keys( (array) $target['files'] ),
-			'templates'     => array_map(
+			'restored'       => $ok,
+			'backup_id'      => (string) $target['id'],
+			'backup_taken'   => gmdate( 'Y-m-d H:i:s', (int) $target['created_gmt'] ) . ' UTC',
+			'files'          => array_keys( (array) $target['files'] ),
+			'templates'      => array_map(
 				static function ( $entry ) {
 					return $entry['slug'];
 				},
 				(array) $target['templates']
 			),
-			'global_styles' => is_array( $target['styles'] ),
-			'health'        => is_array( $health ) ? (string) $health['note'] : __( 'This site cannot request its own pages, so the site was not re-checked. Open it to confirm it looks right.', 'mosmcp-abilities' ),
-			'notes'         => $ok ? array() : array( __( 'At least one item could not be restored; check the site.', 'mosmcp-abilities' ) ),
+			'global_styles'  => is_array( $target['styles'] ),
+			'site_identity'  => self::identity_labels( $target ),
+			'custom_css'     => isset( $target['css'] ) && is_string( $target['css'] ),
+			'theme_settings' => self::settings_labels( $target ),
+			'health'         => is_array( $health ) ? (string) $health['note'] : __( 'This site cannot request its own pages, so the site was not re-checked. Open it to confirm it looks right.', 'mosmcp-abilities' ),
+			'notes'          => $ok ? array() : array( __( 'At least one item could not be restored; check the site.', 'mosmcp-abilities' ) ),
 		);
 	}
 
@@ -809,7 +1276,7 @@ class Theme_Publisher {
 	 * @return true|WP_Error
 	 */
 	private static function save_template( $type, $slug, $content ) {
-		$response = self::rest( 'POST', self::template_route( $type, $slug ), array( 'content' => $content ) );
+		$response = self::rest( \WpOrg\Requests\Requests::POST, self::template_route( $type, $slug ), array( 'content' => $content ) );
 		return is_wp_error( $response ) ? $response : true;
 	}
 
@@ -839,7 +1306,7 @@ class Theme_Publisher {
 				);
 		}
 
-		$response = self::rest( 'DELETE', self::template_route( $type, $slug ), array( 'force' => true ) );
+		$response = self::rest( \WpOrg\Requests\Requests::DELETE, self::template_route( $type, $slug ), array( 'force' => true ) );
 		return is_wp_error( $response ) ? $response : true;
 	}
 
@@ -902,7 +1369,7 @@ class Theme_Publisher {
 		}
 
 		$response = self::rest(
-			'POST',
+			\WpOrg\Requests\Requests::POST,
 			'/wp/v2/global-styles/' . (int) $post_id,
 			array(
 				'settings' => isset( $user_data['settings'] ) && is_array( $user_data['settings'] ) ? $user_data['settings'] : new \stdClass(),

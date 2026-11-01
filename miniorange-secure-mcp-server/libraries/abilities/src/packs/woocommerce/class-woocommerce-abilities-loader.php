@@ -67,10 +67,45 @@ class WooCommerce_Abilities_Loader {
 			return;
 		}
 
+		// WooCommerce's own abilities (woocommerce/product-delete and the rest)
+		// check a capability but do not publish required_cap. Supply it for the
+		// admin matrix. Another pack can do the same on this filter.
+		add_filter( 'mosmcp_ability_required_cap', array( __CLASS__, 'fallback_required_cap' ), 10, 2 );
+
 		Products_Abilities::register();
 		Orders_Abilities::register();
 		Customers_Abilities::register();
 		Coupons_Abilities::register();
 		Reports_Abilities::register();
+	}
+
+	/**
+	 * Role capability for a WooCommerce core ability that publishes none.
+	 *
+	 * The names are the ones WooCommerce registers. The values are the primitive
+	 * capabilities behind their permission callbacks, which is what a role stores.
+	 * A non-empty value passed in is left alone, so an ability that already
+	 * declared required_cap is not overwritten.
+	 *
+	 * @param string $required_cap Capability already resolved, or empty.
+	 * @param string $name         Ability name.
+	 * @return string
+	 */
+	public static function fallback_required_cap( $required_cap, $name ) {
+		if ( '' !== (string) $required_cap ) {
+			return (string) $required_cap;
+		}
+
+		$map = array(
+			'woocommerce/product-delete'      => 'delete_products',
+			'woocommerce/product-create'      => 'publish_products',
+			'woocommerce/product-update'      => 'edit_products',
+			'woocommerce/products-query'      => 'read_private_products',
+			'woocommerce/orders-query'        => 'read_private_shop_orders',
+			'woocommerce/order-add-note'      => 'edit_shop_orders',
+			'woocommerce/order-update-status' => 'edit_shop_orders',
+		);
+
+		return isset( $map[ $name ] ) ? $map[ $name ] : '';
 	}
 }

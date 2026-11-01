@@ -15,6 +15,7 @@
 namespace MoSMCP\Abilities\Packs\Widgets;
 
 use MoSMCP\Abilities\Packs\Site\Site_Support;
+use MoSMCP\Abilities\Packs\Theming\Display_Check;
 use MoSMCP\Abilities\Support\Cache_Purger;
 use MoSMCP\Abilities\Support\Html_Policy;
 use WP_Error;
@@ -556,7 +557,8 @@ class Widgets_Provider {
 		if ( Widgets_Support::INACTIVE === $area ) {
 			$notes[] = __( 'The widget was added to the inactive-widgets bin, so it is not shown on the site until it is moved into an area with mosmcp/widget-move.', 'mosmcp-abilities' );
 		} else {
-			$notes[] = __( 'The widget shows on every page that displays this area.', 'mosmcp-abilities' ) . ' ' . self::cache_note();
+			$hidden  = Display_Check::widget_note( $area, Widgets_Support::area_name( $area ) );
+			$notes[] = '' !== $hidden ? $hidden : __( 'The widget shows on every page that displays this area.', 'mosmcp-abilities' ) . ' ' . self::cache_note();
 		}
 
 		return self::write_result( $widget_id, $area, $index, $warnings, $notes );
@@ -812,6 +814,10 @@ class Widgets_Provider {
 
 		if ( Widgets_Support::STATUS_ACTIVE === Widgets_Support::area_status( $target ) ) {
 			$notes[] = self::cache_note();
+			$hidden  = Display_Check::widget_note( $target, Widgets_Support::area_name( $target ) );
+			if ( '' !== $hidden ) {
+				$notes[] = $hidden;
+			}
 		}
 
 		return self::move_result( $widget_id, $target, $index, $from_area, $from_position, true, $warnings, $notes );

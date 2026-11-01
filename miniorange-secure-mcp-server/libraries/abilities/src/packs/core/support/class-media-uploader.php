@@ -119,7 +119,7 @@ class Media_Uploader {
 	/**
 	 * Loads the upload helpers WordPress only includes for admin requests.
 	 *
-	 * wp_tempnam(), wp_handle_sideload() and wp_generate_attachment_metadata() all
+	 * WordPress's wp_tempnam(), wp_handle_sideload() and wp_generate_attachment_metadata()
 	 * live under wp-admin/includes and are absent during a REST request, which is
 	 * how every call here arrives. Loading them first is what makes these abilities
 	 * work over the API rather than only under WP-CLI, where they happen to already
@@ -722,6 +722,22 @@ class Media_Uploader {
 					(string) $checked['type']
 				)
 			);
+		}
+
+		// Only reachable where a plugin lets the site accept SVG; cleaned here whatever that plugin does.
+		if ( 'image/svg+xml' === (string) $checked['type'] ) {
+			$cleaned = Svg_Sanitizer::clean_file( $tmp );
+			if ( is_wp_error( $cleaned ) ) {
+				wp_delete_file( $tmp );
+				return $cleaned;
+			}
+			if ( ! empty( $cleaned['removed'] ) ) {
+				$warnings[] = array(
+					'code'    => 'svg_cleaned',
+					'message' => __( 'Parts of the SVG that could run code or load outside content were removed; the drawing itself is kept.', 'mosmcp-abilities' ),
+					'context' => 'removed=' . implode( ',', array_slice( $cleaned['removed'], 0, 20 ) ),
+				);
+			}
 		}
 
 		// wp_handle_sideload() takes its first argument by reference, so it needs a variable.

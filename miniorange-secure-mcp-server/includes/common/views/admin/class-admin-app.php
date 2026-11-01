@@ -348,6 +348,15 @@ class Admin_App {
 				$object_level = (bool) $ability->get_meta_item( 'object_level' );
 			}
 
+			// An ability that publishes no required_cap would look grantable for
+			// every role. Packs that know the missing capability fill it in.
+			if ( '' === $required_cap ) {
+				$fallback = apply_filters( 'mosmcp_ability_required_cap', '', $ability->get_name() );
+				if ( is_string( $fallback ) ) {
+					$required_cap = $fallback;
+				}
+			}
+
 			$result[] = array(
 				'name'         => $ability->get_name(),
 				'label'        => $ability->get_label(),

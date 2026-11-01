@@ -10,6 +10,7 @@ namespace MoSMCP\Abilities;
 use MoSMCP\Abilities\Packs\Blocks\Blocks_Pack;
 use MoSMCP\Abilities\Packs\Core\Categories_Pack;
 use MoSMCP\Abilities\Packs\Core\Media_Pack;
+use MoSMCP\Abilities\Packs\Core\Media_Tools_Pack;
 use MoSMCP\Abilities\Packs\Core\Pages_Pack;
 use MoSMCP\Abilities\Packs\Core\Posts_Pack;
 use MoSMCP\Abilities\Packs\Core\Revisions_Pack;
@@ -27,9 +28,11 @@ use MoSMCP\Abilities\Packs\Site\Plugins_Pack;
 use MoSMCP\Abilities\Packs\Site\Site_Overview_Pack;
 use MoSMCP\Abilities\Packs\Site\Site_Settings_Pack;
 use MoSMCP\Abilities\Packs\Site\Themes_Pack;
-use MoSMCP\Abilities\Packs\Theming\Block_Theme_Pack;
-use MoSMCP\Abilities\Packs\Theming\Theme_Draft_Pack;
-use MoSMCP\Abilities\Packs\Theming\Theme_Files_Pack;
+use MoSMCP\Abilities\Packs\Theming\Blocktheme\Block_Theme_Pack;
+use MoSMCP\Abilities\Packs\Theming\Customize\Customize_Pack;
+use MoSMCP\Abilities\Packs\Theming\Identity\Site_Identity_Pack;
+use MoSMCP\Abilities\Packs\Theming\Draft\Theme_Draft_Pack;
+use MoSMCP\Abilities\Packs\Theming\Files\Theme_Files_Pack;
 use MoSMCP\Abilities\Packs\Users\Users_Pack;
 use MoSMCP\Abilities\Packs\Widgets\Widgets_Pack;
 
@@ -62,6 +65,7 @@ class Pack_Registry {
 			Categories_Pack::class,
 			Tags_Pack::class,
 			Media_Pack::class,
+			Media_Tools_Pack::class,
 			Revisions_Pack::class,
 			Users_Pack::class,
 			Comments_Pack::class,
@@ -77,6 +81,8 @@ class Pack_Registry {
 			Block_Theme_Pack::class,
 			Theme_Files_Pack::class,
 			Theme_Draft_Pack::class,
+			Site_Identity_Pack::class,
+			Customize_Pack::class,
 			Blocks_Pack::class,
 			Menus_Pack::class,
 			Widgets_Pack::class,

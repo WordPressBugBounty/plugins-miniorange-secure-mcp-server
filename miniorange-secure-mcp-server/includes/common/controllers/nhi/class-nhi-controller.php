@@ -385,7 +385,7 @@ class NHI_Controller extends Abstract_Admin_Controller {
 
 	/**
 	 * Builds the 409 WP_Error returned when a role_ability_map assigns an
-	 * (ability, role) pair another enabled NHI already owns.
+	 * (ability, role) pair another NHI already owns.
 	 *
 	 * @param array<string, array{uuid:string,name:string}> $conflicts Conflicting pairs keyed "ability::role".
 	 * @return WP_Error

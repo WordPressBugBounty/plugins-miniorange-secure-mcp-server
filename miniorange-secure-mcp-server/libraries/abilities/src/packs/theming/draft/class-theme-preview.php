@@ -6,11 +6,15 @@
  * @package Mosmcp_Abilities_Library
  */
 
-namespace MoSMCP\Abilities\Packs\Theming;
+namespace MoSMCP\Abilities\Packs\Theming\Draft;
 
 use WP_Block_Template;
 use WP_Post;
 use WP_Query;
+use MoSMCP\Abilities\Packs\Theming\Blocktheme\Block_Templates;
+use MoSMCP\Abilities\Packs\Theming\Customize\Theme_Settings;
+use MoSMCP\Abilities\Packs\Theming\Identity\Site_Identity;
+use MoSMCP\Abilities\Packs\Theming\Theme_Support;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -116,6 +120,11 @@ class Theme_Preview {
 		add_filter( 'the_posts', array( __CLASS__, 'overlay_part_posts' ), 20, 2 );
 		add_filter( 'wp_theme_json_data_user', array( __CLASS__, 'overlay_styles' ), 20 );
 		add_filter( 'pre_render_block', array( __CLASS__, 'overlay_synced_pattern' ), 20, 2 );
+		// After core's own theme_mod_custom_logo filter, which reads site_logo.
+		add_filter( 'theme_mod_custom_logo', array( __CLASS__, 'overlay_logo' ), 20 );
+		add_filter( 'pre_option_site_logo', array( __CLASS__, 'overlay_logo' ), 20 );
+		add_filter( 'pre_option_site_icon', array( __CLASS__, 'overlay_icon' ), 20 );
+		add_filter( 'wp_get_custom_css', array( __CLASS__, 'overlay_custom_css' ), 20, 2 );
 		// Right after core registers theme patterns (init, 10) from the live folder.
 		add_action( 'init', array( __CLASS__, 'overlay_file_patterns' ), 11 );
 
@@ -270,8 +279,11 @@ class Theme_Preview {
 		}
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
-		if ( false !== self::active() ) {
+		$draft = self::active();
+		if ( false !== $draft ) {
 			register_shutdown_function( array( __CLASS__, 'fatal_notice' ) );
+			// Now, before the theme loads and reads its settings.
+			self::overlay_settings( $draft );
 		}
 	}
 
@@ -642,6 +654,97 @@ class Theme_Preview {
 		--self::$pattern_depth;
 
 		return $html;
+	}
+
+	/**
+	 * Shows the draft's Customizer CSS in place of the live CSS.
+	 *
+	 * @param string $css        Live CSS.
+	 * @param string $stylesheet Theme the CSS belongs to.
+	 * @return string
+	 */
+	public static function overlay_custom_css( $css, $stylesheet = '' ) {
+		if ( ! self::blocks_apply() ) {
+			return $css;
+		}
+		$draft = self::active();
+		if ( empty( $draft['css'] ) || ( '' !== (string) $stylesheet && (string) $stylesheet !== (string) $draft['stylesheet'] ) ) {
+			return $css;
+		}
+		return (string) $draft['css']['value'];
+	}
+
+	/**
+	 * Lays the draft's theme settings over the stored values, as the Customizer's
+	 * own preview does: one filter per stored option or theme mod, with each
+	 * setting's value placed at its nested key.
+	 *
+	 * @param array<string, mixed> $draft Draft.
+	 * @return void
+	 */
+	private static function overlay_settings( array $draft ) {
+		$groups = array();
+		foreach ( (array) $draft['settings'] as $entry ) {
+			$groups[ $entry['type'] . ':' . $entry['base'] ][] = $entry;
+		}
+
+		foreach ( $groups as $entries ) {
+			$apply = static function ( $value ) use ( $entries ) {
+				if ( ! self::blocks_apply() ) {
+					return $value;
+				}
+				foreach ( $entries as $entry ) {
+					$value = Theme_Settings::place( $value, (array) $entry['keys'], $entry['value'] );
+				}
+				return $value;
+			};
+
+			$base = (string) $entries[0]['base'];
+			if ( 'theme_mod' === $entries[0]['type'] ) {
+				add_filter( 'theme_mod_' . $base, $apply, 20 );
+			} else {
+				add_filter( 'option_' . $base, $apply, 20 );
+				add_filter( 'default_option_' . $base, $apply, 20 );
+			}
+		}
+	}
+
+	/**
+	 * Shows the draft's logo, or none when the draft removes it.
+	 *
+	 * @param mixed $value Live value (false from a pre_option filter).
+	 * @return mixed
+	 */
+	public static function overlay_logo( $value ) {
+		return self::overlay_identity( 'logo', $value );
+	}
+
+	/**
+	 * Shows the draft's site icon, or none when the draft removes it.
+	 *
+	 * @param mixed $value Live value (false from a pre_option filter).
+	 * @return mixed
+	 */
+	public static function overlay_icon( $value ) {
+		return self::overlay_identity( 'icon', $value );
+	}
+
+	/**
+	 * The draft's logo or icon in place of the live one.
+	 *
+	 * Not before init: these values are read early, and resolving the preview
+	 * before the signed-in user is known would switch it off for the request.
+	 *
+	 * @param string $kind  "logo" or "icon".
+	 * @param mixed  $value Live value.
+	 * @return mixed
+	 */
+	private static function overlay_identity( $kind, $value ) {
+		if ( ! did_action( 'init' ) || ! self::blocks_apply() ) {
+			return $value;
+		}
+		$entry = Site_Identity::entry( self::active(), $kind );
+		return null === $entry ? $value : (int) $entry['value'];
 	}
 
 	/**

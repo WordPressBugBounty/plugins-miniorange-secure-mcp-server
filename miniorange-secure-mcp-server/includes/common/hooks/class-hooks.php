@@ -28,6 +28,7 @@ use MoSMCP\Common\Services\Rest\Rest_Abilities;
 use MoSMCP\Common\Services\Rest\Route_Registry;
 use MoSMCP\Common\Utils\Utils;
 use MoSMCP\Common\Views\Admin\Admin_App;
+use MoSMCP\Common\Views\Admin\Member_Dashboard_Widget;
 
 /**
  * Class Hooks
@@ -143,6 +144,9 @@ class Hooks {
 		// Admin menu + React app asset hooks.
 		add_action( 'admin_menu', array( __CLASS__, 'register_admin_menu' ) );
 		Admin_App::register_hooks();
+
+		// Tells team members on the WordPress dashboard that they can connect their own AI.
+		add_action( 'wp_dashboard_setup', array( Member_Dashboard_Widget::class, 'register' ) );
 	}
 
 	/**

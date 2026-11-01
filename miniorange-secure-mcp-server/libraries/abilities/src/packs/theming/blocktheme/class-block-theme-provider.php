@@ -6,12 +6,17 @@
  * @package Mosmcp_Abilities_Library
  */
 
-namespace MoSMCP\Abilities\Packs\Theming;
+namespace MoSMCP\Abilities\Packs\Theming\Blocktheme;
 
+use MoSMCP\Abilities\Packs\Blocks\Block_Patterns;
+use MoSMCP\Abilities\Packs\Blocks\Block_Tree;
 use MoSMCP\Abilities\Packs\Editing\Content_Matcher;
 use MoSMCP\Abilities\Packs\Editing\Editing_Support;
 use MoSMCP\Abilities\Packs\Site\Site_Support;
 use WP_Error;
+use MoSMCP\Abilities\Packs\Theming\Draft\Theme_Draft;
+use MoSMCP\Abilities\Packs\Theming\Draft\Theme_Publisher;
+use MoSMCP\Abilities\Packs\Theming\Theme_Support;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -1030,7 +1035,7 @@ class Block_Theme_Provider {
 					'title'      => (string) $post->post_title,
 					'categories' => wp_get_post_terms( $post->ID, 'wp_pattern_category', array( 'fields' => 'names' ) ),
 					'synced'     => 'unsynced' !== get_post_meta( $post->ID, 'wp_pattern_sync_status', true ),
-					'pending'    => null === $entry ? '' : 'update',
+					'pending'    => null === $entry ? '' : (string) $entry['action'],
 				);
 			}
 			if ( is_array( $draft ) ) {
@@ -1092,6 +1097,12 @@ class Block_Theme_Provider {
 				return self::pattern_not_found( (string) $id );
 			}
 			$entry = Theme_Draft::pattern_entry( Theme_Draft::current(), $id );
+			$notes = array();
+			if ( null !== $entry ) {
+				$notes[] = 'delete' === $entry['action']
+					? __( 'This pattern is marked for deletion in the theme draft; it stays live until the draft is published.', 'mosmcp-abilities' )
+					: __( 'This shows the draft version, which is not live yet.', 'mosmcp-abilities' );
+			}
 			return array(
 				'kind'    => 'saved',
 				'name'    => '',
@@ -1099,8 +1110,8 @@ class Block_Theme_Provider {
 				'title'   => null !== $entry ? (string) $entry['title'] : (string) $post->post_title,
 				'synced'  => 'unsynced' !== get_post_meta( $id, 'wp_pattern_sync_status', true ),
 				'content' => null !== $entry ? (string) $entry['content'] : (string) $post->post_content,
-				'pending' => null === $entry ? '' : 'update',
-				'notes'   => null === $entry ? array() : array( __( 'This shows the draft version, which is not live yet.', 'mosmcp-abilities' ) ),
+				'pending' => null === $entry ? '' : (string) $entry['action'],
+				'notes'   => $notes,
 			);
 		}
 
@@ -1130,10 +1141,11 @@ class Block_Theme_Provider {
 	 * @return array<string, mixed>|WP_Error
 	 */
 	public static function pattern_save( $input = array() ) {
-		$input   = is_array( $input ) ? $input : array();
-		$id      = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
-		$title   = isset( $input['title'] ) ? sanitize_text_field( (string) $input['title'] ) : '';
-		$content = isset( $input['content'] ) ? (string) $input['content'] : '';
+		$input      = is_array( $input ) ? $input : array();
+		$id         = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
+		$title      = isset( $input['title'] ) ? sanitize_text_field( (string) $input['title'] ) : '';
+		$content    = isset( $input['content'] ) ? (string) $input['content'] : '';
+		$categories = self::category_input( $input );
 
 		$draft = Theme_Draft::open();
 		if ( is_wp_error( $draft ) ) {
@@ -1146,6 +1158,18 @@ class Block_Theme_Provider {
 				return self::pattern_not_found( (string) $id );
 			}
 			$existing = Theme_Draft::pattern_entry( $draft, $id );
+			if ( null !== $existing && 'delete' === $existing['action'] ) {
+				return Site_Support::error(
+					'mosmcp_pattern_pending_delete',
+					sprintf(
+						/* translators: %s: pattern title. */
+						__( 'The pattern "%s" is marked for deletion in the theme draft, so it cannot also be changed. To keep it, discard the theme draft with mosmcp/theme-draft-discard and redo any other changes it held.', 'mosmcp-abilities' ),
+						(string) $existing['title']
+					),
+					Site_Support::CAUSE_CONFLICT,
+					false
+				);
+			}
 			$previous = null !== $existing ? (string) $existing['content'] : (string) $post->post_content;
 			$title    = '' !== $title ? $title : ( null !== $existing ? (string) $existing['title'] : (string) $post->post_title );
 			$content  = '' !== $content ? $content : $previous;
@@ -1155,20 +1179,47 @@ class Block_Theme_Provider {
 				return $invalid;
 			}
 
+			// Switching sync on or off, and categories, are kept from an earlier save in
+			// the same draft unless this call changes them again.
+			$live_synced = 'unsynced' !== get_post_meta( $id, 'wp_pattern_sync_status', true );
+			$sync_status = null !== $existing && isset( $existing['sync_status'] ) ? $existing['sync_status'] : null;
+			if ( array_key_exists( 'synced', $input ) ) {
+				$want        = Site_Support::bool_input( $input, 'synced', $live_synced );
+				$sync_status = $want === $live_synced ? null : ( $want ? 'synced' : 'unsynced' );
+			}
+			if ( null === $categories && null !== $existing && isset( $existing['categories'] ) ) {
+				$categories = $existing['categories'];
+			}
+			$synced = null === $sync_status ? $live_synced : ( 'synced' === $sync_status );
+
 			$draft['patterns'][ 'id:' . $id ] = array(
-				'action'   => 'update',
-				'id'       => $id,
-				'title'    => $title,
-				'content'  => $content,
-				'synced'   => 'unsynced' !== get_post_meta( $id, 'wp_pattern_sync_status', true ),
-				'baseline' => null !== $existing ? (string) $existing['baseline'] : Theme_Draft::fingerprint( $post->post_title . '|' . $post->post_content ),
+				'action'      => 'update',
+				'id'          => $id,
+				'title'       => $title,
+				'content'     => $content,
+				'synced'      => $synced,
+				'sync_status' => $sync_status,
+				'categories'  => $categories,
+				'baseline'    => null !== $existing ? (string) $existing['baseline'] : Theme_Draft::fingerprint( $post->post_title . '|' . $post->post_content ),
 			);
 			Theme_Draft::save( $draft );
 
-			$notes  = array();
-			$synced = 'unsynced' !== get_post_meta( $id, 'wp_pattern_sync_status', true );
-			if ( $synced ) {
-				$notes[] = __( 'This pattern is synced: once published, the change appears everywhere it is used.', 'mosmcp-abilities' );
+			$notes = array();
+			if ( 'unsynced' === $sync_status ) {
+				$notes[] = __( 'Once published the pattern is no longer synced: pages that already place it keep showing it, but new copies are independent and editing the pattern no longer changes them.', 'mosmcp-abilities' );
+			} elseif ( 'synced' === $sync_status ) {
+				$notes[] = __( 'Once published the pattern is synced: wherever it is placed by reference, editing it changes every place at once.', 'mosmcp-abilities' );
+			} elseif ( $synced ) {
+				$notes[] = __( 'This pattern is synced: once published, the change appears everywhere it is used. mosmcp/theme-pattern-usage lists those places.', 'mosmcp-abilities' );
+			}
+			if ( null !== $categories ) {
+				$notes[] = empty( $categories )
+					? __( 'Its categories are removed when the draft is published.', 'mosmcp-abilities' )
+					: sprintf(
+						/* translators: %s: comma-separated category names. */
+						__( 'Its categories become: %s (new ones are created when the draft is published).', 'mosmcp-abilities' ),
+						implode( ', ', $categories )
+					);
 			}
 
 			$result                  = self::staged_result( $draft, sprintf( 'the pattern "%s"', $title ), 'updated', $notes );
@@ -1189,12 +1240,13 @@ class Block_Theme_Provider {
 		$synced = Site_Support::bool_input( $input, 'synced', true );
 
 		$draft['patterns'][ 'new:' . $uuid ] = array(
-			'action'   => 'create',
-			'id'       => 0,
-			'title'    => $title,
-			'content'  => $content,
-			'synced'   => $synced,
-			'baseline' => '',
+			'action'     => 'create',
+			'id'         => 0,
+			'title'      => $title,
+			'content'    => $content,
+			'synced'     => $synced,
+			'categories' => null === $categories ? array() : $categories,
+			'baseline'   => '',
 		);
 		Theme_Draft::save( $draft );
 
@@ -1211,6 +1263,212 @@ class Block_Theme_Provider {
 
 		$result['insert_markup'] = $synced ? Theme_Draft::pattern_placeholder( $uuid ) : $content;
 		return $result;
+	}
+
+	/**
+	 * Lists every place a saved pattern is used.
+	 *
+	 * @param array<string, mixed> $input Input.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	public static function pattern_usage( $input = array() ) {
+		$input = is_array( $input ) ? $input : array();
+		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
+		$post  = $id > 0 ? get_post( $id ) : null;
+		if ( ! $post || 'wp_block' !== $post->post_type ) {
+			return self::pattern_not_found( (string) $id );
+		}
+
+		$usage   = Pattern_Usage::find( $id );
+		$pending = self::draft_places( Theme_Draft::current(), $id );
+		$synced  = 'unsynced' !== get_post_meta( $id, 'wp_pattern_sync_status', true );
+		$notes   = array();
+
+		if ( 0 === $usage['total'] && empty( $pending ) ) {
+			$notes[] = __( 'Nothing on the site places this pattern by reference, so changing or deleting it affects no page.', 'mosmcp-abilities' );
+		} elseif ( $synced ) {
+			$notes[] = __( 'Each place listed shows the pattern itself, so editing the pattern changes all of them at once, and deleting it would leave them empty. To change one place on its own, detach it there with mosmcp/block-detach-pattern.', 'mosmcp-abilities' );
+		} else {
+			$notes[] = __( 'The pattern is unsynced, yet these places still show it by reference (they were placed while it was synced), so editing it changes them too.', 'mosmcp-abilities' );
+		}
+		if ( $usage['truncated'] ) {
+			/* translators: %d: number of places listed. */
+			$notes[] = sprintf( __( 'Only the first %d places are listed.', 'mosmcp-abilities' ), Pattern_Usage::LIMIT );
+		}
+
+		return array(
+			'id'        => $id,
+			'title'     => (string) $post->post_title,
+			'synced'    => $synced,
+			'total'     => (int) $usage['total'],
+			'truncated' => (bool) $usage['truncated'],
+			'places'    => $usage['places'],
+			'pending'   => $pending,
+			'notes'     => $notes,
+		);
+	}
+
+	/**
+	 * Stages deleting a saved pattern, refusing while pages use it unless each use
+	 * is to be turned into ordinary blocks first.
+	 *
+	 * @param array<string, mixed> $input Input.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	public static function pattern_delete( $input = array() ) {
+		$input    = is_array( $input ) ? $input : array();
+		$id       = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
+		$on_usage = isset( $input['on_usage'] ) && 'detach' === $input['on_usage'] ? 'detach' : 'refuse';
+
+		$post = $id > 0 ? get_post( $id ) : null;
+		if ( ! $post || 'wp_block' !== $post->post_type || 'trash' === $post->post_status ) {
+			return self::pattern_not_found( (string) $id );
+		}
+		if ( ! current_user_can( 'delete_post', $id ) ) {
+			return Site_Support::error(
+				'mosmcp_pattern_delete_forbidden',
+				__( 'You are not allowed to delete this pattern.', 'mosmcp-abilities' ),
+				Site_Support::CAUSE_CAPABILITY,
+				false
+			);
+		}
+
+		$draft = Theme_Draft::open();
+		if ( is_wp_error( $draft ) ) {
+			return $draft;
+		}
+
+		$existing = Theme_Draft::pattern_entry( $draft, $id );
+		$title    = null !== $existing ? (string) $existing['title'] : (string) $post->post_title;
+		$usage    = Pattern_Usage::find( $id );
+		$pending  = self::draft_places( $draft, $id );
+		$places   = (int) $usage['total'] + count( $pending );
+
+		if ( $places > 0 && 'detach' !== $on_usage ) {
+			$where = Pattern_Usage::describe( $usage['places'] );
+			if ( ! empty( $pending ) ) {
+				$where = trim( $where . ( '' !== $where ? '; ' : '' ) . __( 'pending in the theme draft: ', 'mosmcp-abilities' ) . implode( ', ', $pending ) );
+			}
+			return Site_Support::error(
+				'mosmcp_pattern_in_use',
+				sprintf(
+					/* translators: 1: pattern title, 2: number of places, 3: where. */
+					_n(
+						'The pattern "%1$s" is used in %2$d place (%3$s). Deleting it would leave "This block has been deleted or is unavailable" there instead of the content. Pass on_usage "detach" to turn that use into ordinary blocks when the draft is published, keeping the page as it looks now, or remove the pattern from that page first.',
+						'The pattern "%1$s" is used in %2$d places (%3$s). Deleting it would leave "This block has been deleted or is unavailable" there instead of the content. Pass on_usage "detach" to turn each use into ordinary blocks when the draft is published, keeping the pages as they look now, or remove the pattern from those pages first.',
+						$places,
+						'mosmcp-abilities'
+					),
+					$title,
+					$places,
+					$where
+				),
+				Site_Support::CAUSE_CONFLICT,
+				true,
+				array(
+					'used_in'     => array_slice( wp_list_pluck( $usage['places'], 'title' ), 0, 20 ),
+					'use_instead' => 'mosmcp/theme-pattern-usage',
+				)
+			);
+		}
+
+		$detachable = Pattern_Usage::detachable( $title, $usage );
+		if ( is_wp_error( $detachable ) ) {
+			return $detachable;
+		}
+
+		$draft['patterns'][ 'id:' . $id ] = array(
+			'action'      => 'delete',
+			'id'          => $id,
+			'title'       => $title,
+			// Detached copies show what the page would have shown, including an edit
+			// staged earlier in the same draft.
+			'content'     => null !== $existing ? (string) $existing['content'] : (string) $post->post_content,
+			'synced'      => 'unsynced' !== get_post_meta( $id, 'wp_pattern_sync_status', true ),
+			'on_usage'    => $on_usage,
+			'usage_count' => $places,
+			'baseline'    => null !== $existing ? (string) $existing['baseline'] : Theme_Draft::fingerprint( $post->post_title . '|' . $post->post_content ),
+		);
+		Theme_Draft::save( $draft );
+
+		$notes = array(
+			__( 'Publishing moves the pattern to the trash, so it can still be recovered from there, and the publish can be undone with mosmcp/theme-restore-backup.', 'mosmcp-abilities' ),
+		);
+		if ( $places > 0 ) {
+			$notes[] = sprintf(
+				/* translators: %d: number of places. */
+				_n(
+					'The %d place that uses it gets the pattern\'s blocks as ordinary blocks when the draft is published, so it looks the same afterwards and can be edited on its own.',
+					'The %d places that use it get the pattern\'s blocks as ordinary blocks when the draft is published, so they look the same afterwards and can each be edited on their own.',
+					$places,
+					'mosmcp-abilities'
+				),
+				$places
+			);
+		}
+
+		$result                = self::staged_result( $draft, sprintf( 'the pattern "%s"', $title ), 'deleted', $notes );
+		$result['usage_count'] = $places;
+		$result['used_in']     = array_merge( array_map( array( __CLASS__, 'place_label' ), $usage['places'] ), $pending );
+
+		return $result;
+	}
+
+	/**
+	 * Draft entries that place a saved pattern.
+	 *
+	 * @param array<string, mixed>|null $draft Draft.
+	 * @param int                       $id    Pattern ID.
+	 * @return string[] Labels.
+	 */
+	public static function draft_places( $draft, $id ) {
+		$labels = array();
+		if ( ! is_array( $draft ) ) {
+			return $labels;
+		}
+		foreach ( (array) $draft['templates'] as $entry ) {
+			if ( 'reset' !== $entry['action'] && Block_Patterns::count_references( Block_Tree::parse( (string) $entry['content'] ), $id ) > 0 ) {
+				$labels[] = self::label( $entry['type'], $entry['slug'] );
+			}
+		}
+		foreach ( (array) $draft['patterns'] as $entry ) {
+			if ( 'delete' !== $entry['action'] && (int) $entry['id'] !== (int) $id && Block_Patterns::count_references( Block_Tree::parse( (string) $entry['content'] ), $id ) > 0 ) {
+				/* translators: %s: pattern title. */
+				$labels[] = sprintf( __( 'the pattern "%s"', 'mosmcp-abilities' ), (string) $entry['title'] );
+			}
+		}
+		return $labels;
+	}
+
+	/**
+	 * One-line label for a place that uses a pattern.
+	 *
+	 * @param array<string, mixed> $place Place.
+	 * @return string
+	 */
+	private static function place_label( array $place ) {
+		return sprintf( '%1$s "%2$s"', strtolower( (string) $place['type_label'] ), (string) $place['title'] );
+	}
+
+	/**
+	 * Pattern categories from input, or null when the input does not set them.
+	 *
+	 * @param array<string, mixed> $input Input.
+	 * @return string[]|null
+	 */
+	private static function category_input( array $input ) {
+		if ( ! array_key_exists( 'categories', $input ) ) {
+			return null;
+		}
+		$raw   = is_array( $input['categories'] ) ? $input['categories'] : explode( ',', (string) $input['categories'] );
+		$names = array();
+		foreach ( $raw as $name ) {
+			$name = sanitize_text_field( (string) $name );
+			if ( '' !== $name && ! in_array( $name, $names, true ) ) {
+				$names[] = $name;
+			}
+		}
+		return array_slice( $names, 0, 20 );
 	}
 
 	/*

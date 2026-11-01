@@ -4,7 +4,7 @@ Tags: mcp, ai, mcp-server, chatgpt, claude
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.5.4
+Stable tag: 1.5.5
 License: Expat
 License URI: https://plugins.miniorange.com/mit-license
 
@@ -25,7 +25,8 @@ Unlike other WordPress MCP server plugins that give AI full admin access, we put
 
 Built security-first, so you can let AI work on a live site with confidence:
 
-* **464 MCP tools in 31 categories** – WordPress core, the block editor, menus and widgets, WooCommerce, Yoast SEO, Rank Math, Advanced Custom Fields, Elementor, Kadence, Contact Form 7, WPForms, Gravity Forms, Fluent Forms and more.
+* **Every user connects their own AI** – each person uses their own ChatGPT or Claude, limited to the tools you allow their role.
+* **479 MCP tools in 33 categories** – WordPress core, the block editor, menus and widgets, WooCommerce, Yoast SEO, Rank Math, Advanced Custom Fields, Elementor, Kadence, Contact Form 7, WPForms, Gravity Forms, Fluent Forms and more.
 * **Block-by-block page editing** – AI changes one heading, paragraph or button and leaves the rest of the page exactly as it was.
 * **Changes show straight away** – page caches are cleared automatically after every AI change, and drafts can be shared with an expiring preview link.
 * **Governed REST API access** – AI can use any WordPress REST endpoint, including those from your other plugins, with route-by-route, role-based permissions.
@@ -66,6 +67,8 @@ Everything runs on your own server. No third-party relay sits between your AI cl
 
 Full guide: [Set up ChatGPT with WordPress using MCP](https://plugins.miniorange.com/setup-chatgpt-to-wordpress-abilities-api-using-mcp)
 
+Each team member can connect their own ChatGPT the same way.
+
 = How to Connect Claude to WordPress =
 
 1. Under **Connect your AI client**, select **Claude**. A setup panel opens.
@@ -89,17 +92,17 @@ Your MCP server endpoint:
 
 ==What Your AI Agent Can Do==
 
-464 tools in 31 categories. Integration tools appear only when the related plugin is active.
+479 tools in 33 categories. Integration tools appear only when the related plugin is active.
 
 **WordPress Content**
 
 * **Posts & Pages (56 tools)** – Create, publish, schedule, duplicate, set templates and featured images, trash and restore.
-* **Categories, Tags & Media (40 tools)** – Manage taxonomies, upload media from a URL or file, update alt text and captions.
+* **Categories, Tags & Media (45 tools)** – Manage taxonomies, upload media from a URL or file, update alt text and captions, crop and resize images.
 * **Revisions (9 tools)** – List, compare and restore revisions and autosaves.
 * **Comments (21 tools)** – Moderate, reply, search, mark spam and view counts.
 * **Custom Post Types & Fields (19 tools)** – Discover any custom post type and edit its items, terms and fields.
 * **Content Find & Replace (6 tools)** – Change part of a post, custom field or setting without rewriting it.
-* **Block Editor (11 tools)** – Edit one block at a time: change its text or settings, insert, move, duplicate and delete blocks and patterns.
+* **Block Editor (12 tools)** – Edit one block at a time: change its text or settings, insert, move, duplicate and delete blocks and patterns, and detach synced patterns.
 * **Preview Links (2 tools)** – Expiring links to share a draft without signing in.
 
 **Users & Site Management**
@@ -107,7 +110,7 @@ Your MCP server endpoint:
 * **Users & Roles (38 tools)** – Create users, assign roles, update profiles, send password reset links.
 * **Settings, Plugins, Themes & Updates (34 tools)** – Site title, tagline, homepage, timezone, plugin activation and updates, auto-updates, site health.
 * **Maintenance (8 tools)** – Clear caches, refresh permalinks, run cron events, read the error log.
-* **Theme Editing (32 tools)** – Block templates, global styles, patterns and theme files, with draft, preview, publish and restore.
+* **Theme Editing (41 tools)** – Block templates, global styles, patterns and theme files, logo, site icon, Additional CSS and Customizer settings, with draft, preview, publish and restore.
 * **Menus & Navigation (16 tools)** – Build and reorder menus, assign locations, and edit block-theme Navigation menus.
 * **Widgets & Sidebars (8 tools)** – Add, update, move and delete widgets, including block widgets.
 * **Site Overview (1 tool)** – Tells the AI how your site is built and which tools it may use.
@@ -275,13 +278,25 @@ Ask in the [support forum](https://wordpress.org/support/plugin/miniorange-secur
 
 MCP (Model Context Protocol) is an open standard that lets AI assistants use tools. This plugin makes your WordPress site an MCP server, so AI clients like Claude and ChatGPT can safely read and update your site through tools you control.
 
+= How do I connect ChatGPT to my WordPress site? =
+
+Install and activate Secure MCP Server, create an AI agent, and choose ChatGPT under **Connect your AI client**. Open the **MCP Server for WordPress** app in ChatGPT, enter your site's address and click **Allow Access**. It takes about two minutes, and ChatGPT can then write posts, edit pages, manage WooCommerce products and more, using only the tools you allowed.
+
+= Can each person on my team connect their own ChatGPT or Claude? =
+
+Yes. Every WordPress user connects their own AI client with their own login, so each person's AI works as them, is limited to their role, and is recorded under their name in the audit log. Team members find their connection steps under **My AI Access** in wp-admin.
+
+= Can I limit what an editor's AI can do? =
+
+Yes. In the Agent Registry you choose, for each WordPress role, which tools an AI agent may use: for example, editors' AI can write and edit posts but not install plugins or change settings. Every call is also checked against the person's own WordPress permissions, so an AI can never do more than its user could do in wp-admin.
+
 = Which AI clients are supported? =
 
 Claude, ChatGPT, Gemini, Cursor, Grok, Windsurf and any MCP-compatible client.
 
 = How many tools are included? =
 
-464 tools in 31 categories, covering WordPress core, the block editor, menus, widgets, WooCommerce, Yoast SEO, Rank Math, Advanced Custom Fields, Elementor, Divi, Kadence, Contact Form 7, WPForms, Gravity Forms, Fluent Forms, theme editing and site maintenance. Integration tools appear only when the related plugin is active.
+479 tools in 33 categories, covering WordPress core, the block editor, menus, widgets, WooCommerce, Yoast SEO, Rank Math, Advanced Custom Fields, Elementor, Divi, Kadence, Contact Form 7, WPForms, Gravity Forms, Fluent Forms, theme editing and site maintenance. Integration tools appear only when the related plugin is active.
 
 = Is it safe to give AI access to my WordPress site? =
 
@@ -371,6 +386,26 @@ No. Install, follow the onboarding checklist, and paste one URL into your AI cli
 
 
 == Changelog ==
+
+= 1.5.5 =
+* Added logo and site icon: 3 abilities to see the site's logo and icon, and set or remove them from the media library or a web address. A site icon is cut to a 512 × 512 square the way the Customizer does it, keeping the part you name.
+* Added Additional CSS and theme settings: 4 abilities to read and change the site's custom CSS, and every setting your theme offers in the Customizer, including Astra's. Each value is checked by the theme's own rules and saved through the Customizer when published.
+* Added synced pattern tools: see everywhere a pattern is used, turn one use into ordinary blocks, and delete a pattern safely by turning each remaining use into ordinary blocks, so no page loses its content.
+* Added image editing: crop by shape (16:9, square and so on) keeping the part you name, rotate, flip and resize, as a new image or in place with the original kept. Restore an original, and make missing image sizes.
+* Added upload links: the AI gives you a link to upload a file, such as a logo or a photo, straight into your media library. It works only for your account, behind your normal sign-in.
+* Logo, icon, CSS and theme settings wait in the theme draft, so you can preview them before anything goes live, and publishing backs them up for one-step undo.
+* The approval screen, Connect page and AI Agents page now show that each person connects their own AI with their own WordPress account and gets only the abilities their role allows. The AI Agents page opens with a short guide to role-based AI access, which you can dismiss.
+* Team members whose role has abilities get a dashboard widget showing their role, how many abilities their AI gets and three steps to connect, with links to the connect steps and to Your AI Access. Administrators do not get it.
+* Added setup steps for Gemini, Perplexity, Grok and Antigravity to the dashboard's connect guide, including the plan each app needs to add a custom connector. The Connect page links to the Grok and Antigravity setup guides.
+* After a menu is assigned to a location or a widget is added to an area, the AI now checks the site's pages and says when the theme does not show it yet, and where to switch it on.
+* WooCommerce, ACF, Yoast SEO, forms and Kadence changes now clear page caches automatically too.
+* On sites that accept SVG files, SVGs added by AI are cleaned of scripts, outside links and CSS that could load files from other sites, and a drawing built to freeze the browser of whoever opens it is refused.
+* Theme checks now use their short-lived sign-in only on this site's own pages and always remove it when they finish, so a post whose address points to another site (with Page Links To, for example) can no longer receive it.
+* Fixed the role matrix on the AI Agents page offering abilities to roles that cannot use them, such as deleting pages for a Subscriber, or WooCommerce's own product and order abilities for every role. WordPress still refused those calls, and grants like that are now flagged so you can turn them off.
+* Fixed an agent that was switched off losing its claim to the abilities it owns, which could let two agents own the same ability for a role. Saving now names the agent that already owns an ability.
+* Fixed the plugin page showing blank, or letting you click away, before the setup guide appeared on a first visit.
+* Fixed a warning on menu links to a #section of a page.
+* Minor bug fixes in the WordPress MCP Server.
 
 = 1.5.4 =
 * Added block editor editing: 11 abilities to list, find and read the blocks of any page or post, change one block's text or settings, and insert, replace, move, duplicate and delete blocks, including patterns and synced patterns. Every other block stays exactly as it was, blocks are only placed where they are allowed, and every change saves a revision.
@@ -540,6 +575,9 @@ Fixed: Object-level abilities no longer show false capability conflicts in the r
 * Initial release: read-only viewer for abilities registered through the WordPress Abilities API.
 
 == Upgrade Notice ==
+
+= 1.5.5 =
+Adds logo and site icon, Additional CSS, theme settings (Astra included), synced patterns, image editing and upload links: 15 new abilities, previewed in a draft before going live. Enable them for each role under AI Agents, where grants a role cannot use are now flagged.
 
 = 1.5.4 =
 Adds block-by-block page editing, menus, widgets, shareable draft previews and a site overview (38 new tools), and clears page caches after AI changes. Existing agents do not get the new tools automatically: enable them for each role under AI Agents.

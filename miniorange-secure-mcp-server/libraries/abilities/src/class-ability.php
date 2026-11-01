@@ -55,7 +55,14 @@ class Ability {
 	 *     @type callable|null $cap_args        Maps input to extra current_user_can() args. Optional.
 	 *     @type array         $annotations     The four MCP hints: readonly, destructive, idempotent, open_world.
 	 *     @type string[]      $guard_meta_keys Input fields screened against the reserved-key blocklist. Optional.
-	 *     @type string        $required_cap    Capability surfaced to the admin UI. Defaults to $capability.
+	 *     @type string        $required_cap    Capability the admin matrix compares to the role.
+	 *                                      Omit it and a meta capability such as delete_post is
+	 *                                      surfaced as the primitive the role stores (delete_posts).
+	 *                                      Set a non-empty value to gate on that capability instead.
+	 *                                      Set an empty string to leave the matrix ungated; the
+	 *                                      call-time check still applies. Custom post type abilities
+	 *                                      whose target type is named in the call do that, because
+	 *                                      no one primitive fits every type.
 	 *     @type array         $meta            Extra meta merged into the registration. Optional.
 	 * }
 	 */
@@ -204,13 +211,63 @@ class Ability {
 	}
 
 	/**
-	 * Capability surfaced to the admin UI. Defaults to the runtime capability.
+	 * Capability the admin matrix compares against a role.
 	 *
-	 * @return string
+	 * A non-empty required_cap is returned unchanged, so an ability that names
+	 * its own gate stays gated even when its runtime capability is a meta cap.
+	 * An explicit empty string opts out of the static gate. That is how custom
+	 * post type abilities are marked: their meta cap (edit_post, delete_post)
+	 * resolves to a different primitive for each post type, and the type is an
+	 * argument of the call, so the matrix cannot know it. Abilities in that
+	 * pack which use a primitive already, such as edit_posts, omit the key and
+	 * stay gated on it.
+	 *
+	 * When the key is omitted, a known meta capability is replaced with the
+	 * primitive a role actually stores. delete_post becomes delete_posts. The
+	 * runtime check is unchanged and still passes the meta capability and the
+	 * object id to current_user_can().
+	 *
+	 * @return string Empty when the matrix should not gate the ability on a role capability.
 	 */
 	public function get_required_cap() {
-		$required = (string) $this->arg( 'required_cap', '' );
-		return '' !== $required ? $required : $this->get_capability();
+		if ( array_key_exists( 'required_cap', $this->args ) ) {
+			return (string) $this->args['required_cap'];
+		}
+
+		$capability = $this->get_capability();
+		$role_caps  = self::meta_role_caps();
+
+		return isset( $role_caps[ $capability ] ) ? $role_caps[ $capability ] : $capability;
+	}
+
+	/**
+	 * Core meta capabilities mapped to the primitive stored on a WordPress role.
+	 *
+	 * This is the set WordPress itself derives through map_meta_cap() for posts,
+	 * pages, comments and users. It is not discovered at runtime. A pack that
+	 * introduces another meta capability has to add it here, or set required_cap
+	 * on that ability, or the matrix will compare the meta name and disable the
+	 * checkbox for every role.
+	 *
+	 * @return array<string, string>
+	 */
+	private static function meta_role_caps() {
+		return array(
+			'edit_post'        => 'edit_posts',
+			'delete_post'      => 'delete_posts',
+			'read_post'        => 'read',
+			'publish_post'     => 'publish_posts',
+			'edit_page'        => 'edit_pages',
+			'delete_page'      => 'delete_pages',
+			'read_page'        => 'read',
+			'publish_page'     => 'publish_pages',
+			'edit_post_meta'   => 'edit_posts',
+			'delete_post_meta' => 'edit_posts',
+			'read_post_meta'   => 'edit_posts',
+			'edit_comment'     => 'moderate_comments',
+			'edit_user'        => 'edit_users',
+			'delete_user'      => 'delete_users',
+		);
 	}
 
 	/**

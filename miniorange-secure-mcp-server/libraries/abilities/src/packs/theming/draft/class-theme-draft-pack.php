@@ -6,12 +6,13 @@
  * @package Mosmcp_Abilities_Library
  */
 
-namespace MoSMCP\Abilities\Packs\Theming;
+namespace MoSMCP\Abilities\Packs\Theming\Draft;
 
 use MoSMCP\Abilities\Ability;
 use MoSMCP\Abilities\Ability_Pack;
 use MoSMCP\Abilities\Packs\Core\Support\Core_Schema as Schema;
 use MoSMCP\Abilities\Packs\Site\Site_Support;
+use MoSMCP\Abilities\Packs\Theming\Blocktheme\Block_Theme_Pack;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -108,13 +109,16 @@ class Theme_Draft_Pack extends Ability_Pack {
 					'backups'     => Schema::arr(
 						Schema::object(
 							array(
-								'id'            => Schema::str(),
-								'created'       => Schema::str(),
-								'files'         => Schema::arr( Schema::str() ),
-								'templates'     => Schema::arr( Schema::str() ),
-								'global_styles' => Schema::boolean(),
-								'patterns'      => Schema::arr( Schema::str() ),
-								'restored'      => Schema::boolean(),
+								'id'             => Schema::str(),
+								'created'        => Schema::str(),
+								'files'          => Schema::arr( Schema::str() ),
+								'templates'      => Schema::arr( Schema::str() ),
+								'global_styles'  => Schema::boolean(),
+								'patterns'       => Schema::arr( Schema::str() ),
+								'site_identity'  => Schema::arr( Schema::str() ),
+								'custom_css'     => Schema::boolean(),
+								'theme_settings' => Schema::arr( Schema::str() ),
+								'restored'       => Schema::boolean(),
 							)
 						)
 					),
@@ -134,7 +138,7 @@ class Theme_Draft_Pack extends Ability_Pack {
 		return $this->ability(
 			'mosmcp/theme-draft-preview',
 			__( 'Preview Theme Draft', 'mosmcp-abilities' ),
-			__( 'Returns a link that shows the whole site with the pending theme changes applied — templates, styles and theme files together — to a signed-in administrator, while visitors keep seeing the live site. The preview includes the site\'s existing Site Editor customisations, so it shows exactly what publishing will produce. Also known as: staging link, see changes before publishing, draft preview.', 'mosmcp-abilities' ),
+			__( 'Returns a link that shows the whole site with the pending theme changes applied — templates, styles, theme files, logo and site icon together — to a signed-in administrator, while visitors keep seeing the live site. The preview includes the site\'s existing Site Editor customisations, so it shows exactly what publishing will produce. Also known as: staging link, see changes before publishing, draft preview.', 'mosmcp-abilities' ),
 			array( Theme_Draft_Provider::class, 'preview' ),
 			Site_Support::annotations( false, false, true, false ),
 			Schema::object(
@@ -203,6 +207,9 @@ class Theme_Draft_Pack extends Ability_Pack {
 					'global_styles'  => Schema::str(),
 					'patterns'       => Schema::arr( Schema::str() ),
 					'files'          => Schema::arr( Schema::str() ),
+					'site_identity'  => Schema::arr( Schema::str() ),
+					'custom_css'     => Schema::arr( Schema::str() ),
+					'theme_settings' => Schema::arr( Schema::str() ),
 					'backup_id'      => Schema::str( __( 'Pass to mosmcp/theme-restore-backup to undo this publish.', 'mosmcp-abilities' ) ),
 					'checked_before' => Schema::str(),
 					'checked_after'  => Schema::str(),
@@ -251,7 +258,7 @@ class Theme_Draft_Pack extends Ability_Pack {
 		return $this->ability(
 			'mosmcp/theme-restore-backup',
 			__( 'Restore Theme Backup', 'mosmcp-abilities' ),
-			__( 'Undoes a theme publish: puts back the files, templates, styles and patterns exactly as they were before it, from the backup taken at the time, then checks the site loads. Defaults to the most recent publish. Needs confirm set to true. Also known as: undo theme changes, roll back, revert publish.', 'mosmcp-abilities' ),
+			__( 'Undoes a theme publish: puts back the files, templates, styles, patterns, logo and site icon exactly as they were before it, from the backup taken at the time, then checks the site loads. Defaults to the most recent publish. Needs confirm set to true. Also known as: undo theme changes, roll back, revert publish.', 'mosmcp-abilities' ),
 			array( Theme_Draft_Provider::class, 'restore' ),
 			Site_Support::annotations( false, true, false, false ),
 			Schema::object(
@@ -262,14 +269,17 @@ class Theme_Draft_Pack extends Ability_Pack {
 			),
 			Schema::object(
 				array(
-					'restored'      => Schema::boolean(),
-					'backup_id'     => Schema::str(),
-					'backup_taken'  => Schema::str(),
-					'files'         => Schema::arr( Schema::str() ),
-					'templates'     => Schema::arr( Schema::str() ),
-					'global_styles' => Schema::boolean(),
-					'health'        => Schema::str(),
-					'notes'         => Schema::arr( Schema::str() ),
+					'restored'       => Schema::boolean(),
+					'backup_id'      => Schema::str(),
+					'backup_taken'   => Schema::str(),
+					'files'          => Schema::arr( Schema::str() ),
+					'templates'      => Schema::arr( Schema::str() ),
+					'global_styles'  => Schema::boolean(),
+					'site_identity'  => Schema::arr( Schema::str() ),
+					'custom_css'     => Schema::boolean(),
+					'theme_settings' => Schema::arr( Schema::str() ),
+					'health'         => Schema::str(),
+					'notes'          => Schema::arr( Schema::str() ),
 				),
 				array( 'restored', 'backup_id' )
 			)
