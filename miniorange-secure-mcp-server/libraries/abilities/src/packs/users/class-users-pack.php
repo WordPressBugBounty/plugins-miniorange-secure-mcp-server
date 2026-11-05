@@ -71,7 +71,7 @@ class Users_Pack extends Ability_Pack {
 		return array_merge(
 			$this->read_abilities(),
 			$this->write_abilities(),
-			$this->role_abilities(),
+			$this->role_abilities()
 		);
 	}
 

@@ -23,6 +23,7 @@ use MoSMCP\Abilities\Packs\FluentForms\Fluent_Forms_Pack;
 use MoSMCP\Abilities\Packs\Maintenance\Maintenance_Pack;
 use MoSMCP\Abilities\Packs\Menus\Menus_Pack;
 use MoSMCP\Abilities\Packs\Previews\Previews_Pack;
+use MoSMCP\Abilities\Packs\Seo\Seo_Pack;
 use MoSMCP\Abilities\Packs\Site\Health_Pack;
 use MoSMCP\Abilities\Packs\Site\Plugins_Pack;
 use MoSMCP\Abilities\Packs\Site\Site_Overview_Pack;
@@ -88,6 +89,7 @@ class Pack_Registry {
 			Widgets_Pack::class,
 			Previews_Pack::class,
 			Site_Overview_Pack::class,
+			Seo_Pack::class,
 		);
 	}
 

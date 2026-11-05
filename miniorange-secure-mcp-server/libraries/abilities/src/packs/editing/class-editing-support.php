@@ -8,6 +8,7 @@
 namespace MoSMCP\Abilities\Packs\Editing;
 
 use MoSMCP\Abilities\Packs\Site\Site_Support;
+use MoSMCP\Abilities\Support\Html_Policy;
 use WP_Error;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -294,6 +295,46 @@ class Editing_Support {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Refuses an edit that adds markup the current user is not allowed to save.
+	 *
+	 * WordPress filters these users' post content when they save it, but never their
+	 * custom fields or settings, and page builders print some of those unescaped: an
+	 * Elementor HTML widget prints its code exactly as stored. So the post rule is
+	 * applied here, to what the edit adds, and a refusal says why rather than
+	 * stripping the markup and leaving its text behind on the page.
+	 *
+	 * @param string $before Value before the edit.
+	 * @param string $after  Value after the edit.
+	 * @param string $label  Human description of what is being edited.
+	 * @return WP_Error|null WP_Error when the edit must not be written, null otherwise.
+	 */
+	public static function markup_error( $before, $after, $label ) {
+		if ( '' === Html_Policy::restriction() ) {
+			return null;
+		}
+
+		$added = Html_Policy::added_markup( $before, $after );
+
+		if ( empty( $added ) ) {
+			return null;
+		}
+
+		return Site_Support::error(
+			'mosmcp_markup_not_allowed',
+			sprintf(
+				/* translators: 1: what was being edited, 2: list of markup such as <script>, 3: who is allowed to store it. */
+				__( 'Nothing was saved: this change adds markup to %1$s that your account is not allowed to save: %2$s. %3$s Text and ordinary formatting can still be changed, so remove that markup and try again.', 'mosmcp-abilities' ),
+				$label,
+				implode( ', ', $added ),
+				Html_Policy::unfiltered_html_reason()
+			),
+			Site_Support::CAUSE_CAPABILITY,
+			true,
+			array( 'disallowed_markup' => $added )
+		);
 	}
 
 	/**

@@ -67,7 +67,9 @@ class Elementor_Pack extends Ability_Pack {
 	public function abilities() {
 		return array(
 			$this->page_read(),
+			$this->element_get(),
 			$this->element_set_content(),
+			$this->element_patch(),
 			$this->element_set_style(),
 			$this->element_duplicate(),
 			$this->element_move(),
@@ -323,7 +325,7 @@ class Elementor_Pack extends Ability_Pack {
 			'mosmcp/elementor-element-set-content',
 			array(
 				'label'         => __( 'Edit Elementor Element Content', 'mosmcp-abilities' ),
-				'description'   => __( 'Changes the text, image or link of a single element inside an Elementor layout, leaving the design untouched. Only content settings can be reached, so this cannot change an element\'s colour, font or spacing settings. Markup is handled exactly as in Elementor\'s editor: users with the unfiltered_html capability can store any HTML, including <script>, <style>, <svg> and <canvas> in an HTML widget (which also needs Elementor\'s HTML-widget permission); markup a user is not allowed to store is refused with the reason, never silently removed. Read the layout first to get the element_id you want to change. Also known as: edit Elementor text, change heading, change button text, edit HTML widget code, page builder content.', 'mosmcp-abilities' ),
+				'description'   => __( 'Changes the text, image or link of a single element inside an Elementor layout, leaving the design untouched. Only content settings can be reached, so this cannot change an element\'s colour, font or spacing settings. Markup is handled exactly as in Elementor\'s editor: users with the unfiltered_html capability can store any HTML, including <script>, <style>, <svg> and <canvas> in an HTML widget (which also needs Elementor\'s HTML-widget permission); markup a user is not allowed to store is refused with the reason, never silently removed. To change only part of a long text or a large HTML widget, use mosmcp/elementor-element-patch instead of sending the whole value. Read the layout first to get the element_id you want to change. Also known as: edit Elementor text, change heading, change button text, edit HTML widget code, page builder content.', 'mosmcp-abilities' ),
 				'category'      => 'mosmcp-elementor',
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),
@@ -365,6 +367,178 @@ class Elementor_Pack extends Ability_Pack {
 						'warnings'      => Schema::warnings(),
 					),
 					array( 'id', 'changes' )
+				),
+			)
+		);
+	}
+
+	/**
+	 * Defines the mosmcp/elementor-element-patch ability.
+	 *
+	 * For a small change inside long text, where resending the whole value is
+	 * exactly what goes wrong. It reaches the same content settings as set-content
+	 * and saves through it, so it can do nothing set-content cannot.
+	 *
+	 * @return Ability
+	 */
+	private function element_patch() {
+		return new Ability(
+			'mosmcp/elementor-element-patch',
+			array(
+				'label'         => __( 'Patch Elementor Element Text', 'mosmcp-abilities' ),
+				'description'   => __( 'Makes small exact-text edits inside one Elementor element, such as changing a line of code in a large HTML widget or a sentence in a long text block, without sending the whole content back. Each edit gives the exact text to find and its replacement; the text must appear exactly once unless replace_all is set. All edits are applied together, or none are if any fails, and a failed edit returns the closest matching passages. Saved under the same rules as mosmcp/elementor-element-set-content, including who may store code in an HTML widget. Read the element first with mosmcp/elementor-element-get to copy the exact text. Also known as: apply patch, elementor-element-apply-patch, find and replace in an Elementor widget, edit part of an HTML widget, change one line of code.', 'mosmcp-abilities' ),
+				'category'      => 'mosmcp-elementor',
+				'capability'    => 'edit_post',
+				'cap_args'      => self::id_args(),
+				'annotations'   => self::annotations( false, false, false, true ),
+				'execute'       => array( Elementor_Provider::class, 'element_patch' ),
+				'input_schema'  => Schema::object(
+					array(
+						'id'                => Schema::int( __( 'The ID of the post, page or Elementor template whose layout holds the element.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
+						'element_id'        => Schema::str( __( 'The Elementor element ID to edit, as reported when reading the layout.', 'mosmcp-abilities' ), array( 'minLength' => 1 ) ),
+						'field'             => Schema::str(
+							__( 'Which text to edit: "text" is the primary text or code (an HTML widget\'s code, a heading\'s title, a text editor\'s body); "body" is the secondary text on widgets that have both, such as an icon box\'s description.', 'mosmcp-abilities' ),
+							array(
+								'enum'    => Elementor_Content_Patcher::TEXT_ROLES,
+								'default' => 'text',
+							)
+						),
+						'edits'             => array_merge(
+							Schema::arr(
+								Schema::object(
+									array(
+										'find'        => Schema::str( __( 'The exact text to change, copied from the element. Include enough surrounding text that it appears only once.', 'mosmcp-abilities' ), array( 'minLength' => 1 ) ),
+										'replace'     => Schema::str( __( 'The new text. An empty string deletes the found text.', 'mosmcp-abilities' ) ),
+										'replace_all' => Schema::boolean( __( 'Change every occurrence instead of requiring exactly one.', 'mosmcp-abilities' ), array( 'default' => false ) ),
+									),
+									array( 'find', 'replace' )
+								),
+								__( 'The edits, applied in order, each to the result of the one before.', 'mosmcp-abilities' )
+							),
+							array(
+								'minItems' => 1,
+								'maxItems' => Elementor_Content_Patcher::MAX_EDITS,
+							)
+						),
+						'expected_modified' => Schema::str( __( 'Optional. The "modified" value from a previous read. The edit is refused if the post changed since then, so a concurrent edit is never overwritten.', 'mosmcp-abilities' ) ),
+					),
+					array( 'id', 'element_id', 'edits' )
+				),
+				'output_schema' => Schema::object(
+					array(
+						'id'            => Schema::int(),
+						'title'         => Schema::str(),
+						'status'        => Schema::str( __( 'The post status, which this ability never changes.', 'mosmcp-abilities' ) ),
+						'modified'      => Schema::str( __( 'New modified timestamp, usable as expected_modified on a following edit.', 'mosmcp-abilities' ) ),
+						'field'         => Schema::str(),
+						'control'       => Schema::str( __( 'The Elementor setting that was edited.', 'mosmcp-abilities' ) ),
+						'edits'         => Schema::arr(
+							Schema::object(
+								array(
+									'edit'       => Schema::int( __( 'Which edit, counting from 1.', 'mosmcp-abilities' ) ),
+									'match_mode' => Schema::str( __( 'How the text was found: exact, or a tolerant rule when quotes, entities or spacing differed.', 'mosmcp-abilities' ) ),
+									'replaced'   => Schema::int( __( 'How many occurrences were changed.', 'mosmcp-abilities' ) ),
+									'excerpt'    => Schema::str( __( 'The changed passage with some text either side, as it now reads.', 'mosmcp-abilities' ) ),
+								)
+							)
+						),
+						'length_before' => Schema::int(),
+						'length_after'  => Schema::int(),
+						'changes'       => Schema::arr(
+							Schema::object(
+								array(
+									'element_id'  => Schema::str(),
+									'widget_type' => Schema::str(),
+									'role'        => Schema::str(),
+									'control'     => Schema::str(),
+									'previous'    => Schema::str(),
+									'current'     => Schema::str(),
+								)
+							)
+						),
+						'view_url'      => Schema::str(),
+						'elementor_url' => Schema::str(),
+						'warnings'      => Schema::warnings(),
+					),
+					array( 'id', 'edits' )
+				),
+			)
+		);
+	}
+
+	/**
+	 * Defines the mosmcp/elementor-element-get ability.
+	 *
+	 * @return Ability
+	 */
+	private function element_get() {
+		return new Ability(
+			'mosmcp/elementor-element-get',
+			array(
+				'label'         => __( 'Read Elementor Element', 'mosmcp-abilities' ),
+				'description'   => __( 'Reads one element of an Elementor layout in full: its text, code, image and link exactly as stored, without the shortening the layout read applies to long values. Use it to copy exact text before changing part of it with mosmcp/elementor-element-patch. Very long content comes back in pages; call again with offset set to next_offset. Also known as: read an Elementor widget, get HTML widget code, show the full text of an element.', 'mosmcp-abilities' ),
+				'category'      => 'mosmcp-elementor',
+				'capability'    => 'edit_post',
+				'cap_args'      => self::id_args(),
+				'annotations'   => self::annotations( true, false, true, false ),
+				'execute'       => array( Elementor_Provider::class, 'element_get' ),
+				'input_schema'  => Schema::object(
+					array(
+						'id'         => Schema::int( __( 'The ID of the post, page or Elementor template whose layout holds the element.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
+						'element_id' => Schema::str( __( 'The Elementor element ID, as reported when reading the layout.', 'mosmcp-abilities' ), array( 'minLength' => 1 ) ),
+						'offset'     => Schema::int(
+							__( 'Byte offset to start each value at, for reading very long content in pages.', 'mosmcp-abilities' ),
+							array(
+								'default' => 0,
+								'minimum' => 0,
+							)
+						),
+						'max_bytes'  => Schema::int(
+							__( 'Most bytes of each value to return.', 'mosmcp-abilities' ),
+							array(
+								'default' => Elementor_Provider::ELEMENT_GET_DEFAULT_BYTES,
+								'minimum' => Elementor_Provider::ELEMENT_GET_MIN_BYTES,
+								'maximum' => Elementor_Provider::ELEMENT_GET_MAX_BYTES,
+							)
+						),
+					),
+					array( 'id', 'element_id' )
+				),
+				'output_schema' => Schema::object(
+					array(
+						'id'        => Schema::int(),
+						'post_type' => Schema::str(),
+						'title'     => Schema::str(),
+						'modified'  => Schema::str( __( 'Usable as expected_modified on a following edit.', 'mosmcp-abilities' ) ),
+						'element'   => Schema::object(
+							array(
+								'element_id'  => Schema::str(),
+								'el_type'     => Schema::str(),
+								'widget_type' => Schema::str(),
+								'title'       => Schema::str(),
+								'path'        => Schema::str(),
+								'depth'       => Schema::int(),
+								'child_count' => Schema::int(),
+								'is_atomic'   => Schema::boolean(),
+								'editable'    => Schema::boolean(),
+							)
+						),
+						'content'   => Schema::arr(
+							Schema::object(
+								array(
+									'role'        => Schema::str( __( 'text, body, image or link.', 'mosmcp-abilities' ) ),
+									'control'     => Schema::str( __( 'The Elementor setting that holds it.', 'mosmcp-abilities' ) ),
+									'value'       => Schema::str(),
+									'length'      => Schema::int( __( 'Full length in bytes.', 'mosmcp-abilities' ) ),
+									'offset'      => Schema::int(),
+									'has_more'    => Schema::boolean(),
+									'next_offset' => Schema::int( __( 'Where the next page starts; 0 when this is the end.', 'mosmcp-abilities' ) ),
+								)
+							)
+						),
+						'warnings'  => Schema::warnings(),
+					),
+					array( 'id', 'element', 'content' )
 				),
 			)
 		);
@@ -465,7 +639,7 @@ class Elementor_Pack extends Ability_Pack {
 			'mosmcp/elementor-page-read',
 			array(
 				'label'         => __( 'Read Elementor Layout', 'mosmcp-abilities' ),
-				'description'   => __( 'Lists the elements that make up a post or page built with Elementor, with each element\'s ID and its text, image and link values. Styling is omitted to keep the response small. Use the element IDs from this list to edit specific parts of the layout. Also known as: page builder, read the Elementor layout, inspect the page structure.', 'mosmcp-abilities' ),
+				'description'   => __( 'Lists the elements that make up a post or page built with Elementor, with each element\'s ID and its text, image and link values. Styling is omitted to keep the response small, and values longer than 500 characters are shortened; read one element in full with mosmcp/elementor-element-get. Use the element IDs from this list to edit specific parts of the layout. Also known as: page builder, read the Elementor layout, inspect the page structure.', 'mosmcp-abilities' ),
 				'category'      => 'mosmcp-elementor',
 				'capability'    => 'edit_post',
 				'cap_args'      => self::id_args(),

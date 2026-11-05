@@ -1,10 +1,10 @@
 === Secure MCP Server for Claude, ChatGPT, Gemini and other AI Agents===
 Contributors: cyberlord92
-Tags: mcp, ai, mcp-server, chatgpt, claude
+Tags: mcp-server, mcp, chatgpt, claude, wordpress mcp
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.5.5
+Stable tag: 1.5.6
 License: Expat
 License URI: https://plugins.miniorange.com/mit-license
 
@@ -26,7 +26,7 @@ Unlike other WordPress MCP server plugins that give AI full admin access, we put
 Built security-first, so you can let AI work on a live site with confidence:
 
 * **Every user connects their own AI** – each person uses their own ChatGPT or Claude, limited to the tools you allow their role.
-* **479 MCP tools in 33 categories** – WordPress core, the block editor, menus and widgets, WooCommerce, Yoast SEO, Rank Math, Advanced Custom Fields, Elementor, Kadence, Contact Form 7, WPForms, Gravity Forms, Fluent Forms and more.
+* **483 MCP tools in 34 categories** – WordPress core, the block editor, menus and widgets, WooCommerce, Yoast SEO, Rank Math, Advanced Custom Fields, Elementor, Kadence, Contact Form 7, WPForms, Gravity Forms, Fluent Forms and more.
 * **Block-by-block page editing** – AI changes one heading, paragraph or button and leaves the rest of the page exactly as it was.
 * **Changes show straight away** – page caches are cleared automatically after every AI change, and drafts can be shared with an expiring preview link.
 * **Governed REST API access** – AI can use any WordPress REST endpoint, including those from your other plugins, with route-by-route, role-based permissions.
@@ -92,7 +92,7 @@ Your MCP server endpoint:
 
 ==What Your AI Agent Can Do==
 
-479 tools in 33 categories. Integration tools appear only when the related plugin is active.
+483 tools in 34 categories. Integration tools appear only when the related plugin is active.
 
 **WordPress Content**
 
@@ -119,9 +119,9 @@ Your MCP server endpoint:
 
 * **WooCommerce (41 tools)** – Products, orders, refunds, customers, coupons and sales reports.
 * **Advanced Custom Fields (25 tools)** – Field groups, repeaters, flexible content, relationships, options pages.
-* **Yoast SEO & Rank Math (15 tools)** – SEO titles, meta descriptions, focus keywords, canonicals, schema, Open Graph.
+* **Yoast SEO & Rank Math (17 tools)** – SEO titles, meta descriptions, focus keywords, canonicals, schema, Open Graph, plus read-only SEO reports.
 * **Forms & Leads (54 tools)** – Contact Form 7 (Flamingo), WPForms, Gravity Forms and Fluent Forms entries, with CSV export.
-* **Elementor (10 tools)** – Read, edit, style, move and duplicate Elementor elements
+* **Elementor (12 tools)** – Read, edit, style, move and duplicate Elementor elements, and patch large HTML widgets
 * **Divi 4 & Divi 5** – Read and edit Divi Builder layouts, modules, text, images and styling. Divi support is part of the Pro plan.
 * **Kadence Blocks (18 tools)** – Build Kadence pages, insert rows, columns, headings, buttons and images.
 
@@ -296,7 +296,7 @@ Claude, ChatGPT, Gemini, Cursor, Grok, Windsurf and any MCP-compatible client.
 
 = How many tools are included? =
 
-479 tools in 33 categories, covering WordPress core, the block editor, menus, widgets, WooCommerce, Yoast SEO, Rank Math, Advanced Custom Fields, Elementor, Divi, Kadence, Contact Form 7, WPForms, Gravity Forms, Fluent Forms, theme editing and site maintenance. Integration tools appear only when the related plugin is active.
+483 tools in 34 categories, covering WordPress core, the block editor, menus, widgets, WooCommerce, Yoast SEO, Rank Math, Advanced Custom Fields, Elementor, Divi, Kadence, Contact Form 7, WPForms, Gravity Forms, Fluent Forms, theme editing and site maintenance. Integration tools appear only when the related plugin is active.
 
 = Is it safe to give AI access to my WordPress site? =
 
@@ -322,13 +322,17 @@ Yes. 41 tools cover products, attributes, orders, order notes, refunds, customer
 
 Yes. 14 Yoast SEO tools cover titles, meta descriptions, focus keywords, cornerstone content, robots, canonicals, breadcrumbs, Open Graph, Twitter/X cards, schema and sitemaps. Rank Math SEO metadata is also supported.
 
+= Can a read-only AI agent read SEO data? =
+
+Yes. The read-only SEO tools need only permission to read a post, so you can give them to a role such as Subscriber and keep the AI strictly read-only. They show each post's SEO title, meta description and focus keywords, both as saved and as search engines see them, and can list posts with SEO issues such as a missing meta description. They work with Rank Math and Yoast SEO, and with All in One SEO and SEOPress on the Pro plan.
+
 = Does it support Advanced Custom Fields (ACF)? =
 
 Yes. 25 ACF tools cover field values, repeaters, flexible content, relationships, options pages, field groups and location rules.
 
 = Does it support Elementor, Divi and Kadence? =
 
-Yes. Elementor (10 tools), Divi 3 and Divi 4, and Kadence Blocks (18 tools) are supported, so AI can read, edit, style and build layouts. Divi support (Divi 4 and Divi 5 layouts) is part of the Pro plan.
+Yes. Elementor (12 tools), Divi 3 and Divi 4, and Kadence Blocks (18 tools) are supported, so AI can read, edit, style and build layouts. Divi support (Divi 4 and Divi 5 layouts) is part of the Pro plan.
 
 = Can AI edit just one part of a page? =
 
@@ -376,16 +380,21 @@ No. Install, follow the onboarding checklist, and paste one URL into your AI cli
 
 == Screenshots ==
 
-1. Onboarding quick-start guide for registering your first AI agent.
-2. AI Agents list with role-based policies and ability packs.
+1. MCP Server quick-start guide for registering your first AI agent
+2. MCP Server AI agents list with role-based policies and ability packs 
 3. Agent overview showing configuration and recent activity.
-4. Activity log filterable by agent, status, ability, user and date.
-5. Connect to AI – setup for ChatGPT, Claude, Cursor and other MCP clients.
-6. MCP Server dashboard with active agents, executions, success rate and latency.
-7. "Your AI Access" view showing a member's allowed tools and how to connect.
-
+4. MCP Server activity log with filters for agent, status, ability, user and date 
+5. Connect AI clients to WordPress MCP Server using ChatGPT, Claude and Cursor 
+6. WordPress MCP Server dashboard showing active agents, executions, success rate and latency 
+7. WordPress MCP Server Your AI Access page showing permitted tools and connection details 
 
 == Changelog ==
+
+= 1.5.6 =
+* Added exact edits for Elementor: change a line of code in a large HTML widget, or a sentence in a long text block, without sending the whole widget back. Several edits can be made at once; they all apply or none do, and when a phrase is not found the AI is shown the closest text.
+* Added a full read of one Elementor element, so long HTML and text are no longer cut short when the AI reads them.
+* Added read-only SEO tools: read each post's SEO title, meta description, focus keywords and indexing, as saved and as search engines see them, or list the posts with SEO issues. They need only permission to read the post, so a Subscriber's AI can review SEO without editing rights. Works with Rank Math and Yoast SEO.
+* Hardened custom field and setting edits: code a user is not allowed to add, such as scripts, iframes or onclick handlers, is now refused with the reason, as it already was for posts and Elementor.
 
 = 1.5.5 =
 * Added logo and site icon: 3 abilities to see the site's logo and icon, and set or remove them from the media library or a web address. A site icon is cut to a 512 × 512 square the way the Customizer does it, keeping the part you name.
@@ -403,7 +412,7 @@ No. Install, follow the onboarding checklist, and paste one URL into your AI cli
 * Theme checks now use their short-lived sign-in only on this site's own pages and always remove it when they finish, so a post whose address points to another site (with Page Links To, for example) can no longer receive it.
 * Fixed the role matrix on the AI Agents page offering abilities to roles that cannot use them, such as deleting pages for a Subscriber, or WooCommerce's own product and order abilities for every role. WordPress still refused those calls, and grants like that are now flagged so you can turn them off.
 * Fixed an agent that was switched off losing its claim to the abilities it owns, which could let two agents own the same ability for a role. Saving now names the agent that already owns an ability.
-* Fixed the plugin page showing blank, or letting you click away, before the setup guide appeared on a first visit.
+* Fixed the MCP Server plugin page showing blank, or letting you click away, before the setup guide appeared on a first visit.
 * Fixed a warning on menu links to a #section of a page.
 * Minor bug fixes in the WordPress MCP Server.
 
@@ -575,6 +584,9 @@ Fixed: Object-level abilities no longer show false capability conflicts in the r
 * Initial release: read-only viewer for abilities registered through the WordPress Abilities API.
 
 == Upgrade Notice ==
+
+= 1.5.6 =
+Adds exact edits inside Elementor widgets and read-only SEO tools for any role that can read a post: 4 new abilities. Also refuses code in custom field and setting edits from users WordPress does not allow to add code. Enable the new abilities for each role under AI Agents.
 
 = 1.5.5 =
 Adds logo and site icon, Additional CSS, theme settings (Astra included), synced patterns, image editing and upload links: 15 new abilities, previewed in a draft before going live. Enable them for each role under AI Agents, where grants a role cannot use are now flagged.

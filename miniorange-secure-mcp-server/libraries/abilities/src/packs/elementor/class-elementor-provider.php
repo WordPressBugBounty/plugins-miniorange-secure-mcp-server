@@ -37,6 +37,14 @@ class Elementor_Provider {
 	const WIDGET_LIST_MAX_LIMIT     = 300;
 
 	/**
+	 * Default, smallest and largest "max_bytes" for mosmcp/elementor-element-get,
+	 * shared with its input_schema for the same reason.
+	 */
+	const ELEMENT_GET_DEFAULT_BYTES = 60000;
+	const ELEMENT_GET_MIN_BYTES     = 1000;
+	const ELEMENT_GET_MAX_BYTES     = 250000;
+
+	/**
 	 * Reads a post's Elementor layout as a flat, content-focused element list.
 	 *
 	 * @param array<string, mixed> $input Ability input.
@@ -210,6 +218,176 @@ class Elementor_Provider {
 		$input = (array) $input;
 
 		return Elementor_Write_Engine::run( $input, Elementor_Content_Writer::mutator( $input ) );
+	}
+
+	/**
+	 * Reads one element in full.
+	 *
+	 * The layout read shortens every value to keep a whole page's list small, which
+	 * leaves a long HTML widget or text block unreadable there. This returns one
+	 * element's content complete, in pages when it is very large, so it can be
+	 * quoted exactly in a patch.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	public static function element_get( $input = array() ) {
+		$input = (array) $input;
+
+		if ( ! Elementor_Schema::available() ) {
+			return Elementor_Schema::unavailable_error();
+		}
+
+		$post = Elementor_Document::require_post( isset( $input['id'] ) ? $input['id'] : 0 );
+		if ( is_wp_error( $post ) ) {
+			return $post;
+		}
+
+		$tree = Elementor_Document::tree( (int) $post->ID );
+		if ( is_wp_error( $tree ) ) {
+			return $tree;
+		}
+
+		$path = Elementor_Write_Engine::resolve_one( $tree, isset( $input['element_id'] ) ? (string) $input['element_id'] : '' );
+		if ( is_wp_error( $path ) ) {
+			return $path;
+		}
+
+		$node = Elementor_Write_Engine::node_at( $tree, $path );
+		if ( ! is_array( $node ) ) {
+			return new WP_Error( 'element_not_found', __( 'The element could not be read from the layout.', 'mosmcp-abilities' ) );
+		}
+
+		$described = Elementor_Document::describe_node( $node, $path, count( $path ) - 1 );
+		$offset    = isset( $input['offset'] ) ? absint( $input['offset'] ) : 0;
+		$max       = isset( $input['max_bytes'] ) ? absint( $input['max_bytes'] ) : self::ELEMENT_GET_DEFAULT_BYTES;
+		$max       = max( self::ELEMENT_GET_MIN_BYTES, min( $max, self::ELEMENT_GET_MAX_BYTES ) );
+		$content   = array();
+		$warnings  = array();
+
+		$values = array();
+		foreach ( $described['content'] as $role => $entry ) {
+			$values[ $role ] = array( (string) $entry['control'], (string) $entry['value'] );
+		}
+
+		// Text in full, including a never-edited control's default, which the
+		// summary leaves out because nothing is stored for it.
+		foreach ( Elementor_Content_Patcher::TEXT_ROLES as $role ) {
+			$text = Elementor_Content_Patcher::text_of( $node, $role );
+			if ( ! is_wp_error( $text ) ) {
+				$values[ $role ] = array( (string) $text['control'], (string) $text['value'] );
+			} elseif ( isset( $values[ $role ] ) ) {
+				$warnings[] = array(
+					'code'    => 'value_shortened',
+					'message' => $text->get_error_message(),
+					'context' => 'role=' . $role,
+				);
+			}
+		}
+
+		foreach ( $values as $role => $pair ) {
+			list( $control, $value ) = $pair;
+
+			$length = strlen( $value );
+			$slice  = self::utf8_slice( $value, $offset, $max );
+			$end    = $slice['offset'] + strlen( $slice['text'] );
+
+			$content[] = array(
+				'role'        => (string) $role,
+				'control'     => $control,
+				'value'       => $slice['text'],
+				'length'      => $length,
+				'offset'      => $slice['offset'],
+				'has_more'    => $end < $length,
+				'next_offset' => $end < $length ? $end : 0,
+			);
+
+			if ( $end < $length ) {
+				$warnings[] = array(
+					'code'    => 'more_content',
+					'message' => __( 'This value is longer than max_bytes. Call again with offset set to next_offset to read the rest.', 'mosmcp-abilities' ),
+					'context' => sprintf( 'role=%s length=%d next_offset=%d', $role, $length, $end ),
+				);
+			}
+		}
+
+		return array(
+			'id'        => (int) $post->ID,
+			'post_type' => (string) $post->post_type,
+			'title'     => (string) get_the_title( $post ),
+			'modified'  => (string) $post->post_modified_gmt,
+			'element'   => array_intersect_key( $described, array_flip( array( 'element_id', 'el_type', 'widget_type', 'title', 'path', 'depth', 'child_count', 'is_atomic', 'editable' ) ) ),
+			'content'   => $content,
+			'warnings'  => $warnings,
+		);
+	}
+
+	/**
+	 * Makes small find-and-replace edits inside one element's text.
+	 *
+	 * @param array<string, mixed> $input Ability input.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	public static function element_patch( $input = array() ) {
+		$input  = (array) $input;
+		$report = array();
+
+		$result = Elementor_Write_Engine::run( $input, Elementor_Content_Patcher::mutator( $input, $report ) );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		foreach ( $report['edits'] as $edit ) {
+			if ( 'exact' === $edit['match_mode'] ) {
+				continue;
+			}
+
+			$result['warnings'][] = array(
+				'code'    => 'tolerant_match',
+				'message' => 'across_markup' === $edit['match_mode']
+					? __( 'The text ran through formatting such as a link or bold text, so that whole passage, formatting included, was replaced. Check the excerpt reads as intended.', 'mosmcp-abilities' )
+					: __( 'The stored text differed slightly from the text supplied (quotes, entities or spacing) and was matched by a tolerant rule. Check the excerpt reads as intended.', 'mosmcp-abilities' ),
+				'context' => sprintf( 'edit=%d mode=%s', $edit['edit'], $edit['match_mode'] ),
+			);
+		}
+
+		return array_merge(
+			$result,
+			array(
+				'field'         => $report['role'],
+				'control'       => $report['control'],
+				'edits'         => $report['edits'],
+				'length_before' => $report['length_before'],
+				'length_after'  => $report['length_after'],
+			)
+		);
+	}
+
+	/**
+	 * A byte range of a string that never splits a multi-byte character.
+	 *
+	 * @param string $text   Text.
+	 * @param int    $offset Byte offset to start at.
+	 * @param int    $length Most bytes to return.
+	 * @return array{text:string,offset:int}
+	 */
+	private static function utf8_slice( $text, $offset, $length ) {
+		$total = strlen( $text );
+		$start = min( $offset, $total );
+
+		while ( $start > 0 && $start < $total && 0x80 === ( ord( $text[ $start ] ) & 0xC0 ) ) {
+			--$start;
+		}
+
+		$end = min( $start + $length, $total );
+		while ( $end > $start && $end < $total && 0x80 === ( ord( $text[ $end ] ) & 0xC0 ) ) {
+			--$end;
+		}
+
+		return array(
+			'text'   => substr( $text, $start, $end - $start ),
+			'offset' => $start,
+		);
 	}
 
 	/**

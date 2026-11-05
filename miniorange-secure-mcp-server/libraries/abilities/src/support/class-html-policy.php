@@ -127,6 +127,48 @@ final class Html_Policy {
 	}
 
 	/**
+	 * Markup an edit adds that a user without unfiltered_html may not save.
+	 *
+	 * For in-place edits of stored values (custom fields, settings), which WordPress
+	 * never filters itself even though page builders print some of them unescaped.
+	 * Only what the edit adds is judged: markup already stored by someone allowed to
+	 * store it does not block an unrelated edit, while changing it does, because
+	 * each disallowed element is compared whole, attributes and contents included.
+	 *
+	 * JSON values, such as a page builder layout, are judged on their decoded text,
+	 * so an escaped form like <script> is seen for what it is. Tags are
+	 * read with WordPress's HTML tokenizer, which follows the browser's parsing
+	 * rules. An element counts when wp_kses_post(), the rule WordPress applies to
+	 * these users' posts, does not allow it; an attribute counts when it can run
+	 * script (see rejected_attributes()).
+	 *
+	 * @param string $before Value before the edit.
+	 * @param string $after  Value after the edit.
+	 * @return string[] What the edit adds, such as "<script>"; empty when it adds nothing disallowed.
+	 */
+	public static function added_markup( $before, $after ) {
+		$allowed = wp_kses_allowed_html( 'post' );
+		$present = array();
+
+		foreach ( self::disallowed_markup( (string) $before, $allowed ) as $item ) {
+			$present[ $item['key'] ] = isset( $present[ $item['key'] ] ) ? $present[ $item['key'] ] + 1 : 1;
+		}
+
+		$added = array();
+
+		foreach ( self::disallowed_markup( (string) $after, $allowed ) as $item ) {
+			if ( ! empty( $present[ $item['key'] ] ) ) {
+				--$present[ $item['key'] ];
+				continue;
+			}
+
+			$added[ $item['label'] ] = true;
+		}
+
+		return array_keys( $added );
+	}
+
+	/**
 	 * Warnings for a value that did not survive saving intact.
 	 *
 	 * Only losses are reported. WordPress and plugins legitimately add to content
@@ -291,6 +333,185 @@ final class Html_Policy {
 		}
 
 		return array_keys( $names );
+	}
+
+	/**
+	 * Every piece of disallowed markup in a stored value, as comparable items.
+	 *
+	 * @param string                                   $value   Stored value, plain or JSON.
+	 * @param array<string, array<string, mixed>|true> $allowed Allowed elements and attributes, from wp_kses_allowed_html().
+	 * @return array<int, array<string, string>> Items with a 'key' that identifies the markup exactly and a 'label' for messages.
+	 */
+	private static function disallowed_markup( $value, array $allowed ) {
+		$items = array();
+
+		foreach ( self::text_values( $value ) as $path => $text ) {
+			if ( false === strpos( $text, '<' ) ) {
+				continue;
+			}
+
+			// Keyed by position too: moving existing code into another setting can put
+			// it where it runs, such as from a code-display widget into an HTML widget.
+			foreach ( self::disallowed_in( $text, $allowed ) as $item ) {
+				$item['key'] = $path . '|' . $item['key'];
+				$items[]     = $item;
+			}
+		}
+
+		return $items;
+	}
+
+	/**
+	 * The text a value holds: every string inside it when it is JSON, else the value itself.
+	 *
+	 * @param string $value Stored value.
+	 * @return array<string, string> Text keyed by its position in the value ('' for a plain value).
+	 */
+	private static function text_values( $value ) {
+		$start = substr( ltrim( $value ), 0, 1 );
+
+		if ( '{' === $start || '[' === $start ) {
+			$decoded = json_decode( $value, true );
+
+			if ( is_array( $decoded ) ) {
+				$texts = array();
+				self::collect_strings( $decoded, '', $texts );
+				return $texts;
+			}
+		}
+
+		return array( '' => $value );
+	}
+
+	/**
+	 * Collects the strings inside decoded JSON, keyed by their path.
+	 *
+	 * @param array<int|string, mixed> $node  Decoded JSON array or object.
+	 * @param string                   $path  Path of this node.
+	 * @param array<string, string>    $texts Accumulator, modified in place.
+	 * @return void
+	 */
+	private static function collect_strings( array $node, $path, array &$texts ) {
+		foreach ( $node as $key => $child ) {
+			$at = $path . '/' . $key;
+
+			if ( is_string( $child ) ) {
+				$texts[ $at ] = $child;
+			} elseif ( is_array( $child ) ) {
+				self::collect_strings( $child, $at, $texts );
+			}
+		}
+	}
+
+	/**
+	 * Disallowed elements and attributes in one piece of markup.
+	 *
+	 * A tag left unfinished at the end is judged as if it were closed, because the
+	 * markup a builder prints after this text would close it in the browser; one
+	 * that still cannot be read is refused outright.
+	 *
+	 * @param string                                   $html      Markup.
+	 * @param array<string, array<string, mixed>|true> $allowed   Allowed elements and attributes.
+	 * @param bool                                     $completed Whether a closing ">" was already appended.
+	 * @return array<int, array<string, string>>
+	 */
+	private static function disallowed_in( $html, array $allowed, $completed = false ) {
+		$items     = array();
+		$processor = new \WP_HTML_Tag_Processor( $html );
+
+		while ( $processor->next_token() ) {
+			if ( '#tag' !== $processor->get_token_type() || $processor->is_tag_closer() ) {
+				continue;
+			}
+
+			$tag        = strtolower( (string) $processor->get_tag() );
+			$attributes = array();
+			foreach ( (array) $processor->get_attribute_names_with_prefix( '' ) as $name ) {
+				$attributes[ $name ] = $processor->get_attribute( $name );
+			}
+
+			if ( ! isset( $allowed[ $tag ] ) ) {
+				$items[] = array(
+					'key'   => 'element|' . $tag . '|' . wp_json_encode( $attributes ) . '|' . $processor->get_modifiable_text(),
+					'label' => '<' . $tag . '>',
+				);
+				continue;
+			}
+
+			foreach ( self::rejected_attributes( $attributes ) as $name ) {
+				$items[] = array(
+					'key'   => 'attribute|' . $tag . '|' . $name . '|' . ( true === $attributes[ $name ] ? '' : (string) $attributes[ $name ] ),
+					'label' => sprintf(
+						/* translators: 1: HTML attribute name such as onclick, 2: HTML tag such as <a> */
+						__( 'the %1$s attribute on %2$s', 'mosmcp-abilities' ),
+						$name,
+						'<' . $tag . '>'
+					),
+				);
+			}
+		}
+
+		if ( $processor->paused_at_incomplete_token() ) {
+			if ( ! $completed ) {
+				return self::disallowed_in( $html . '>', $allowed, true );
+			}
+
+			$items[] = array(
+				'key'   => 'unfinished|' . md5( $html ),
+				'label' => __( 'an unfinished tag', 'mosmcp-abilities' ),
+			);
+		}
+
+		return $items;
+	}
+
+	/**
+	 * Attributes of an allowed element that can run script.
+	 *
+	 * Event handlers, and links or sources using a protocol WordPress does not allow
+	 * (javascript:, data:), judged with WordPress's own lists of URL attributes and
+	 * allowed protocols. Attributes kses merely does not recognise, such as srcset or
+	 * a newer CSS property, cannot run anything and are left alone.
+	 *
+	 * @param array<string, string|true> $attributes Attribute values, true for a bare attribute.
+	 * @return string[] Attribute names.
+	 */
+	private static function rejected_attributes( array $attributes ) {
+		$uri_attributes = wp_kses_uri_attributes();
+		$protocols      = wp_allowed_protocols();
+		$rejected       = array();
+
+		foreach ( $attributes as $name => $value ) {
+			if ( 0 === strpos( $name, 'on' ) ) {
+				$rejected[] = $name;
+			} elseif ( true !== $value && in_array( $name, $uri_attributes, true ) && self::has_disallowed_protocol( (string) $value, $protocols ) ) {
+				$rejected[] = $name;
+			}
+		}
+
+		return $rejected;
+	}
+
+	/**
+	 * Whether a URL names a protocol WordPress does not allow.
+	 *
+	 * The scheme is found the way a browser finds it, which wp_kses_bad_protocol()
+	 * does not quite do: it also reads a colon in a relative link's query string
+	 * ("/page?a=1:2") as a protocol. A URL with no scheme is relative and safe.
+	 *
+	 * @param string   $url       Attribute value, entities already decoded.
+	 * @param string[] $protocols Allowed protocols, from wp_allowed_protocols().
+	 * @return bool
+	 */
+	private static function has_disallowed_protocol( $url, array $protocols ) {
+		// Browsers ignore spaces and control characters around a URL, and every tab or newline inside it.
+		$url = (string) preg_replace( '/[\t\n\r]/', '', trim( $url, "\x00..\x20" ) );
+
+		if ( ! preg_match( '/^([a-zA-Z][a-zA-Z0-9+.\-]*):/', $url, $match ) ) {
+			return false;
+		}
+
+		return ! in_array( strtolower( $match[1] ), $protocols, true );
 	}
 
 	/**

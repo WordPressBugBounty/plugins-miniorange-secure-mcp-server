@@ -16,6 +16,7 @@ use MoSMCP\Abilities\Ability;
 use MoSMCP\Abilities\Ability_Pack;
 use MoSMCP\Abilities\Packs\Core\Support\Core_Schema as Schema;
 use MoSMCP\Abilities\Packs\Site\Site_Support;
+use MoSMCP\Abilities\Support\Html_Policy;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -260,7 +261,7 @@ class Editing_Pack extends Ability_Pack {
 						'post_id'      => Schema::int( __( 'The ID of the post that holds the field.', 'mosmcp-abilities' ), array( 'minimum' => 1 ) ),
 						'meta_key'     => Schema::str( __( 'The name of the custom field to edit.', 'mosmcp-abilities' ) ),
 						'find_text'    => Schema::str( __( 'The existing wording to replace. Get this from mosmcp/content-find-in-meta.', 'mosmcp-abilities' ) ),
-						'replace_with' => Schema::str( __( 'The new wording. Pass an empty string to delete the found text.', 'mosmcp-abilities' ) ),
+						'replace_with' => Schema::str( __( 'The new wording. Pass an empty string to delete the found text.', 'mosmcp-abilities' ) . ' ' . Html_Policy::rule_summary() ),
 						'replace_all'  => Schema::boolean(
 							__( 'Change every occurrence instead of requiring exactly one.', 'mosmcp-abilities' ),
 							array( 'default' => false )
@@ -332,7 +333,7 @@ class Editing_Pack extends Ability_Pack {
 					array(
 						'option'       => Schema::str( __( 'The exact name of the setting to edit.', 'mosmcp-abilities' ) ),
 						'find_text'    => Schema::str( __( 'The existing wording to replace. Get this from mosmcp/content-find-in-options.', 'mosmcp-abilities' ) ),
-						'replace_with' => Schema::str( __( 'The new wording. Pass an empty string to delete the found text.', 'mosmcp-abilities' ) ),
+						'replace_with' => Schema::str( __( 'The new wording. Pass an empty string to delete the found text.', 'mosmcp-abilities' ) . ' ' . Html_Policy::rule_summary() ),
 						'replace_all'  => Schema::boolean(
 							__( 'Change every occurrence instead of requiring exactly one.', 'mosmcp-abilities' ),
 							array( 'default' => false )

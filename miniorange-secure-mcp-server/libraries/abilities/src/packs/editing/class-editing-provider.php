@@ -344,7 +344,7 @@ class Editing_Provider {
 
 		foreach ( $fields as $f ) {
 			if ( '_elementor_data' === $f['meta_key'] ) {
-				$notes[] = __( 'This text is inside an Elementor layout. The Elementor abilities edit it through the layout structure and cannot mistake a setting for visible text, so prefer those; editing this field as raw text is a fallback.', 'mosmcp-abilities' );
+				$notes[] = __( 'This text is inside an Elementor layout. The Elementor abilities edit it through the layout structure and cannot mistake a setting for visible text, so prefer those (mosmcp/elementor-element-patch changes part of one element\'s text); editing this field as raw text is a fallback.', 'mosmcp-abilities' );
 				break;
 			}
 		}
@@ -473,6 +473,21 @@ class Editing_Provider {
 
 		if ( $integrity instanceof WP_Error ) {
 			return $integrity;
+		}
+
+		$markup = Editing_Support::markup_error(
+			$stored,
+			$outcome['result'],
+			sprintf(
+				/* translators: 1: custom field name, 2: post ID. */
+				__( 'the field "%1$s" on post %2$d', 'mosmcp-abilities' ),
+				$key,
+				$post_id
+			)
+		);
+
+		if ( $markup instanceof WP_Error ) {
+			return $markup;
 		}
 
 		update_post_meta( $post_id, $key, wp_slash( $outcome['result'] ) );
@@ -679,6 +694,20 @@ class Editing_Provider {
 
 		if ( $integrity instanceof WP_Error ) {
 			return $integrity;
+		}
+
+		$markup = Editing_Support::markup_error(
+			$stored,
+			$outcome['result'],
+			sprintf(
+				/* translators: %s: the setting name. */
+				__( 'the setting "%s"', 'mosmcp-abilities' ),
+				$option
+			)
+		);
+
+		if ( $markup instanceof WP_Error ) {
+			return $markup;
 		}
 
 		// No slashing here: update_option() does not unslash, so the value is stored
