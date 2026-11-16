@@ -872,9 +872,10 @@ class NHI_Store {
 	 * @param string $role          Role slug, or '*'.
 	 * @param string $ability       Ability name (resource identifier), or '*'.
 	 * @param string $resource_type Grant type (default RESOURCE_TYPE_ABILITY).
+	 * @param int    $created       When the grant was first made; 0 for now.
 	 * @return bool True when the row was written or already present.
 	 */
-	public static function add_grant( $nhi_id, $role, $ability, $resource_type = self::RESOURCE_TYPE_ABILITY ) {
+	public static function add_grant( $nhi_id, $role, $ability, $resource_type = self::RESOURCE_TYPE_ABILITY, $created = 0 ) {
 		global $wpdb;
 
 		$ability = (string) $ability;
@@ -891,7 +892,7 @@ class NHI_Store {
 				(string) $role,
 				(string) $resource_type,
 				$ability,
-				time()
+				$created > 0 ? (int) $created : time()
 			)
 		);
 
@@ -927,6 +928,14 @@ class NHI_Store {
 	 */
 	private static function replace_grants( $nhi_id, array $map, $resource_type = self::RESOURCE_TYPE_ABILITY ) {
 		global $wpdb;
+
+		// Grants kept across a save keep their age, so a re-saved policy doesn't make old access look new.
+		$created = array();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$existing = $wpdb->get_results( $wpdb->prepare( 'SELECT role, resource, created FROM %i WHERE nhi_id = %d AND resource_type = %s', self::grants_table(), (int) $nhi_id, (string) $resource_type ), ARRAY_A );
+		foreach ( (array) $existing as $row ) {
+			$created[ $row['role'] . "\n" . $row['resource'] ] = (int) $row['created'];
+		}
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		// Scoped to one resource type so saving an ability policy leaves the NHI's REST
@@ -965,7 +974,8 @@ class NHI_Store {
 			foreach ( $abilities as $ability ) {
 				++$attempted;
 				// Written first so one failure does not abandon the remaining grants.
-				if ( ! self::add_grant( (int) $nhi_id, (string) $role, (string) $ability, $resource_type ) ) {
+				$key = $role . "\n" . $ability;
+				if ( ! self::add_grant( (int) $nhi_id, (string) $role, (string) $ability, $resource_type, isset( $created[ $key ] ) ? $created[ $key ] : 0 ) ) {
 					++$failed;
 				}
 			}

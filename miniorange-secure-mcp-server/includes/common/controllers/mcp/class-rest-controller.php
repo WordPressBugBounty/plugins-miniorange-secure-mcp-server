@@ -248,9 +248,11 @@ class REST_Controller {
 	 * keeps this correct under a subdirectory install, a language-prefixed URL, or
 	 * a renamed REST prefix, without needing to enumerate any of them.
 	 *
+	 * Also used by {@see \MoSMCP\Common\I18n\I18n::skip_on_mcp()}.
+	 *
 	 * @return bool
 	 */
-	private static function is_mcp_endpoint_request() {
+	public static function is_mcp_endpoint_request() {
 		// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.Recommended -- Only compared, never stored or output.
 		$method = isset( $_SERVER['REQUEST_METHOD'] ) ? strtoupper( (string) wp_unslash( $_SERVER['REQUEST_METHOD'] ) ) : '';
 

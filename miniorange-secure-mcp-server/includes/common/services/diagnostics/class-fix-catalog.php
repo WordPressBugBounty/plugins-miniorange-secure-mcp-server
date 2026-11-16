@@ -448,7 +448,7 @@ class Fix_Catalog {
 		if ( in_array( 'wordfence', $ctx['layers'], true ) ) {
 			$steps[] = self::step( __( 'Add each IP under Firewall, then All Firewall Options, in the allowlisted IPs list.', 'miniorange-secure-mcp-server' ), null, self::tag( $ctx, 'Wordfence' ) );
 		}
-		$steps[] = self::step( __( 'On shared hosting, send the list to your host and ask them to allowlist it in their firewall.', 'miniorange-secure-mcp-server' ), null, self::tag( $ctx, 'Host' ) );
+		$steps[] = self::step( __( 'On shared hosting, send the list to your host and ask them to allowlist it in their firewall.', 'miniorange-secure-mcp-server' ), null, self::tag( $ctx, _x( 'Host', 'hosting provider, as a platform tab label', 'miniorange-secure-mcp-server' ) ) );
 
 		return array(
 			'title' => __( 'Allowlist the gateway IP addresses', 'miniorange-secure-mcp-server' ),
@@ -489,7 +489,7 @@ class Fix_Catalog {
 			$steps[] = self::step( __( 'Cloudflare: add a Cache Rule that bypasses the cache when the URI path starts with:', 'miniorange-secure-mcp-server' ), '/wp-json/mosmcp/', self::tag( $ctx, 'Cloudflare' ) );
 		}
 		if ( empty( $steps ) || ! empty( $ctx['guide'] ) ) {
-			$steps[] = self::step( __( 'In your cache plugin or CDN, exclude this path from caching and from any redirect rule:', 'miniorange-secure-mcp-server' ), '/wp-json/mosmcp/', self::tag( $ctx, 'Other cache or CDN' ) );
+			$steps[] = self::step( __( 'In your cache plugin or CDN, exclude this path from caching and from any redirect rule:', 'miniorange-secure-mcp-server' ), '/wp-json/mosmcp/', self::tag( $ctx, __( 'Other cache or CDN', 'miniorange-secure-mcp-server' ) ) );
 		}
 		$steps[] = self::step( __( 'Purge the whole cache, then run the connection test again.', 'miniorange-secure-mcp-server' ) );
 
@@ -723,7 +723,7 @@ class Fix_Catalog {
 			'title' => __( 'Send the diagnostics to support', 'miniorange-secure-mcp-server' ),
 			'why'   => __( 'This result does not match a known cause, so we need the details to find it.', 'miniorange-secure-mcp-server' ),
 			'steps' => array(
-				self::step( __( 'Choose "Copy diagnostics" and paste the result into your support request. Secrets are removed from it.', 'miniorange-secure-mcp-server' ) ),
+				self::step( __( 'Choose "Copy for support" and paste the result into your support request. Secrets are removed from it.', 'miniorange-secure-mcp-server' ) ),
 			),
 		);
 	}

@@ -252,7 +252,7 @@ class NHI_Controller extends Abstract_Admin_Controller {
 				$caps = isset( $role['capabilities'] ) && is_array( $role['capabilities'] ) ? array_filter( $role['capabilities'] ) : array();
 				$roles[] = array(
 					'slug'         => (string) $slug,
-					'name'         => isset( $role['name'] ) ? (string) $role['name'] : (string) $slug,
+					'name'         => isset( $role['name'] ) ? translate_user_role( (string) $role['name'] ) : (string) $slug,
 					'capabilities' => (object) $caps,
 				);
 			}

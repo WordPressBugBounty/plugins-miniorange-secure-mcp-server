@@ -1,6 +1,6 @@
 <?php
 /**
- * Registers the three REST bridge abilities with the Abilities API.
+ * Registers the REST bridge abilities with the Abilities API.
  *
  * @package Miniorange_Secure_MCP_Server
  */
@@ -18,10 +18,10 @@ use MoSMCP\Abilities\Naming;
 /**
  * Class Rest_Abilities
  *
- * Exposes the WordPress REST API as three abilities rather than one tool per route:
+ * Exposes the WordPress REST API as four abilities rather than one tool per route:
  * a site's route table runs to hundreds of route/method pairs, which would blow past
- * every client's tool cap. Discovery is progressive (list, then describe, then call)
- * and governance lives on the routes themselves, not on these three tool names.
+ * every client's tool cap. Discovery is progressive (list, then describe, then read
+ * or call) and governance lives on the routes themselves, not on these tool names.
  */
 class Rest_Abilities {
 
@@ -37,10 +37,16 @@ class Rest_Abilities {
 	const CAPABILITY = 'edit_posts';
 
 	/**
-	 * Name of the ability that calls a route. Governed by route grants as well as
-	 * its own ability grant; see {@see Rest_Bridge::agents_for_call()}.
+	 * Name of the ability that calls a route with any granted method. Governed by
+	 * route grants as well as its own ability grant; see {@see Rest_Bridge::agents_for_call()}.
 	 */
 	const CALL = 'mosmcp/rest-call';
+
+	/**
+	 * Name of the GET-only ability. Same route grants as {@see self::CALL}, but the
+	 * method is always GET and the MCP hints declare it read-only.
+	 */
+	const READ = 'mosmcp/rest-read';
 
 	/**
 	 * Hooks category and ability registration.
@@ -66,13 +72,45 @@ class Rest_Abilities {
 			self::CATEGORY,
 			array(
 				'label'       => __( 'REST API', 'miniorange-secure-mcp-server' ),
-				'description' => __( 'Discover and call the WordPress REST API routes this connection has been granted.', 'miniorange-secure-mcp-server' ),
+				'description' => __( 'Discover, read and call the WordPress REST API routes this connection has been granted.', 'miniorange-secure-mcp-server' ),
 			)
 		);
 	}
 
 	/**
-	 * Registers the three bridge abilities.
+	 * Whether this ability reaches a REST route through the bridge.
+	 *
+	 * @param string $ability Ability name.
+	 * @return bool
+	 */
+	public static function is_route_call( $ability ) {
+		return in_array( (string) $ability, array( self::CALL, self::READ ), true );
+	}
+
+	/**
+	 * HTTP method a bridge call will send.
+	 *
+	 * The GET-only tool always sends GET, whatever the input contains. The generic
+	 * call tool uses the method named in the input, defaulting to GET.
+	 *
+	 * @param string $ability Ability name.
+	 * @param mixed  $input   Tool input.
+	 * @return string
+	 */
+	public static function call_method( $ability, $input ) {
+		if ( self::READ === $ability ) {
+			return 'GET';
+		}
+
+		if ( is_array( $input ) && isset( $input['method'] ) && is_string( $input['method'] ) ) {
+			return strtoupper( $input['method'] );
+		}
+
+		return 'GET';
+	}
+
+	/**
+	 * Registers the four bridge abilities.
 	 *
 	 * @return void
 	 */
@@ -81,7 +119,7 @@ class Rest_Abilities {
 			return;
 		}
 
-		foreach ( array( self::list_routes(), self::describe_route(), self::call() ) as $ability ) {
+		foreach ( array( self::list_routes(), self::describe_route(), self::read(), self::call() ) as $ability ) {
 			Ability_Registrar::register( $ability );
 		}
 	}
@@ -183,6 +221,50 @@ class Rest_Abilities {
 	}
 
 	/**
+	 * Defines the mosmcp/rest-read ability.
+	 *
+	 * @return Ability
+	 */
+	private static function read() {
+		return new Ability(
+			self::READ,
+			array(
+				'label'        => __( 'Read REST Route', 'miniorange-secure-mcp-server' ),
+				'description'  => __( 'Sends a GET request to a WordPress REST API route and returns its response. Read-only: it cannot create, update or delete anything. Use this for reads; writes go through Call REST Route. The call is refused unless this connection has been granted GET on that route, and the endpoint\'s own permission check also applies. Use "_fields" to keep responses small; large list responses are trimmed.', 'miniorange-secure-mcp-server' ),
+				'category'     => self::CATEGORY,
+				'capability'   => self::CAPABILITY,
+				'annotations'  => array(
+					'readonly'    => true,
+					'destructive' => false,
+					'idempotent'  => true,
+					'open_world'  => false,
+				),
+				'execute'      => array( Rest_Bridge::class, 'read' ),
+				'input_schema' => array(
+					'type'                 => 'object',
+					'properties'           => array(
+						'route'   => array(
+							'type'        => 'string',
+							'description' => __( 'Route to read, with any path placeholders filled in, for example "/wp/v2/posts" or "/wp/v2/posts/42".', 'miniorange-secure-mcp-server' ),
+						),
+						'params'  => array(
+							'type'                 => 'object',
+							'description'          => __( 'Query parameters for the GET request.', 'miniorange-secure-mcp-server' ),
+							'additionalProperties' => true,
+						),
+						'_fields' => array(
+							'type'        => 'string',
+							'description' => __( 'Comma-separated list of response fields to return, for example "id,title,status". Strongly recommended on list routes.', 'miniorange-secure-mcp-server' ),
+						),
+					),
+					'required'             => array( 'route' ),
+					'additionalProperties' => false,
+				),
+			)
+		);
+	}
+
+	/**
 	 * Defines the mosmcp/rest-call ability.
 	 *
 	 * @return Ability
@@ -192,7 +274,7 @@ class Rest_Abilities {
 			self::CALL,
 			array(
 				'label'        => __( 'Call REST Route', 'miniorange-secure-mcp-server' ),
-				'description'  => __( 'Calls a WordPress REST API route and returns its response. Can create, update and delete content, so confirm the route and parameters before calling it with a write method. The call is refused unless this connection has been granted that route and method, and the endpoint\'s own permission check also applies. Use "_fields" to keep responses small; large list responses are trimmed.', 'miniorange-secure-mcp-server' ),
+				'description'  => __( 'Calls a WordPress REST API route and returns its response. Can create, update and delete content, so confirm the route and parameters before calling it with a write method. The call is refused unless this connection has been granted that route and method, and the endpoint\'s own permission check also applies. Use "_fields" to keep responses small; large list responses are trimmed. Never put credentials, API keys or tokens in params, and never ask the user for them.', 'miniorange-secure-mcp-server' ),
 				'category'     => self::CATEGORY,
 				'capability'   => self::CAPABILITY,
 				'annotations'  => array(

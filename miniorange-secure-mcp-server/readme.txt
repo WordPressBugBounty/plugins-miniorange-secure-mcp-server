@@ -1,10 +1,10 @@
-=== Secure MCP Server for Claude, ChatGPT, Gemini and other AI Agents===
+=== Secure MCP Server for Claude, ChatGPT, Gemini, Cursor and other AI Agents ===
 Contributors: cyberlord92
 Tags: mcp-server, mcp, chatgpt, claude, wordpress mcp
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.5.6
+Stable tag: 1.5.7
 License: Expat
 License URI: https://plugins.miniorange.com/mit-license
 
@@ -27,6 +27,7 @@ Built security-first, so you can let AI work on a live site with confidence:
 
 * **Every user connects their own AI** – each person uses their own ChatGPT or Claude, limited to the tools you allow their role.
 * **483 MCP tools in 34 categories** – WordPress core, the block editor, menus and widgets, WooCommerce, Yoast SEO, Rank Math, Advanced Custom Fields, Elementor, Kadence, Contact Form 7, WPForms, Gravity Forms, Fluent Forms and more.
+* **Role-based MCP adapter** – abilities that other plugins register appear in the Agent Registry, ready to grant per role.
 * **Block-by-block page editing** – AI changes one heading, paragraph or button and leaves the rest of the page exactly as it was.
 * **Changes show straight away** – page caches are cleared automatically after every AI change, and drafts can be shared with an expiring preview link.
 * **Governed REST API access** – AI can use any WordPress REST endpoint, including those from your other plugins, with route-by-route, role-based permissions.
@@ -134,6 +135,10 @@ AI can use any WordPress REST API endpoint – core, WooCommerce, Yoast or any o
 * **Site-wide write switches** – turn all create, update or delete REST calls off for the whole site in one click.
 * **Dangerous routes stay blocked** – plugin and theme installs, activations, batch and blueprint-import routes can never be granted.
 
+**Your Role-Based MCP Adapter for Plugin Abilities**
+
+Other plugins can add their own abilities through the WordPress Abilities API. As your MCP adapter, Secure MCP Server lists each one in the Agent Registry, where you decide which roles may use it. Every call to them is recorded in the audit log, just like the built-in abilities.
+
 **WooCommerce MCP Server**
 
 Run your store through chat. Create and update products, attributes, categories and tags. Look up, create and update orders, change order status, add order notes and issue refunds. Manage customers, view purchase history and customer segments, and create or update coupons. Get sales, orders, products, customers, coupon usage and top-seller reports.
@@ -230,18 +235,6 @@ Plus:
 
 See active agents, executions, success rate and latency at a glance. Members can open "Your AI Access" to see which tools their role allows and how to connect.
 
-==Example Prompts==
-
-* "Write a blog post about our summer sale, add it to the News category and schedule it for Monday 9 AM."
-* "Find all products under ₹500 and put them on a 20% sale until Sunday."
-* "Write meta descriptions for every post that doesn't have one."
-* "Export this month's Gravity Forms entries as CSV."
-* "Change the footer text in my theme, preview it, then publish."
-* "Why aren't my scheduled posts publishing? Check cron and the error log."
-* "Use the REST API to list this week's bookings from my booking plugin."
-* "Change the heading in my homepage hero to 'Spring Collection'."
-* "Add our new Pricing page to the main menu, right after About."
-
 = Need Help? =
 
 Ask in the [support forum](https://wordpress.org/support/plugin/miniorange-secure-mcp-server/) – our team responds quickly. For private or enterprise questions, email **info@xecurify.com** or use the **Contact Support** button inside the plugin.
@@ -278,6 +271,10 @@ Ask in the [support forum](https://wordpress.org/support/plugin/miniorange-secur
 
 MCP (Model Context Protocol) is an open standard that lets AI assistants use tools. This plugin makes your WordPress site an MCP server, so AI clients like Claude and ChatGPT can safely read and update your site through tools you control.
 
+= Does Secure MCP Server include an MCP adapter? =
+
+Yes. Alongside its own MCP server, which Claude, ChatGPT and other assistants reach over OAuth 2.1, this WordPress MCP plugin includes an MCP adapter that offers them the abilities your plugins register, next to its own 483 abilities.
+
 = How do I connect ChatGPT to my WordPress site? =
 
 Install and activate Secure MCP Server, create an AI agent, and choose ChatGPT under **Connect your AI client**. Open the **MCP Server for WordPress** app in ChatGPT, enter your site's address and click **Allow Access**. It takes about two minutes, and ChatGPT can then write posts, edit pages, manage WooCommerce products and more, using only the tools you allowed.
@@ -298,6 +295,20 @@ Claude, ChatGPT, Gemini, Cursor, Grok, Windsurf and any MCP-compatible client.
 
 483 tools in 34 categories, covering WordPress core, the block editor, menus, widgets, WooCommerce, Yoast SEO, Rank Math, Advanced Custom Fields, Elementor, Divi, Kadence, Contact Form 7, WPForms, Gravity Forms, Fluent Forms, theme editing and site maintenance. Integration tools appear only when the related plugin is active.
 
+= What are some example prompts? =
+
+These are just examples of what you can ask. Your AI can do anything that the abilities allowed for your role can do.
+
+* "Write a blog post about our summer sale, add it to the News category and schedule it for Monday 9 AM."
+* "Find all products under ₹500 and put them on a 20% sale until Sunday."
+* "Write meta descriptions for every post that doesn't have one."
+* "Export this month's Gravity Forms entries as CSV."
+* "Change the footer text in my theme, preview it, then publish."
+* "Why aren't my scheduled posts publishing? Check cron and the error log."
+* "Use the REST API to list this week's bookings from my booking plugin."
+* "Change the heading in my homepage hero to 'Spring Collection'."
+* "Add our new Pricing page to the main menu, right after About."
+
 = Is it safe to give AI access to my WordPress site? =
 
 Yes. Access uses self-hosted OAuth 2.1 with PKCE, so the AI never sees your password. Every call is limited by role through the agent Registry, checked against WordPress capabilities, rate-limited and logged. You can require human approval for sensitive actions and mask sensitive data. Rate limits are enforced by the miniOrange Gateway; human approval and data masking are part of the Business plan.
@@ -306,9 +317,9 @@ Yes. Access uses self-hosted OAuth 2.1 with PKCE, so the AI never sees your pass
 
 No. Every tool runs as the WordPress user who approved the connection, and every call is checked against that user's capabilities exactly as in wp-admin.
 
-= Can AI use the REST API of my other plugins? =
+= Can the REST APIs of my other plugins be converted into WordPress MCP abilities? =
 
-Yes. AI can discover and call any WordPress REST route, including those from WooCommerce, Yoast and other plugins, with no plugin update needed. A new agent starts with read-only access to core WordPress content. Writes and routes outside it need an explicit, per-role grant, and you can switch off all create, update or delete REST calls for the whole site. Plugin and theme install, activate, batch and blueprint-import routes are always blocked.
+Yes. Secure MCP Server becomes your MCP adapter for every REST route you allow, without any coding. AI can discover and call any WordPress REST route, including those from WooCommerce, Yoast and other plugins, with no plugin update needed. A new agent starts with read-only access to core WordPress content. Writes and routes outside it need an explicit, per-role grant, and you can switch off all create, update or delete REST calls for the whole site. Plugin and theme install, activate, batch and blueprint-import routes are always blocked.
 
 = Can AI break my theme or site? =
 
@@ -389,6 +400,12 @@ No. Install, follow the onboarding checklist, and paste one URL into your AI cli
 7. WordPress MCP Server Your AI Access page showing permitted tools and connection details 
 
 == Changelog ==
+
+= 1.5.7 =
+* Fixed plugin REST routes: your AI's connection token is no longer sent to plugin routes, so plugins that reject tokens they don't recognise no longer block AI calls.
+* Added Read REST Route: a read-only tool for the REST API routes you have allowed. It sends only GET requests, so it cannot change anything. Agents that could already call REST routes get it automatically.
+* Added multisite support: Network Admin lists every site with a link to its settings, plugin tools are offered only to people who can manage plugins for the network, and users who do not belong to a site can no longer be looked up from it.
+* Added Italian and Japanese: the admin, the approval screen and the deactivation form follow each person's WordPress language. What AI sees stays in English.
 
 = 1.5.6 =
 * Added exact edits for Elementor: change a line of code in a large HTML widget, or a sentence in a long text block, without sending the whole widget back. Several edits can be made at once; they all apply or none do, and when a phrase is not found the AI is shown the closest text.
@@ -584,6 +601,9 @@ Fixed: Object-level abilities no longer show false capability conflicts in the r
 * Initial release: read-only viewer for abilities registered through the WordPress Abilities API.
 
 == Upgrade Notice ==
+
+= 1.5.7 =
+Adds Italian and Japanese for the admin, a read-only tool for REST routes (existing agents that could call REST routes get it automatically) and multisite fixes: a Network Admin page and plugin tools only for network plugin managers.
 
 = 1.5.6 =
 Adds exact edits inside Elementor widgets and read-only SEO tools for any role that can read a post: 4 new abilities. Also refuses code in custom field and setting edits from users WordPress does not allow to add code. Enable the new abilities for each role under AI Agents.

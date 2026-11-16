@@ -81,13 +81,19 @@ class Route_Registry {
 
 	/**
 	 * Grantable route prefixes an admin should think twice about, and why.
+	 *
+	 * A method, not a constant: the admin UI shows the reasons, so they are translated.
+	 *
+	 * @return array<string, string>
 	 */
-	const SENSITIVE_PREFIXES = array(
-		'/wp/v2/settings' => 'Site-wide settings, including the site title, admin email and default roles.',
-		'/wp/v2/users'    => 'Account data for every user on the site, including email addresses.',
-		'/wp/v2/plugins'  => 'The list of installed plugins, which reveals the site\'s attack surface.',
-		'/wp/v2/themes'   => 'The list of installed themes.',
-	);
+	private static function sensitive_prefixes() {
+		return array(
+			'/wp/v2/settings' => __( 'Site-wide settings, including the site title, admin email and default roles.', 'miniorange-secure-mcp-server' ),
+			'/wp/v2/users'    => __( 'Account data for every user on the site, including email addresses.', 'miniorange-secure-mcp-server' ),
+			'/wp/v2/plugins'  => __( 'The list of installed plugins, which reveals the site\'s attack surface.', 'miniorange-secure-mcp-server' ),
+			'/wp/v2/themes'   => __( 'The list of installed themes.', 'miniorange-secure-mcp-server' ),
+		);
+	}
 
 	/**
 	 * Returns why a route deserves a warning in the admin UI, if it does.
@@ -96,7 +102,7 @@ class Route_Registry {
 	 * @return string Empty string when unremarkable, otherwise the reason to be careful.
 	 */
 	public static function sensitive( $route ) {
-		foreach ( self::SENSITIVE_PREFIXES as $prefix => $why ) {
+		foreach ( self::sensitive_prefixes() as $prefix => $why ) {
 			if ( 0 === strpos( $route, $prefix ) ) {
 				return $why;
 			}

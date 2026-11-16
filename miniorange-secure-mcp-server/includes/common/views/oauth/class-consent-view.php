@@ -13,6 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use MoSMCP\Common\Repositories\NHI_Store;
 use MoSMCP\Common\Services\Logging\Debug_Logger;
+use MoSMCP\Common\Services\MCP\MCP_Server;
 
 /**
  * Class Consent_View
@@ -50,7 +51,7 @@ class Consent_View {
 		$wp_roles   = wp_roles();
 		$role_names = array();
 		foreach ( $roles as $slug ) {
-			$role_names[] = isset( $wp_roles->roles[ $slug ]['name'] ) ? $wp_roles->roles[ $slug ]['name'] : $slug;
+			$role_names[] = isset( $wp_roles->roles[ $slug ]['name'] ) ? translate_user_role( $wp_roles->roles[ $slug ]['name'] ) : $slug;
 		}
 		$roles_label = ! empty( $role_names ) ? implode( ', ', $role_names ) : __( 'your role', 'miniorange-secure-mcp-server' );
 
@@ -76,6 +77,10 @@ class Consent_View {
 			}
 			$names = $unrestricted ? array_keys( $label_map ) : (array) $allowed;
 			foreach ( $names as $name ) {
+				$offered = function_exists( 'wp_get_ability' ) ? wp_get_ability( $name ) : null;
+				if ( $offered instanceof \WP_Ability && ! MCP_Server::plugin_ability_is_usable( $offered ) ) {
+					continue;
+				}
 				if ( isset( $label_map[ $name ] ) ) {
 					$label = $label_map[ $name ];
 					$group = isset( $cat_labels[ $cat_map[ $name ] ] ) ? $cat_labels[ $cat_map[ $name ] ] : __( 'Other abilities', 'miniorange-secure-mcp-server' );

@@ -121,7 +121,12 @@ class Connectivity_Checker {
 				'site_url'       => home_url(),
 				'expected_count' => (int) $local['facts']['expected_count'],
 				'ran_at'         => time(),
-				'secrets'        => $secrets,
+				/**
+				 * Filters stored secret values the diagnostics result and support bundle must never contain.
+				 *
+				 * @param string[] $values Exact values to mask.
+				 */
+				'secrets'        => array_merge( $secrets, array_filter( (array) apply_filters( 'mosmcp_redact_values', array() ), 'is_string' ) ),
 			)
 		);
 

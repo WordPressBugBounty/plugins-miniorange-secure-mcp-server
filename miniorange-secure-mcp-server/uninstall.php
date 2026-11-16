@@ -26,6 +26,7 @@ delete_option( 'mosmcp_settings' );
 delete_option( Migration::DB_VERSION_OPTION );
 delete_option( Migration::GRANTS_BACKFILL_OPTION );
 delete_option( Migration::EXCLUSIVITY_BACKFILL_OPTION );
+delete_option( Migration::REST_READ_BACKFILL_OPTION );
 delete_option( Migration::MIGRATED_VERSION_OPTION );
 delete_option( Hooks::REWRITE_VERSION_OPTION );
 delete_option( Hooks::CRON_RECONCILED_OPTION );

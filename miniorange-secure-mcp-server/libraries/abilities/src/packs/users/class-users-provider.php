@@ -89,7 +89,7 @@ class Users_Provider {
 		$input = is_array( $input ) ? $input : array();
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
-		$user = $id > 0 ? get_userdata( $id ) : false;
+		$user = self::user_on_this_site( $id > 0 ? get_userdata( $id ) : false );
 		if ( ! $user ) {
 			return new WP_Error( 'mosmcp_user_not_found', __( 'No user was found with that ID.', 'mosmcp-abilities' ) );
 		}
@@ -106,7 +106,7 @@ class Users_Provider {
 		$input    = is_array( $input ) ? $input : array();
 		$username = isset( $input['username'] ) ? (string) $input['username'] : '';
 
-		$user = '' !== $username ? get_user_by( 'login', $username ) : false;
+		$user = self::user_on_this_site( '' !== $username ? get_user_by( 'login', $username ) : false );
 		if ( ! $user ) {
 			return new WP_Error( 'mosmcp_user_not_found', __( 'No user was found with that username.', 'mosmcp-abilities' ) );
 		}
@@ -123,7 +123,7 @@ class Users_Provider {
 		$input = is_array( $input ) ? $input : array();
 		$email = isset( $input['email'] ) ? sanitize_email( (string) $input['email'] ) : '';
 
-		$user = '' !== $email ? get_user_by( 'email', $email ) : false;
+		$user = self::user_on_this_site( '' !== $email ? get_user_by( 'email', $email ) : false );
 		if ( ! $user ) {
 			return new WP_Error( 'mosmcp_user_not_found', __( 'No user was found with that email address.', 'mosmcp-abilities' ) );
 		}
@@ -210,7 +210,7 @@ class Users_Provider {
 		$input = is_array( $input ) ? $input : array();
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
-		$user = $id > 0 ? get_userdata( $id ) : false;
+		$user = self::user_on_this_site( $id > 0 ? get_userdata( $id ) : false );
 		if ( ! $user ) {
 			return new WP_Error( 'mosmcp_user_not_found', __( 'No user was found with that ID.', 'mosmcp-abilities' ) );
 		}
@@ -233,7 +233,7 @@ class Users_Provider {
 		$input = is_array( $input ) ? $input : array();
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
-		if ( $id <= 0 || ! get_userdata( $id ) ) {
+		if ( ! self::user_on_this_site( $id > 0 ? get_userdata( $id ) : false ) ) {
 			return new WP_Error( 'mosmcp_user_not_found', __( 'No user was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
@@ -272,7 +272,7 @@ class Users_Provider {
 		$input = is_array( $input ) ? $input : array();
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
-		$user = $id > 0 ? get_userdata( $id ) : false;
+		$user = self::user_on_this_site( $id > 0 ? get_userdata( $id ) : false );
 		if ( ! $user ) {
 			return new WP_Error( 'mosmcp_user_not_found', __( 'No user was found with that ID.', 'mosmcp-abilities' ) );
 		}
@@ -293,7 +293,7 @@ class Users_Provider {
 		$input = is_array( $input ) ? $input : array();
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
-		if ( $id <= 0 || ! get_userdata( $id ) ) {
+		if ( ! self::user_on_this_site( $id > 0 ? get_userdata( $id ) : false ) ) {
 			return new WP_Error( 'mosmcp_user_not_found', __( 'No user was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
@@ -315,7 +315,7 @@ class Users_Provider {
 		$input = is_array( $input ) ? $input : array();
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
-		if ( $id <= 0 || ! get_userdata( $id ) ) {
+		if ( ! self::user_on_this_site( $id > 0 ? get_userdata( $id ) : false ) ) {
 			return new WP_Error( 'mosmcp_user_not_found', __( 'No user was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
@@ -638,7 +638,7 @@ class Users_Provider {
 		$input = is_array( $input ) ? $input : array();
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
-		if ( $id <= 0 || ! get_userdata( $id ) ) {
+		if ( ! self::user_on_this_site( $id > 0 ? get_userdata( $id ) : false ) ) {
 			return new WP_Error( 'mosmcp_user_not_found', __( 'No user was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
@@ -785,7 +785,7 @@ class Users_Provider {
 		$input = is_array( $input ) ? $input : array();
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
-		if ( $id <= 0 || ! get_userdata( $id ) ) {
+		if ( ! self::user_on_this_site( $id > 0 ? get_userdata( $id ) : false ) ) {
 			return new WP_Error( 'mosmcp_user_not_found', __( 'No user was found with that ID.', 'mosmcp-abilities' ) );
 		}
 
@@ -904,7 +904,7 @@ class Users_Provider {
 		$input = is_array( $input ) ? $input : array();
 		$id    = isset( $input['id'] ) ? absint( $input['id'] ) : 0;
 
-		$user = $id > 0 ? get_userdata( $id ) : false;
+		$user = self::user_on_this_site( $id > 0 ? get_userdata( $id ) : false );
 		if ( ! $user ) {
 			return new WP_Error( 'mosmcp_user_not_found', __( 'No user was found with that ID.', 'mosmcp-abilities' ) );
 		}
@@ -989,6 +989,30 @@ class Users_Provider {
 	 */
 	private static function paginate_args( $input ) {
 		return Pagination::args( $input );
+	}
+
+	/**
+	 * Returns the user when the caller may read them on this site.
+	 *
+	 * Multisite stores every account in one network-wide table. Each site in that
+	 * network is still called a "blog" by WordPress core, and is_user_member_of_blog()
+	 * is the check for "was this person added to this site?". A lookup by ID,
+	 * username, or email can otherwise find someone who has no role here. Those
+	 * people are treated as not found, unless the caller is a Super Admin.
+	 * Returning null for both a missing user and a user from another site keeps
+	 * the reply from confirming that the account exists elsewhere on the network.
+	 *
+	 * @param \WP_User|false|null $user User from get_userdata() or get_user_by().
+	 * @return \WP_User|null
+	 */
+	private static function user_on_this_site( $user ) {
+		if ( ! $user instanceof \WP_User ) {
+			return null;
+		}
+		if ( is_multisite() && ! is_super_admin() && ! is_user_member_of_blog( (int) $user->ID ) ) {
+			return null;
+		}
+		return $user;
 	}
 
 	/**

@@ -16,6 +16,7 @@ use MoSMCP\Common\Repositories\Debug_Store;
 use MoSMCP\Common\Repositories\NHI_Store;
 use MoSMCP\Common\Repositories\Store;
 use MoSMCP\Common\Services\OAuth\Tokens;
+use MoSMCP\Common\Services\Rest\Rest_Abilities;
 
 /**
  * Class Migration
@@ -30,6 +31,9 @@ class Migration {
 
 	/** One-time flag: duplicate ability grants have been deduplicated for exclusivity. */
 	const EXCLUSIVITY_BACKFILL_OPTION = 'mosmcp_ability_exclusivity_reconciled';
+
+	/** One-time flag: rest-read has been granted wherever rest-call already was. */
+	const REST_READ_BACKFILL_OPTION = 'mosmcp_rest_read_grants_backfilled';
 
 	/** Schema version last recorded by install()/maybe_upgrade(). */
 	const DB_VERSION_OPTION = 'mosmcp_db_version';
@@ -206,6 +210,7 @@ class Migration {
 		self::backfill_nhi_uuids();
 		self::backfill_nhi_grants();
 		self::deduplicate_ability_grants();
+		self::backfill_rest_read_grants();
 
 		Tokens::ensure_salt();
 
@@ -245,8 +250,11 @@ class Migration {
 			return;
 		}
 
+		// Upgrades run on plugins_loaded, before translations may load (WordPress 6.7+ warns).
+		$fallback = did_action( 'init' ) ? __( 'Migrated client', 'miniorange-secure-mcp-server' ) : 'Migrated client';
+
 		foreach ( $rows as $row ) {
-			$name = '' !== (string) $row['client_name'] ? (string) $row['client_name'] : __( 'Migrated client', 'miniorange-secure-mcp-server' );
+			$name = '' !== (string) $row['client_name'] ? (string) $row['client_name'] : $fallback;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$inserted = $wpdb->insert(
 				$nhis,
@@ -392,6 +400,46 @@ class Migration {
 		);
 
 		update_option( self::EXCLUSIVITY_BACKFILL_OPTION, 1, false );
+	}
+
+	/**
+	 * One-time (option-guarded) copy of rest-call ability grants onto rest-read.
+	 *
+	 * Existing agents already have Call REST Route ticked. The GET-only tool is a
+	 * new ability, so without this copy ChatGPT would not see it until someone
+	 * reopened the Access tab. Route grants are unchanged: rest-read still needs
+	 * GET on the route, which those agents already have.
+	 *
+	 * INSERT IGNORE is safe if a site already granted rest-read by hand.
+	 *
+	 * @return void
+	 */
+	private static function backfill_rest_read_grants() {
+		global $wpdb;
+
+		if ( get_option( self::REST_READ_BACKFILL_OPTION ) ) {
+			return;
+		}
+
+		$grants = NHI_Store::grants_table();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query(
+			$wpdb->prepare(
+				'INSERT IGNORE INTO %i (nhi_id, role, resource_type, resource, created)
+				 SELECT nhi_id, role, resource_type, %s, %d
+				 FROM %i
+				 WHERE resource_type = %s AND resource = %s',
+				$grants,
+				Rest_Abilities::READ,
+				time(),
+				$grants,
+				NHI_Store::RESOURCE_TYPE_ABILITY,
+				Rest_Abilities::CALL
+			)
+		);
+
+		update_option( self::REST_READ_BACKFILL_OPTION, 1, false );
 	}
 
 	/**

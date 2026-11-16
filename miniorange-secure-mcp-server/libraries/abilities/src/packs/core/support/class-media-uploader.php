@@ -137,14 +137,20 @@ class Media_Uploader {
 	 * Adds a file to the media library from a URL.
 	 *
 	 * @param array<string, mixed> $input Ability input.
+	 * @param string[]|null        $types MIME types taken in place of every type the site accepts, from a
+	 *                                    caller that has itself decided this account may add them (as a
+	 *                                    theme's own form does for its members), so upload_files is not
+	 *                                    required. Null to require upload_files.
 	 * @return array<string, mixed>|WP_Error
 	 */
-	public static function from_url( array $input ) {
+	public static function from_url( array $input, $types = null ) {
 		self::load_upload_helpers();
 
-		$gate = self::check_upload_permission();
-		if ( $gate instanceof WP_Error ) {
-			return $gate;
+		if ( null === $types ) {
+			$gate = self::check_upload_permission();
+			if ( $gate instanceof WP_Error ) {
+				return $gate;
+			}
 		}
 
 		// Before anything is fetched, so a refused description never leaves a download behind.
@@ -173,21 +179,24 @@ class Media_Uploader {
 			? (string) $input['filename']
 			: self::filename_from_url( $url );
 
-		return self::sideload( $fetched['path'], $filename, $input, array_merge( $described['warnings'], $fetched['warnings'] ) );
+		return self::sideload( $fetched['path'], $filename, $input, array_merge( $described['warnings'], $fetched['warnings'] ), $types );
 	}
 
 	/**
 	 * Adds a file to the media library from base64 content.
 	 *
 	 * @param array<string, mixed> $input Ability input.
+	 * @param string[]|null        $types As for from_url().
 	 * @return array<string, mixed>|WP_Error
 	 */
-	public static function from_content( array $input ) {
+	public static function from_content( array $input, $types = null ) {
 		self::load_upload_helpers();
 
-		$gate = self::check_upload_permission();
-		if ( $gate instanceof WP_Error ) {
-			return $gate;
+		if ( null === $types ) {
+			$gate = self::check_upload_permission();
+			if ( $gate instanceof WP_Error ) {
+				return $gate;
+			}
 		}
 
 		// Before the file is decoded and written, so a refused description leaves nothing behind.
@@ -247,7 +256,7 @@ class Media_Uploader {
 			return new WP_Error( 'temp_write_failed', __( 'The upload could not be written to a temporary file.', 'mosmcp-abilities' ) );
 		}
 
-		return self::sideload( $tmp, $filename, $input, $described['warnings'] );
+		return self::sideload( $tmp, $filename, $input, $described['warnings'], $types );
 	}
 
 	/**
@@ -671,9 +680,10 @@ class Media_Uploader {
 	 * @param string               $filename Intended filename.
 	 * @param array<string, mixed> $input    Ability input.
 	 * @param array<int, mixed>    $warnings Warnings accumulated so far.
+	 * @param string[]|null        $types    MIME types the caller takes, or null for every type the site accepts.
 	 * @return array<string, mixed>|WP_Error
 	 */
-	private static function sideload( $tmp, $filename, array $input, array $warnings ) {
+	private static function sideload( $tmp, $filename, array $input, array $warnings, $types = null ) {
 		self::load_upload_helpers();
 
 		$filename = sanitize_file_name( $filename );
@@ -712,15 +722,26 @@ class Media_Uploader {
 		}
 
 		$allowed = get_allowed_mime_types();
+		if ( null !== $types ) {
+			$allowed = array_intersect( $allowed, (array) $types );
+		}
+
 		if ( ! in_array( (string) $checked['type'], array_values( $allowed ), true ) ) {
 			wp_delete_file( $tmp );
 			return new WP_Error(
 				'mime_type_not_allowed',
-				sprintf(
-					/* translators: %s: detected MIME type */
-					__( 'This site does not accept "%s" files.', 'mosmcp-abilities' ),
-					(string) $checked['type']
-				)
+				null === $types
+					? sprintf(
+						/* translators: %s: detected MIME type */
+						__( 'This site does not accept "%s" files.', 'mosmcp-abilities' ),
+						(string) $checked['type']
+					)
+					: sprintf(
+						/* translators: 1: detected MIME type, 2: file extensions taken. */
+						__( '"%1$s" files cannot be added this way, which takes only %2$s files.', 'mosmcp-abilities' ),
+						(string) $checked['type'],
+						str_replace( '|', ', ', implode( ', ', array_keys( $allowed ) ) )
+					)
 			);
 		}
 

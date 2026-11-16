@@ -103,7 +103,7 @@ class Member_Dashboard_Widget {
 							echo esc_html(
 								sprintf(
 									/* translators: %s: WordPress role name(s), e.g. "Editor". */
-									_n( '%s role', '%s roles', count( $roles ), 'miniorange-secure-mcp-server' ),
+									_nx( '%s role', '%s roles', count( $roles ), 'role names, not a count', 'miniorange-secure-mcp-server' ),
 									implode( ', ', $roles )
 								)
 							);

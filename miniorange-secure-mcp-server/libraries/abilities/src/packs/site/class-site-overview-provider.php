@@ -101,6 +101,7 @@ class Site_Overview_Provider {
 		'polylang-pro'                => array( 'Polylang Pro', 'languages' ),
 		'translatepress-multilingual' => array( 'TranslatePress', 'languages' ),
 		'the-events-calendar'         => array( 'The Events Calendar', 'events' ),
+		'houzez-theme-functionality'  => array( 'Houzez', 'real estate' ),
 		'sfwd-lms'                    => array( 'LearnDash', 'learning' ),
 		'lifterlms'                   => array( 'LifterLMS', 'learning' ),
 		'tutor'                       => array( 'Tutor LMS', 'learning' ),

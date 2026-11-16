@@ -965,12 +965,18 @@ class MCP_Server {
 
 		$after_prefix_trim = count( $abilities );
 
+		// A subsite administrator's role still contains activate_plugins, so an agent
+		// that grants every ability offers the plugin tools. On multisite those calls
+		// are refused unless this user can manage plugins for the network. Drop them
+		// here so the AI is not handed tools that can only fail.
+		$abilities = self::hide_unusable_plugin_abilities( $abilities );
+
 		self::$exposure_stats = array(
 			'registry_total'    => $registry_total,
 			'after_filter'      => $after_filter,
 			'allowed_count'     => $allowed_count,
 			'after_prefix_trim' => $after_prefix_trim,
-			'exposed_count'     => $after_prefix_trim,
+			'exposed_count'     => count( $abilities ),
 		);
 
 		self::maybe_warn_exposure_narrowed( $registry_total, $after_filter, $allowed_count, $after_prefix_trim );
@@ -1058,6 +1064,56 @@ class MCP_Server {
 				}
 			)
 		);
+	}
+
+	/**
+	 * Removes plugin abilities the current user is not allowed to run.
+	 *
+	 * On a single site an administrator can manage plugins, so nothing is removed.
+	 * On multisite the same role still lists the plugin capability, but WordPress
+	 * only lets a network manager use it unless the network has turned the Plugins
+	 * menu on for subsite administrators. Each ability is checked on its own, so a
+	 * subsite administrator who may activate plugins still sees the activate and
+	 * list tools, while update tools stay hidden.
+	 *
+	 * @param \WP_Ability[] $abilities Abilities about to be offered to the AI.
+	 * @return \WP_Ability[]
+	 */
+	private static function hide_unusable_plugin_abilities( array $abilities ) {
+		return array_values(
+			array_filter(
+				$abilities,
+				static function ( $ability ) {
+					return self::plugin_ability_is_usable( $ability );
+				}
+			)
+		);
+	}
+
+	/**
+	 * Whether this ability may be offered to the current user.
+	 *
+	 * Non-plugin abilities are left unchanged. A plugin ability on multisite is
+	 * offered only when its own permission check passes for this user.
+	 *
+	 * @param \WP_Ability $ability Ability being considered.
+	 * @return bool
+	 */
+	public static function plugin_ability_is_usable( $ability ) {
+		$name = (string) $ability->get_name();
+		if ( ! is_multisite() ) {
+			return true;
+		}
+		if ( 0 !== strpos( $name, 'mosmcp/plugin-' ) && 'mosmcp/site-check-plugin-updates' !== $name ) {
+			return true;
+		}
+
+		$object_level = method_exists( $ability, 'get_meta_item' ) && (bool) $ability->get_meta_item( 'object_level' );
+		if ( $object_level ) {
+			return true;
+		}
+
+		return true === $ability->check_permissions( array() );
 	}
 
 	/**
@@ -1373,6 +1429,17 @@ class MCP_Server {
 					(string) $name,
 					empty( self::$roles ) ? __( 'no role', 'miniorange-secure-mcp-server' ) : implode( ', ', array_map( 'strval', self::$roles ) ),
 					admin_url( 'admin.php?page=' . Admin_App::PAGE_SLUG ) . '#/nhi'
+				),
+			);
+		}
+
+		if ( $registered && ! self::plugin_ability_is_usable( $registered ) ) {
+			return array(
+				'code'    => 'not_permitted_on_multisite',
+				'message' => sprintf(
+					/* translators: %s: ability name. */
+					__( 'The ability %s is not available to this account. On a multisite network, plugin tools work only for a user who is allowed to manage plugins for the whole network.', 'miniorange-secure-mcp-server' ),
+					(string) $name
 				),
 			);
 		}

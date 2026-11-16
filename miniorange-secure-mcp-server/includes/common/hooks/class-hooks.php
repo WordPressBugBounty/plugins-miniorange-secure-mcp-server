@@ -15,6 +15,7 @@ use MoSMCP\Abilities\Abilities_Library;
 use MoSMCP\Common\Apis\Rest_Routes;
 use MoSMCP\Common\Controllers\Debug\Debug_Controller;
 use MoSMCP\Common\Controllers\MCP\REST_Controller;
+use MoSMCP\Common\I18n\I18n;
 use MoSMCP\Common\Migration\Migration;
 use MoSMCP\Common\Plans\Plan_Registry;
 use MoSMCP\Common\Repositories\Audit_Store;
@@ -51,6 +52,8 @@ class Hooks {
 	 */
 	public static function init() {
 		self::register_public_base_filters();
+
+		I18n::register_hooks();
 
 		// Database schema lifecycle. maybe_upgrade also runs on plugins_loaded so the
 		// first request of any kind — including an MCP/REST request that never fires
@@ -140,9 +143,12 @@ class Hooks {
 
 		// "Settings" link on the plugin's row on the Plugins screen.
 		add_filter( 'plugin_action_links_' . plugin_basename( MOSMCP_PLUGIN_FILE ), array( __CLASS__, 'add_action_links' ) );
+		add_filter( 'network_admin_plugin_action_links_' . plugin_basename( MOSMCP_PLUGIN_FILE ), array( __CLASS__, 'add_network_action_links' ) );
 
-		// Admin menu + React app asset hooks.
+		// Admin menu + React app asset hooks. On multisite the same entry also
+		// appears in Network Admin, where it links out to each site's settings.
 		add_action( 'admin_menu', array( __CLASS__, 'register_admin_menu' ) );
+		add_action( 'network_admin_menu', array( __CLASS__, 'register_network_admin_menu' ) );
 		Admin_App::register_hooks();
 
 		// Tells team members on the WordPress dashboard that they can connect their own AI.
@@ -372,6 +378,24 @@ class Hooks {
 	}
 
 	/**
+	 * Prepends a Settings link on the network Plugins screen.
+	 *
+	 * @param string[] $links Existing action links.
+	 * @return string[]
+	 */
+	public static function add_network_action_links( $links ) {
+		$settings = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( network_admin_url( 'admin.php?page=' . Admin_App::NETWORK_PAGE_SLUG ) ),
+			esc_html__( 'Settings', 'miniorange-secure-mcp-server' )
+		);
+
+		array_unshift( $links, $settings );
+
+		return $links;
+	}
+
+	/**
 	 * Applies the public base override (testing aid) to WordPress URL generation.
 	 *
 	 * No-op unless MOSMCP_PUBLIC_BASE is set; see {@see Utils::rewrite_url()}.
@@ -421,5 +445,30 @@ class Hooks {
 				$icon
 			);
 		}
+	}
+
+	/**
+	 * Registers the plugin menu in Network Admin.
+	 *
+	 * Site settings stay on each site. This menu gives a Super Admin one place
+	 * in Network Admin that leads to every site's screen.
+	 *
+	 * @return void
+	 */
+	public static function register_network_admin_menu() {
+		if ( ! is_multisite() ) {
+			return;
+		}
+
+		$icon = plugins_url( 'views/assets/images/miniorange-logo.png', MOSMCP_PLUGIN_FILE );
+
+		add_menu_page(
+			esc_html__( 'Secure MCP Server', 'miniorange-secure-mcp-server' ),
+			esc_attr__( 'Secure MCP Server', 'miniorange-secure-mcp-server' ),
+			'manage_network',
+			Admin_App::NETWORK_PAGE_SLUG,
+			array( Admin_App::class, 'render_network' ),
+			$icon
+		);
 	}
 }

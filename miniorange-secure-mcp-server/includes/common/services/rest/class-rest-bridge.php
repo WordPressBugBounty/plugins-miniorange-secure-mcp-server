@@ -15,11 +15,12 @@ use MoSMCP\Common\Repositories\NHI_Store;
 use MoSMCP\Common\Services\Logging\Audit_Logger;
 use WP_Error;
 use WP_REST_Request;
+use WP_REST_Response;
 
 /**
  * Class Rest_Bridge
  *
- * Backs the three REST bridge abilities. Every path in here is gated twice: by the
+ * Backs the REST bridge abilities. Every path in here is gated twice: by the
  * route grants resolved for this request's NHI, and by the endpoint's own
  * permission_callback, which rest_do_request() runs against the token's WordPress user.
  */
@@ -41,6 +42,11 @@ class Rest_Bridge {
 	 * per-route NHI grant, and this is an emergency, site-wide override on top of it.
 	 */
 	const SETTINGS_OPTION = 'mosmcp_rest_bridge_settings';
+
+	/**
+	 * Replaces a secret value masked out of a response.
+	 */
+	const MASK = '[redacted]';
 
 	/**
 	 * Route grants for this request; defaults to an empty list (deny all), null means unrestricted.
@@ -69,10 +75,10 @@ class Rest_Bridge {
 	/**
 	 * Returns every enabled NHI whose REST route grants let these roles make a call.
 	 *
-	 * A rest-call is allowed by the union of every NHI's route grants, so policy
-	 * that NHIs attach to calls must consult each NHI granting the route, not
-	 * only those granting the rest-call ability itself. The route is resolved the
-	 * way the call itself resolves it.
+	 * A REST bridge call is allowed by the union of every NHI's route grants, so
+	 * policy that NHIs attach to calls must consult each NHI granting the route, not
+	 * only those granting the rest-call or rest-read ability itself. The route is
+	 * resolved the way the call itself resolves it.
 	 *
 	 * @param string   $route  Route template or concrete path, as the call names it.
 	 * @param string   $method HTTP method.
@@ -177,13 +183,40 @@ class Rest_Bridge {
 			);
 		}
 
-		return array(
+		$description = array(
 			'route'       => $resolved['entry']['template'],
 			'method'      => $method,
 			'path_params' => self::path_params( $resolved['entry']['template'] ),
 			'params'      => self::describe_args( isset( $handler['args'] ) ? (array) $handler['args'] : array() ),
 			'notes'       => __( 'Pass "_fields" to limit which fields come back; large list responses are trimmed otherwise.', 'miniorange-secure-mcp-server' ),
 		);
+
+		/**
+		 * Filters what describe-route tells an agent about one route and method.
+		 *
+		 * @param array<string, mixed> $description Route description.
+		 * @param array<string, mixed> $entry       Route_Registry entry.
+		 * @param string               $canonical   Canonical method.
+		 */
+		$filtered = apply_filters( 'mosmcp_rest_bridge_route_description', $description, $resolved['entry'], $resolved['canonical'] );
+
+		return is_array( $filtered ) ? $filtered : $description;
+	}
+
+	/**
+	 * Executes a GET-only REST call on behalf of the agent.
+	 *
+	 * The method is forced to GET before the shared call path runs, so a write
+	 * cannot be requested through this entry point even if the input names one.
+	 *
+	 * @param array<string, mixed> $input Tool input.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	public static function read( $input = array() ) {
+		$input           = is_array( $input ) ? $input : array();
+		$input['method'] = 'GET';
+
+		return self::call( $input );
 	}
 
 	/**
@@ -228,9 +261,10 @@ class Rest_Bridge {
 	 * Runs an already-authorized REST call: kill switches, the pre-dispatch filter,
 	 * request assembly, dispatch, and response shaping/trimming.
 	 *
-	 * Shared by the generic rest-call ability (after its route-grant check) and by a
-	 * promoted route's own ability (which is governed by its own ability grant instead
-	 * of a route grant, but must still honor the same site-wide switches and filter).
+	 * Shared by the generic rest-call and rest-read abilities (after their route-grant
+	 * check) and by a promoted route's own ability (which is governed by its own
+	 * ability grant instead of a route grant, but must still honor the same site-wide
+	 * switches and filter).
 	 *
 	 * @param array<string, mixed> $entry     Route_Registry entry for the matched route.
 	 * @param string                $canonical Canonical grant method for this route.
@@ -320,10 +354,53 @@ class Rest_Bridge {
 			$request->set_query_params( $query );
 		}
 
-		$response = rest_do_request( $request );
-		$status   = $response->get_status();
-		$headers  = $response->get_headers();
-		$data     = $response->get_data();
+		$response = self::without_caller_credentials(
+			static function () use ( $request, $entry, $canonical ) {
+				/**
+				 * Filters how an authorized bridge request is executed.
+				 *
+				 * Return a WP_REST_Response or WP_Error to run the request some other way than
+				 * the default in-process rest_do_request(); null keeps the default. Whatever comes
+				 * back goes through the same redaction, audit and trimming as a default dispatch.
+				 * The caller's own Authorization header is hidden while it runs.
+				 *
+				 * @param null|WP_REST_Response|WP_Error $response  Null to dispatch in-process.
+				 * @param WP_REST_Request                 $request   The assembled request.
+				 * @param array<string, mixed>            $entry     Route_Registry entry.
+				 * @param string                          $canonical Canonical method.
+				 */
+				$response = apply_filters( 'mosmcp_rest_bridge_dispatch', null, $request, $entry, $canonical );
+
+				return ( $response instanceof WP_REST_Response || is_wp_error( $response ) ) ? $response : rest_do_request( $request );
+			}
+		);
+
+		/**
+		 * Filters exact values that must never reach the agent from this call.
+		 *
+		 * Read after dispatch, so values minted while dispatching are included. Each
+		 * value of 8 or more characters is masked wherever it appears in the response.
+		 *
+		 * @param string[]             $secrets   Values to mask.
+		 * @param array<string, mixed> $entry     Route_Registry entry.
+		 * @param string               $canonical Canonical method.
+		 */
+		$secrets = (array) apply_filters( 'mosmcp_rest_bridge_secrets', array(), $entry, $canonical );
+
+		if ( is_wp_error( $response ) ) {
+			Audit_Logger::set_meta(
+				array(
+					'route'  => $entry['template'],
+					'method' => $method,
+				)
+			);
+
+			return new WP_Error( $response->get_error_code(), self::scrub( $response->get_error_message(), $secrets ), self::scrub( $response->get_error_data(), $secrets ) );
+		}
+
+		$status  = $response->get_status();
+		$headers = $response->get_headers();
+		$data    = self::scrub( $response->get_data(), $secrets );
 
 		Audit_Logger::set_meta(
 			array(
@@ -732,6 +809,102 @@ class Rest_Bridge {
 		}
 
 		return $described;
+	}
+
+	/**
+	 * Runs a dispatch with the MCP request's own credentials hidden from the route.
+	 *
+	 * The route runs inside the MCP request, whose Authorization header is still in
+	 * $_SERVER. A plugin that reads it there rather than from the WP_REST_Request
+	 * takes the MCP token for one of its own and refuses even public calls, and no
+	 * route should see that token anyway. Emptied rather than unset, so code that
+	 * merges $_SERVER over apache_request_headers() finds no header either.
+	 *
+	 * @param callable $dispatch Runs the dispatch.
+	 * @return mixed What $dispatch returns.
+	 */
+	private static function without_caller_credentials( callable $dispatch ) {
+		$saved = array();
+
+		foreach ( array( 'HTTP_AUTHORIZATION', 'REDIRECT_HTTP_AUTHORIZATION', 'HTTP_X_MO_AUTHORIZATION' ) as $key ) {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- Saved verbatim to be put back.
+			$saved[ $key ]   = array_key_exists( $key, $_SERVER ) ? $_SERVER[ $key ] : null;
+			$_SERVER[ $key ] = '';
+		}
+
+		try {
+			return $dispatch();
+		} finally {
+			foreach ( $saved as $key => $value ) {
+				if ( null === $value ) {
+					unset( $_SERVER[ $key ] );
+				} else {
+					$_SERVER[ $key ] = $value;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Masks exact secret values wherever they appear in response data.
+	 *
+	 * Works on the JSON encoding so values nested in objects are caught too, and
+	 * decodes only when something was masked.
+	 *
+	 * @param mixed    $data    Response data or a message.
+	 * @param string[] $secrets Values to mask; ones under 8 characters are ignored.
+	 * @return mixed
+	 */
+	public static function scrub( $data, array $secrets ) {
+		$secrets = array_values(
+			array_filter(
+				array_unique( array_map( 'strval', array_filter( $secrets, 'is_scalar' ) ) ),
+				static function ( $secret ) {
+					return strlen( $secret ) >= 8;
+				}
+			)
+		);
+
+		if ( empty( $secrets ) ) {
+			return $data;
+		}
+
+		// Longest first, so a value containing another is masked whole.
+		usort(
+			$secrets,
+			static function ( $a, $b ) {
+				return strlen( $b ) - strlen( $a );
+			}
+		);
+
+		if ( is_string( $data ) ) {
+			return str_replace( $secrets, self::MASK, $data );
+		}
+
+		$json = wp_json_encode( $data );
+
+		if ( ! is_string( $json ) ) {
+			return $data;
+		}
+
+		$masked = $json;
+
+		foreach ( $secrets as $secret ) {
+			$encoded = wp_json_encode( $secret );
+
+			if ( is_string( $encoded ) ) {
+				$masked = str_replace( substr( $encoded, 1, -1 ), self::MASK, $masked );
+			}
+		}
+
+		if ( $masked === $json ) {
+			return $data;
+		}
+
+		$decoded = json_decode( $masked, true );
+
+		// A secret matching a bare number breaks the JSON; withhold the whole response rather than leak it.
+		return ( null === $decoded ) ? self::MASK : $decoded;
 	}
 
 	/**

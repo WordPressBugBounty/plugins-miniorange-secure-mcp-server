@@ -11,6 +11,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use MoSMCP\Common\I18n\I18n;
+
 /**
  * Class Deactivation_Feedback
  *
@@ -51,10 +53,11 @@ class Deactivation_Feedback {
 		wp_enqueue_script(
 			'mosmcp-deactivation-feedback',
 			$views_url . 'public/plans/standard/js/deactivation-feedback.js',
-			array(),
+			array( 'wp-i18n' ),
 			$js_ver,
 			true
 		);
+		wp_set_script_translations( 'mosmcp-deactivation-feedback', I18n::TEXT_DOMAIN, I18n::languages_dir() );
 
 		$current_user = wp_get_current_user();
 		$first_name   = $current_user->first_name;
@@ -82,7 +85,7 @@ class Deactivation_Feedback {
 			)
 		);
 
-		$template = MOSMCP_PLUGIN_DIR . 'views/assets/plans/standard/templates/deactivation-feedback.html';
+		$template = MOSMCP_PLUGIN_DIR . 'views/assets/plans/standard/templates/deactivation-feedback.php';
 		if ( file_exists( $template ) ) {
 			include $template;
 		}

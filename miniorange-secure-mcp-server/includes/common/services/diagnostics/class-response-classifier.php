@@ -176,8 +176,11 @@ class Response_Classifier {
 
 		if ( $status >= 300 && $status < 400 ) {
 			$location = isset( $res['headers']['location'] ) ? self::strip_query( $res['headers']['location'] ) : '';
-			/* translators: 1: HTTP status code, 2: redirect target. */
-			$detail = sprintf( __( 'The request was redirected (%1$d) to %2$s. AI clients do not follow redirects safely, so the redirect must be removed.', 'miniorange-secure-mcp-server' ), $status, '' !== $location ? $location : __( 'another URL', 'miniorange-secure-mcp-server' ) );
+			$detail   = '' !== $location
+				/* translators: 1: HTTP status code, 2: redirect target. */
+				? sprintf( __( 'The request was redirected (%1$d) to %2$s. AI clients do not follow redirects safely, so the redirect must be removed.', 'miniorange-secure-mcp-server' ), $status, $location )
+				/* translators: %d: HTTP status code. */
+				: sprintf( __( 'The request was redirected (%d) to another URL. AI clients do not follow redirects safely, so the redirect must be removed.', 'miniorange-secure-mcp-server' ), $status );
 			return self::verdict( self::FAIL, 'redirect', $detail );
 		}
 

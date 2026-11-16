@@ -38,7 +38,7 @@ class WooCommerce_Response {
 	 * @param float|null                $started_at microtime(true) captured at the start of execution.
 	 * @return array<string, mixed>
 	 */
-	public static function success( $ability, $data, $message = '', array $pagination = null, $started_at = null ) {
+	public static function success( $ability, $data, $message = '', $pagination = null, $started_at = null ) {
 		return array(
 			'success' => true,
 			'message' => $message,
@@ -146,7 +146,7 @@ class WooCommerce_Response {
 			'execution_time' => null !== $started_at ? round( ( microtime( true ) - $started_at ) * 1000, 2 ) . 'ms' : null,
 		);
 
-		if ( null !== $pagination ) {
+		if ( is_array( $pagination ) ) {
 			$meta['pagination'] = $pagination;
 		}
 

@@ -12,6 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use MoSMCP\Common\Controllers\Debug\Debug_Controller;
+use MoSMCP\Common\I18n\I18n;
 use MoSMCP\Common\Migration\Migration;
 use MoSMCP\Common\Plans\Plan_Registry;
 use MoSMCP\Common\Repositories\NHI_Store;
@@ -31,6 +32,12 @@ class Admin_App {
 	 * WordPress admin page slug (admin, manage_options).
 	 */
 	const PAGE_SLUG = 'mosmcp-abilities';
+
+	/**
+	 * Network Admin page slug. Agents are stored per site, so this page lists the
+	 * sites and links to each site's own settings screen.
+	 */
+	const NETWORK_PAGE_SLUG = 'mosmcp-network';
 
 	/**
 	 * Member page slug (any logged-in user, `read`). Shown to non-admins so the
@@ -139,6 +146,9 @@ class Admin_App {
 			return;
 		}
 
+		// The bundle reads wp.i18n as an external; the dev server's shim needs it too.
+		wp_enqueue_script( 'wp-i18n' );
+
 		// Enqueue the production build if it exists.
 		self::enqueue_prod_assets();
 
@@ -160,6 +170,66 @@ class Admin_App {
 		}
 
 		echo '<div id="mosmcp-app-root"></div>';
+	}
+
+	/**
+	 * Renders the Network Admin page.
+	 *
+	 * The plugin is activated for the whole network, but each site keeps its own
+	 * agents and connections. This screen is the network entry point: it names
+	 * every site and links to that site's settings.
+	 *
+	 * @return void
+	 */
+	public static function render_network() {
+		if ( ! current_user_can( 'manage_network' ) ) {
+			wp_die( esc_html__( 'You do not have permission to access this page.', 'miniorange-secure-mcp-server' ) );
+		}
+
+		$sites = get_sites(
+			array(
+				'number'  => 200,
+				'orderby' => 'id',
+				'order'   => 'ASC',
+			)
+		);
+
+		?>
+		<div class="wrap">
+			<h1><?php esc_html_e( 'Secure MCP Server', 'miniorange-secure-mcp-server' ); ?></h1>
+			<p><?php esc_html_e( 'Agents, connections, and abilities are kept on each site. Choose a site to open its settings.', 'miniorange-secure-mcp-server' ); ?></p>
+			<table class="widefat striped">
+				<thead>
+					<tr>
+						<th scope="col"><?php esc_html_e( 'Site', 'miniorange-secure-mcp-server' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Address', 'miniorange-secure-mcp-server' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Settings', 'miniorange-secure-mcp-server' ); ?></th>
+					</tr>
+				</thead>
+				<tbody>
+					<?php if ( empty( $sites ) ) : ?>
+					<tr>
+						<td colspan="3"><?php esc_html_e( 'No sites were found on this network.', 'miniorange-secure-mcp-server' ); ?></td>
+					</tr>
+					<?php else : ?>
+						<?php foreach ( $sites as $site ) : ?>
+							<?php
+							$blog_id  = (int) $site->blog_id;
+							$name     = (string) get_blog_option( $blog_id, 'blogname' );
+							$home     = (string) get_blog_option( $blog_id, 'home' );
+							$settings = trailingslashit( (string) get_blog_option( $blog_id, 'siteurl' ) ) . 'wp-admin/admin.php?page=' . self::PAGE_SLUG;
+							?>
+						<tr>
+							<td><strong><?php echo esc_html( '' !== $name ? $name : $home ); ?></strong></td>
+							<td><a href="<?php echo esc_url( $home ); ?>"><?php echo esc_html( $home ); ?></a></td>
+							<td><a class="button button-primary" href="<?php echo esc_url( $settings ); ?>"><?php esc_html_e( 'Open settings', 'miniorange-secure-mcp-server' ); ?></a></td>
+						</tr>
+						<?php endforeach; ?>
+					<?php endif; ?>
+				</tbody>
+			</table>
+		</div>
+		<?php
 	}
 
 
@@ -196,10 +266,12 @@ class Admin_App {
 		wp_enqueue_script(
 			self::SCRIPT_HANDLE,
 			$build_url . 'index.js',
-			array(),
+			array( 'wp-i18n' ),
 			$js_ver,
 			true
 		);
+
+		wp_set_script_translations( self::SCRIPT_HANDLE, I18n::TEXT_DOMAIN, I18n::languages_dir() );
 	}
 
 	/**
@@ -237,6 +309,8 @@ class Admin_App {
 			'nonce'                  => wp_create_nonce( 'wp_rest' ),
 			'pluginUrl'              => esc_url_raw( plugins_url( '/', MOSMCP_PLUGIN_FILE ) ),
 			'version'                => MOSMCP_VERSION,
+			// BCP 47 tag of the admin's own language, for Intl date and number formatting.
+			'locale'                 => str_replace( '_', '-', get_user_locale() ),
 			'mcpEndpoint'            => Utils::resource_url(),
 			'isLocalhost'            => Utils::is_localhost_site(),
 			'serviceEnabled'         => $service,

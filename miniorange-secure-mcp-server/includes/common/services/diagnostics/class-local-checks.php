@@ -488,8 +488,11 @@ class Local_Checks {
 	 * @return string
 	 */
 	private static function environment_summary( array $env ) {
-		/* translators: 1: PHP version, 2: PHP handler (SAPI), 3: web server software. */
-		$line = sprintf( __( 'PHP %1$s (%2$s) on %3$s.', 'miniorange-secure-mcp-server' ), $env['php_version'], $env['sapi'], '' !== $env['server_software'] ? $env['server_software'] : __( 'an unidentified web server', 'miniorange-secure-mcp-server' ) );
+		$line = '' !== $env['server_software']
+			/* translators: 1: PHP version, 2: PHP handler (SAPI), 3: web server software. */
+			? sprintf( __( 'PHP %1$s (%2$s) on %3$s.', 'miniorange-secure-mcp-server' ), $env['php_version'], $env['sapi'], $env['server_software'] )
+			/* translators: 1: PHP version, 2: PHP handler (SAPI). */
+			: sprintf( __( 'PHP %1$s (%2$s) on an unidentified web server.', 'miniorange-secure-mcp-server' ), $env['php_version'], $env['sapi'] );
 
 		if ( ! empty( $env['layers'] ) ) {
 			/* translators: %s: comma-separated names of detected layers. */
