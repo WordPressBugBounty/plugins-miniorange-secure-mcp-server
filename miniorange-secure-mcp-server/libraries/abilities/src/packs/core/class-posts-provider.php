@@ -881,7 +881,7 @@ class Posts_Provider {
 		return array(
 			'id'          => (int) $post->ID,
 			'title'       => (string) get_the_title( $post ),
-			'content'     => (string) $post->post_content,
+			'content'     => Post_Fields::can_view_protected( $post ) ? (string) $post->post_content : '',
 			'excerpt'     => Post_Fields::display_excerpt( $post, Post_Fields::EXCERPT_LENGTH_FULL ),
 			'status'      => (string) $post->post_status,
 			'author_id'   => (int) $post->post_author,

@@ -82,7 +82,7 @@ class Revisions_Pack extends Ability_Pack {
 				'label'         => __( 'Count Revisions for Post', 'mosmcp-abilities' ),
 				'description'   => __( 'Returns how many revisions a post or page has, and the ID of the latest one. Does not count autosaves.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
-				'capability'    => 'read_post',
+				'capability'    => 'edit_post',
 				'cap_args'      => self::post_id_args(),
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Revisions_Provider::class, 'count_for_post' ),
@@ -116,7 +116,8 @@ class Revisions_Pack extends Ability_Pack {
 				'label'         => __( 'Get Revision', 'mosmcp-abilities' ),
 				'description'   => __( 'Gets the full content of a single revision by its ID: title, content, excerpt, author, and date.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
-				'capability'    => 'edit_posts',
+				'capability'    => 'edit_post',
+				'cap_args'      => self::parent_args(),
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Revisions_Provider::class, 'get' ),
 				'input_schema'  => Schema::object(
@@ -155,7 +156,7 @@ class Revisions_Pack extends Ability_Pack {
 				'label'         => __( 'Get Latest Revision', 'mosmcp-abilities' ),
 				'description'   => __( 'Gets the full content of the most recent revision of a post or page.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
-				'capability'    => 'read_post',
+				'capability'    => 'edit_post',
 				'cap_args'      => self::post_id_args(),
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Revisions_Provider::class, 'get_latest' ),
@@ -226,7 +227,7 @@ class Revisions_Pack extends Ability_Pack {
 				'label'         => __( 'List Autosaves for Post', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists the autosaves of a post or page. WordPress keeps only the single most recent autosave per user, so this typically returns at most one item per user currently editing the post — it is not a full history like mosmcp/revision-list-for-post.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
-				'capability'    => 'read_post',
+				'capability'    => 'edit_post',
 				'cap_args'      => self::post_id_args(),
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Revisions_Provider::class, 'list_autosaves' ),
@@ -267,7 +268,7 @@ class Revisions_Pack extends Ability_Pack {
 				'label'         => __( 'List Revisions by Author', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists the revisions of a post or page that were made by a specific user, newest first. Does not include autosaves.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
-				'capability'    => 'read_post',
+				'capability'    => 'edit_post',
 				'cap_args'      => self::post_id_args(),
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Revisions_Provider::class, 'list_by_author' ),
@@ -296,7 +297,7 @@ class Revisions_Pack extends Ability_Pack {
 				'label'         => __( 'List Revisions for Post', 'mosmcp-abilities' ),
 				'description'   => __( 'Lists all revisions of a post or page, newest first, with author and date for each. Does not include the full content of each revision — use mosmcp/revision-get for that. Returns at most per_page revisions (default 20) plus the total.', 'mosmcp-abilities' ),
 				'category'      => self::CATEGORY,
-				'capability'    => 'read_post',
+				'capability'    => 'edit_post',
 				'cap_args'      => self::post_id_args(),
 				'annotations'   => self::annotations( true, false, true, false ),
 				'execute'       => array( Revisions_Provider::class, 'list_for_post' ),
@@ -431,7 +432,7 @@ class Revisions_Pack extends Ability_Pack {
 	}
 
 	/**
-	 * Resolves the post_id input for read_post capability checks (cap_args).
+	 * Resolves the post_id input for post capability checks (cap_args).
 	 *
 	 * @return callable
 	 */

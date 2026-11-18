@@ -62,7 +62,7 @@
 #mosmcp-df-close {
 	position: absolute;
 	top: 14px;
-	right: 14px;
+	inset-inline-end: 14px;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -84,7 +84,7 @@
 	align-items: flex-start;
 	gap: 12px;
 	margin-bottom: 20px;
-	padding-right: 24px;
+	padding-inline-end: 24px;
 }
 .mosmcp-df-head-icon {
 	display: inline-flex;
@@ -144,7 +144,7 @@
 	color: var(--df-fg-2);
 	margin-bottom: 8px;
 }
-.mosmcp-df-req { color: var(--df-red); margin-left: 1px; }
+.mosmcp-df-req { color: var(--df-red); margin-inline-start: 1px; }
 .mosmcp-df-optional { font-weight: 400; color: var(--df-fg-4); }
 
 /* ── Reason radio-cards ──────────────────────────────────────────────────── */

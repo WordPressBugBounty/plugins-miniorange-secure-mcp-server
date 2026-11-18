@@ -722,7 +722,7 @@ class Pages_Provider {
 		return array(
 			'id'           => (int) $page->ID,
 			'title'        => (string) get_the_title( $page ),
-			'content'      => (string) $page->post_content,
+			'content'      => Post_Fields::can_view_protected( $page ) ? (string) $page->post_content : '',
 			'excerpt'      => Post_Fields::display_excerpt( $page, Post_Fields::EXCERPT_LENGTH_FULL ),
 			'status'       => (string) $page->post_status,
 			'author_id'    => (int) $page->post_author,

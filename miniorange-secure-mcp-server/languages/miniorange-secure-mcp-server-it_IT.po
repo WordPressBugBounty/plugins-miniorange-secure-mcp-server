@@ -526,24 +526,24 @@ msgid "This site is running on <strong>localhost</strong> — no AI client outsi
 msgstr "Questo sito è in esecuzione su <strong>localhost</strong> — nessun client IA esterno a questo computer può raggiungerlo. Assicurati che il sito sia raggiungibile pubblicamente prima di connetterti."
 
 #. translators: 1: country name, 2: calling code without the plus sign.
-#: views/src/common/components/PhoneInput.jsx:82
+#: views/src/common/components/PhoneInput.jsx:83
 #, js-format
 msgid "Country code: %1$s, +%2$s"
 msgstr "Prefisso internazionale: %1$s, +%2$s"
 
-#: views/src/common/components/PhoneInput.jsx:93
+#: views/src/common/components/PhoneInput.jsx:94
 msgid "Search country or code"
 msgstr "Cerca paese o prefisso"
 
-#: views/src/common/components/PhoneInput.jsx:93
+#: views/src/common/components/PhoneInput.jsx:94
 msgid "Search country"
 msgstr "Cerca paese"
 
-#: views/src/common/components/PhoneInput.jsx:95
+#: views/src/common/components/PhoneInput.jsx:96
 msgid "Country"
 msgstr "Paese"
 
-#: views/src/common/components/PhoneInput.jsx:104
+#: views/src/common/components/PhoneInput.jsx:105
 msgid "No matches"
 msgstr "Nessun risultato"
 

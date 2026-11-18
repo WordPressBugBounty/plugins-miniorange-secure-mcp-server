@@ -521,24 +521,24 @@ msgid "This site is running on <strong>localhost</strong> — no AI client outsi
 msgstr "このサイトは <strong>localhost</strong> で動作しているため、このマシンの外にある AI クライアントからはアクセスできません。接続する前に、サイトが公開アクセス可能であることを確認してください。"
 
 #. translators: 1: country name, 2: calling code without the plus sign.
-#: views/src/common/components/PhoneInput.jsx:82
+#: views/src/common/components/PhoneInput.jsx:83
 #, js-format
 msgid "Country code: %1$s, +%2$s"
 msgstr "国番号：%1$s、+%2$s"
 
-#: views/src/common/components/PhoneInput.jsx:93
+#: views/src/common/components/PhoneInput.jsx:94
 msgid "Search country or code"
 msgstr "国名または国番号で検索"
 
-#: views/src/common/components/PhoneInput.jsx:93
+#: views/src/common/components/PhoneInput.jsx:94
 msgid "Search country"
 msgstr "国を検索"
 
-#: views/src/common/components/PhoneInput.jsx:95
+#: views/src/common/components/PhoneInput.jsx:96
 msgid "Country"
 msgstr "国"
 
-#: views/src/common/components/PhoneInput.jsx:104
+#: views/src/common/components/PhoneInput.jsx:105
 msgid "No matches"
 msgstr "一致する項目がありません"
 

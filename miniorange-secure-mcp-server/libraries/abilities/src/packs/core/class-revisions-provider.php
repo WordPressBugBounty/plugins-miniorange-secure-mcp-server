@@ -369,7 +369,8 @@ class Revisions_Provider {
 			return new WP_Error( 'post_not_found', __( 'No post or page found with that ID.', 'mosmcp-abilities' ) );
 		}
 
-		if ( ! current_user_can( 'read_post', $post->ID ) ) {
+		// Not read_post: revisions and autosaves hold unpublished edits, which core shows only to editors.
+		if ( ! current_user_can( 'edit_post', $post->ID ) ) {
 			return new WP_Error( 'cannot_read_post', __( 'You are not allowed to view this post.', 'mosmcp-abilities' ) );
 		}
 
@@ -394,7 +395,8 @@ class Revisions_Provider {
 			return new WP_Error( 'revision_not_found', __( 'No revision found with that ID.', 'mosmcp-abilities' ) );
 		}
 
-		if ( ! current_user_can( 'read_post', $revision->post_parent ) ) {
+		// Same rule as revisionable_post_or_error(): edit rights on the parent, not read_post.
+		if ( ! current_user_can( 'edit_post', $revision->post_parent ) ) {
 			return new WP_Error( 'cannot_read_post', __( 'You are not allowed to view this revision.', 'mosmcp-abilities' ) );
 		}
 

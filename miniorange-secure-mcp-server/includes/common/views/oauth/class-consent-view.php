@@ -289,7 +289,7 @@ class Consent_View {
 			printf(
 				/* translators: %s: redirect destination host. */
 				esc_html__( 'You\'ll be returned to %s', 'miniorange-secure-mcp-server' ),
-				'<strong>' . esc_html( $redirect_host ) . '</strong>'
+				'<strong dir="ltr">' . esc_html( $redirect_host ) . '</strong>'
 			);
 			?>
 		</span>

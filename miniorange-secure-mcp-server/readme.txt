@@ -4,7 +4,7 @@ Tags: mcp-server, mcp, chatgpt, claude, wordpress mcp
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.5.7
+Stable tag: 1.5.8
 License: Expat
 License URI: https://plugins.miniorange.com/mit-license
 
@@ -401,6 +401,10 @@ No. Install, follow the onboarding checklist, and paste one URL into your AI cli
 
 == Changelog ==
 
+= 1.5.8 =
+* Added Arabic: the admin, the approval screen and the deactivation form follow each person's WordPress language and lay out right to left. What AI sees stays in English.
+* Improved password-protected posts and revision history: they now follow WordPress's own rules, so their content is shown to people who can edit the post.
+
 = 1.5.7 =
 * Fixed plugin REST routes: your AI's connection token is no longer sent to plugin routes, so plugins that reject tokens they don't recognise no longer block AI calls.
 * Added Read REST Route: a read-only tool for the REST API routes you have allowed. It sends only GET requests, so it cannot change anything. Agents that could already call REST routes get it automatically.
@@ -601,6 +605,9 @@ Fixed: Object-level abilities no longer show false capability conflicts in the r
 * Initial release: read-only viewer for abilities registered through the WordPress Abilities API.
 
 == Upgrade Notice ==
+
+= 1.5.8 =
+Adds Arabic for the admin, the approval screen and the deactivation form, laid out right to left. Password-protected posts and revision history now follow WordPress's own rules.
 
 = 1.5.7 =
 Adds Italian and Japanese for the admin, a read-only tool for REST routes (existing agents that could call REST routes get it automatically) and multisite fixes: a Network Admin page and plugin tools only for network plugin managers.

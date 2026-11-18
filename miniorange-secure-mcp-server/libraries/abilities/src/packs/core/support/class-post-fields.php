@@ -284,12 +284,30 @@ class Post_Fields {
 	 * @return string
 	 */
 	public static function display_excerpt( WP_Post $post, $num_words = self::EXCERPT_LENGTH_FULL ) {
+		if ( ! self::can_view_protected( $post ) ) {
+			return '';
+		}
+
 		$manual = (string) $post->post_excerpt;
 		if ( '' !== trim( $manual ) ) {
 			return (string) wp_trim_words( $manual, self::MANUAL_EXCERPT_CAP_WORDS );
 		}
 
 		return (string) wp_trim_words( $post->post_content, $num_words );
+	}
+
+	/**
+	 * Whether the current user may see a post's content and excerpt.
+	 *
+	 * The REST API withholds a password-protected post's content from anyone who
+	 * cannot edit it unless the password is supplied. Abilities take no password,
+	 * so only edit rights open it, as in mosmcp/seo-get-post.
+	 *
+	 * @param WP_Post $post Post or page.
+	 * @return bool
+	 */
+	public static function can_view_protected( WP_Post $post ) {
+		return '' === (string) $post->post_password || current_user_can( 'edit_post', $post->ID );
 	}
 
 	/**

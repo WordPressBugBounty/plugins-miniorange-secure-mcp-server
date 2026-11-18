@@ -3,7 +3,7 @@
  * Plugin Name:       Secure MCP Server for Claude, ChatGPT, Gemini, Cursor and other AI Agents
  * Plugin URI:        https://plugins.miniorange.com/
  * Description:       AI governance and policy enforcement for WordPress, built on the Abilities API. Exposes a secure, OAuth-protected MCP server so AI clients such as ChatGPT and Claude can connect.
- * Version:           1.5.7
+ * Version:           1.5.8
  * Requires at least: 6.9
  * Requires PHP:      7.4
  * Author:            miniOrange
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'MOSMCP_VERSION', '1.5.7' );
+define( 'MOSMCP_VERSION', '1.5.8' );
 define( 'MOSMCP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'MOSMCP_PLUGIN_FILE', __FILE__ );
 
