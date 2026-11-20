@@ -58,7 +58,13 @@ class OAuth_Server {
 		$redirect_uris = self::sanitize_redirect_uris( $redirect_uris );
 
 		if ( empty( $redirect_uris ) ) {
-			return self::registration_error( 'invalid_redirect_uri', __( 'At least one valid HTTPS or localhost redirect URI is required.', 'miniorange-secure-mcp-server' ) );
+			// Usually an AI app pointed at the site itself instead of at the gateway.
+			Debug_Logger::info(
+				Debug_Logger::CHANNEL_OAUTH,
+				'Refused a client registration: none of its redirect URIs is the gateway\'s.',
+				array( 'client_name' => isset( $body['client_name'] ) ? sanitize_text_field( $body['client_name'] ) : '' )
+			);
+			return self::registration_error( 'invalid_redirect_uri', self::gateway_only_message() );
 		}
 
 		$auth_method = isset( $body['token_endpoint_auth_method'] ) ? sanitize_text_field( $body['token_endpoint_auth_method'] ) : 'none';
@@ -175,6 +181,17 @@ class OAuth_Server {
 	 */
 	public static function authorize() {
 		$params = self::collect_authorize_params();
+
+		// Codes go to the gateway only. Checked first and never redirected, so a link
+		// carrying any other address stops here, before the login and consent screens.
+		if ( ! Store::is_gateway_redirect_uri( $params['redirect_uri'] ) ) {
+			Debug_Logger::warning(
+				Debug_Logger::CHANNEL_OAUTH,
+				'Authorization refused: the redirect URI is not the gateway\'s.',
+				array( 'client_id' => $params['client_id'] )
+			);
+			self::fatal( self::gateway_only_message() );
+		}
 
 		$client = Store::get_client( $params['client_id'] );
 		if ( ! $client ) {
@@ -403,6 +420,11 @@ class OAuth_Server {
 
 		if ( $row['redirect_uri'] !== $redirect_uri ) {
 			return self::token_error( 'invalid_grant', __( 'Redirect URI mismatch.', 'miniorange-secure-mcp-server' ) );
+		}
+
+		// A code issued to another address just before this site went gateway-only.
+		if ( ! Store::is_gateway_redirect_uri( $row['redirect_uri'] ) ) {
+			return self::token_error( 'invalid_grant', self::gateway_only_message() );
 		}
 
 		if ( ! Tokens::verify_pkce( $code_verifier, $row['code_challenge'] ) ) {
@@ -815,8 +837,9 @@ class OAuth_Server {
 	 */
 
 	/**
-	 * Filters a list of redirect URIs down to the ones that are acceptable
-	 * (HTTPS, or HTTP only for loopback hosts).
+	 * Filters a list of redirect URIs down to the gateway's (see
+	 * {@see Store::gateway_redirect_uris()}). HTTPS, or HTTP for a loopback host, is
+	 * still required, so even an address added through the filter cannot be plain HTTP.
 	 *
 	 * @param array $uris Candidate redirect URIs.
 	 * @return string[] The accepted URIs.
@@ -837,12 +860,26 @@ class OAuth_Server {
 			$scheme = wp_parse_url( $clean, PHP_URL_SCHEME );
 			$host   = wp_parse_url( $clean, PHP_URL_HOST );
 
-			if ( 'https' === $scheme || in_array( $host, array( 'localhost', '127.0.0.1', '::1' ), true ) ) {
+			if ( ( 'https' === $scheme || in_array( $host, array( 'localhost', '127.0.0.1', '::1' ), true ) )
+				&& Store::is_gateway_redirect_uri( $clean ) ) {
 				$valid[] = $clean;
 			}
 		}
 
 		return array_values( array_unique( $valid ) );
+	}
+
+	/**
+	 * What an AI app connecting directly is told, wherever it is refused.
+	 *
+	 * @return string
+	 */
+	private static function gateway_only_message() {
+		return __( 'This site no longer accepts direct AI connections.', 'miniorange-secure-mcp-server' ) . ' ' . sprintf(
+			/* translators: %s: the miniOrange MCP Gateway's MCP server URL. */
+			__( 'Connect your AI app through the miniOrange MCP Gateway, using this MCP server URL: %s', 'miniorange-secure-mcp-server' ),
+			Store::GATEWAY_MCP_URL
+		);
 	}
 
 	/**
@@ -908,7 +945,7 @@ class OAuth_Server {
 
 	/**
 	 * Renders a terminal error page for problems that must not be redirected
-	 * (unknown client or unregistered redirect URI).
+	 * (a redirect URI that is not the gateway's, unknown client, unregistered redirect URI).
 	 *
 	 * @param string $message The message to display.
 	 * @return void

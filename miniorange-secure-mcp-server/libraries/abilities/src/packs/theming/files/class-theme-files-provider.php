@@ -62,6 +62,11 @@ class Theme_Files_Provider {
 	 * @return array<string, mixed>|WP_Error
 	 */
 	public static function file_list( $input = array() ) {
+		$blocked = Theme_Support::file_reading_blocked();
+		if ( $blocked instanceof WP_Error ) {
+			return $blocked;
+		}
+
 		$input  = is_array( $input ) ? $input : array();
 		$draft  = Theme_Draft::current();
 		$source = '';
@@ -147,6 +152,11 @@ class Theme_Files_Provider {
 	 * @return array<string, mixed>|WP_Error
 	 */
 	public static function file_read( $input = array() ) {
+		$blocked = Theme_Support::file_reading_blocked();
+		if ( $blocked instanceof WP_Error ) {
+			return $blocked;
+		}
+
 		$input  = is_array( $input ) ? $input : array();
 		$draft  = Theme_Draft::current();
 		$source = '';
@@ -233,6 +243,11 @@ class Theme_Files_Provider {
 	 * @return array<string, mixed>|WP_Error
 	 */
 	public static function file_search( $input = array() ) {
+		$blocked = Theme_Support::file_reading_blocked();
+		if ( $blocked instanceof WP_Error ) {
+			return $blocked;
+		}
+
 		$input = is_array( $input ) ? $input : array();
 		$text  = isset( $input['text'] ) ? (string) $input['text'] : '';
 
@@ -307,6 +322,11 @@ class Theme_Files_Provider {
 	 * @return array<string, mixed>|WP_Error
 	 */
 	public static function file_outline( $input = array() ) {
+		$blocked = Theme_Support::file_reading_blocked();
+		if ( $blocked instanceof WP_Error ) {
+			return $blocked;
+		}
+
 		$read = self::file_read(
 			array(
 				'path'       => isset( $input['path'] ) ? $input['path'] : '',

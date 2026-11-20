@@ -212,6 +212,50 @@ class Theme_Support {
 		return null;
 	}
 
+	/**
+	 * Refuses reading theme code to anyone WordPress would not show it to.
+	 *
+	 * The Theme File Editor needs edit_themes just to open a file, so reading follows
+	 * the same rule as writing, checked in core's order: DISALLOW_FILE_EDIT, then file
+	 * changes switched off, then the capability itself (which multisite keeps for super
+	 * admins). edit_theme_options alone, held by every site admin and by roles such as
+	 * Shop Manager, is not enough.
+	 *
+	 * @return WP_Error|null
+	 */
+	public static function file_reading_blocked() {
+		if ( defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT ) {
+			return Site_Support::error(
+				'mosmcp_file_read_disabled',
+				__( 'This site has theme file access switched off, via the DISALLOW_FILE_EDIT constant in wp-config.php, so theme files cannot be read or changed here. That is a deliberate site policy, and no account can override it from here. Templates, template parts and global styles can still be read and changed, because they are stored in the database rather than in files.', 'mosmcp-abilities' ),
+				Site_Support::CAUSE_HOST_ENVIRONMENT,
+				false,
+				array( 'constant' => 'DISALLOW_FILE_EDIT' )
+			);
+		}
+
+		if ( ! wp_is_file_mod_allowed( 'capability_edit_themes' ) ) {
+			return Site_Support::error(
+				'mosmcp_file_read_disabled',
+				__( 'This site has file changes switched off, via the DISALLOW_FILE_MODS constant in wp-config.php or a host-level setting, and WordPress then keeps theme files out of reach as well. That is a deliberate site policy, and no account can override it from here. Templates, template parts and global styles can still be read and changed.', 'mosmcp-abilities' ),
+				Site_Support::CAUSE_HOST_ENVIRONMENT,
+				false,
+				array( 'constant' => 'DISALLOW_FILE_MODS' )
+			);
+		}
+
+		if ( ! current_user_can( 'edit_themes' ) ) {
+			return Site_Support::error(
+				'mosmcp_cannot_read_theme_files',
+				__( 'This account cannot view theme files. WordPress shows theme code only to people who can use the Theme File Editor: administrators on a single site and super admins on a multisite network. Templates, template parts and global styles can still be read and changed.', 'mosmcp-abilities' ),
+				Site_Support::CAUSE_CAPABILITY,
+				false
+			);
+		}
+
+		return null;
+	}
+
 	/*
 	 * Paths
 	 */

@@ -203,8 +203,8 @@ class Utils {
 	 * abilities" symptom, so only the log can separate them.
 	 *
 	 * $request is optional: {@see \MoSMCP\Common\Controllers\MCP\REST_Controller::determine_user()}
-	 * runs on `determine_current_user`, before WordPress has parsed a WP_REST_Request, and so
-	 * has only the superglobal fallbacks below to work with.
+	 * runs on `rest_api_init`, before WordPress has built a WP_REST_Request, and so has only
+	 * the superglobal fallbacks below to work with.
 	 *
 	 * @param WP_REST_Request|null $request The request, when one exists yet.
 	 * @return string The raw header value, or an empty string when absent.

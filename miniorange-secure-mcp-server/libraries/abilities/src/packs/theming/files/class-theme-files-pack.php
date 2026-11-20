@@ -39,8 +39,10 @@ class Theme_Files_Pack extends Ability_Pack {
 	const CATEGORY = 'mosmcp-theme-files';
 
 	/*
-	 * The writing abilities are gated on edit_theme_options, and enforce
-	 * edit_themes themselves (Theme_Support::file_editing_blocked()). Gating them
+	 * Every ability here is gated on edit_theme_options and enforces edit_themes
+	 * itself: the writing ones through Theme_Support::file_editing_blocked(), the
+	 * reading ones through Theme_Support::file_reading_blocked(), because WordPress
+	 * shows theme code only to people who can use the Theme File Editor. Gating them
 	 * on edit_themes directly would be no more secure, but on a site with
 	 * DISALLOW_FILE_EDIT — which removes edit_themes — it would refuse with a
 	 * generic permission error instead of saying that a site policy is the cause.

@@ -4,7 +4,7 @@ Tags: mcp-server, mcp, chatgpt, claude, wordpress mcp
 Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.5.8
+Stable tag: 1.5.9
 License: Expat
 License URI: https://plugins.miniorange.com/mit-license
 
@@ -401,6 +401,11 @@ No. Install, follow the onboarding checklist, and paste one URL into your AI cli
 
 == Changelog ==
 
+= 1.5.9 =
+* Improved AI app connections through miniOrange MCP Gateway.
+* Improved theme file abilities: they now follow WordPress's Theme File Editor rules.
+* Minor bug fixes.
+
 = 1.5.8 =
 * Added Arabic: the admin, the approval screen and the deactivation form follow each person's WordPress language and lay out right to left. What AI sees stays in English.
 * Improved password-protected posts and revision history: they now follow WordPress's own rules, so their content is shown to people who can edit the post.
@@ -605,6 +610,9 @@ Fixed: Object-level abilities no longer show false capability conflicts in the r
 * Initial release: read-only viewer for abilities registered through the WordPress Abilities API.
 
 == Upgrade Notice ==
+
+= 1.5.9 =
+Improves AI app connections through miniOrange MCP Gateway and theme file abilities. Minor bug fixes.
 
 = 1.5.8 =
 Adds Arabic for the admin, the approval screen and the deactivation form, laid out right to left. Password-protected posts and revision history now follow WordPress's own rules.

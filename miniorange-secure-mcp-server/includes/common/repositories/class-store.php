@@ -33,6 +33,11 @@ class Store {
 	const GATEWAY_HOSTS = array( 'gateway.miniorange.ai' );
 
 	/**
+	 * The gateway's MCP server URL, quoted to anyone still connecting directly.
+	 */
+	const GATEWAY_MCP_URL = 'https://gateway.miniorange.ai/v2/mcp';
+
+	/**
 	 * Values returned by connection_source().
 	 */
 	const SOURCE_GATEWAY = 'gateway';
@@ -100,6 +105,45 @@ class Store {
 	}
 
 	/**
+	 * Redirect URIs an authorization code may be sent to: the gateway's callback.
+	 *
+	 * Registration is open (RFC 7591), so without this list anyone could register an
+	 * address of their own and phish a code with a consent link. AI apps connect
+	 * through the gateway only, so its callback is the one destination needed.
+	 *
+	 * @return string[]
+	 */
+	public static function gateway_redirect_uris() {
+		$uris = array();
+		foreach ( self::GATEWAY_HOSTS as $host ) {
+			$uris[] = 'https://' . $host . '/callback';
+		}
+
+		/**
+		 * Filters the redirect URIs treated as the gateway's.
+		 *
+		 * Only these may be registered or sent an authorization code, and connections
+		 * using them count as gateway connections. For a local or staging gateway;
+		 * each entry is matched exactly.
+		 *
+		 * @param string[] $uris Exact redirect URIs.
+		 */
+		$uris = apply_filters( 'mosmcp_allowed_redirect_uris', $uris );
+
+		return array_values( array_filter( (array) $uris, 'is_string' ) );
+	}
+
+	/**
+	 * Whether a redirect URI is one of the gateway's.
+	 *
+	 * @param mixed $uri Redirect URI.
+	 * @return bool
+	 */
+	public static function is_gateway_redirect_uri( $uri ) {
+		return is_string( $uri ) && '' !== $uri && in_array( $uri, self::gateway_redirect_uris(), true );
+	}
+
+	/**
 	 * Classifies a set of registered redirect URIs as gateway or direct.
 	 *
 	 * Nothing reaches the MCP endpoint without registering as an OAuth client first,
@@ -110,9 +154,12 @@ class Store {
 	 * are never garbage-collected, it records it for connections made long before
 	 * this code shipped.
 	 *
+	 * Matched on the host, not the exact callback that new registrations must use
+	 * (gateway_redirect_uris()), so every existing gateway connection stays one.
+	 *
 	 * Gateway only when EVERY URI is on a gateway host: a registration mixing a
 	 * gateway callback with a foreign one is not the gateway, and accepting it as one
-	 * would be a way to opt out of the deprecation notice.
+	 * would be a way around the stop on direct connections.
 	 *
 	 * Matched on the parsed host, never a substring of the stored JSON — a
 	 * `LIKE '%gateway.miniorange.ai%'` would also match
@@ -129,6 +176,12 @@ class Store {
 		foreach ( $redirect_uris as $uri ) {
 			if ( ! is_string( $uri ) ) {
 				return self::SOURCE_DIRECT;
+			}
+
+			// So a local or staging gateway added through `mosmcp_allowed_redirect_uris`
+			// counts as the gateway too.
+			if ( self::is_gateway_redirect_uri( $uri ) ) {
+				continue;
 			}
 
 			$host = wp_parse_url( $uri, PHP_URL_HOST );

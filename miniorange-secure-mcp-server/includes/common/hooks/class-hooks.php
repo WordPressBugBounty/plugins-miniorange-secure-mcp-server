@@ -74,13 +74,12 @@ class Hooks {
 		// REST routes (MCP transport + OAuth server).
 		add_action( 'rest_api_init', array( Rest_Routes::class, 'register' ) );
 
-		// Resolve the MCP bearer token's user before rest_api_init runs, so a third-party
-		// plugin's own current_user_can() check (deciding whether to register a route at
-		// all) sees the connecting agent rather than an anonymous visitor. Priority 30: after
-		// core's cookie (10) and Application Password (20) filters, so either still wins if
-		// it already resolved a user. See REST_Controller::determine_user() for why this is
-		// safe alongside authenticate(), which remains the sole authority on the MCP call itself.
-		add_filter( 'determine_current_user', array( REST_Controller::class, 'determine_user' ), 30 );
+		// Log the MCP agent in while plugins register their REST routes, so a plugin that only
+		// registers a route for capable users does so for the agent too. On rest_api_init, not
+		// determine_current_user: only by now has WordPress decided this is a REST request and
+		// which route it serves, so nothing is guessed from the URL. PHP_INT_MIN runs it before
+		// every other callback. authenticate() still decides the MCP call itself.
+		add_action( 'rest_api_init', array( REST_Controller::class, 'determine_user' ), PHP_INT_MIN );
 
 		// Keep every mosmcp/v1 response out of page, server and edge caches (live agent
 		// state, client registrations, tokens). Late priority so a cache plugin's own
